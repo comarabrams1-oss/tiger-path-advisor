@@ -323,7 +323,7 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 8),
 
                 Text(
-                  'Your academic path, all in one place.',
+                  'Plan smarter. Stay on track.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Colors.white.withValues(

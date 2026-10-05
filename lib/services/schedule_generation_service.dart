@@ -42,7 +42,8 @@ class GeneratedSchedule {
   double get scheduledCredits {
     return scheduled.fold(
       0,
-      (total, item) => total + item.planItem.credits,
+      (total, item) =>
+          total + item.planItem.credits,
     );
   }
 }
@@ -68,26 +69,42 @@ class ScheduleGenerationService {
           UnscheduledPlanItem(
             planItem: planItem,
             reason:
-                'TigerPath still needs an approved course selection for this requirement.',
+                'An approved course still needs to be selected for this requirement.',
           ),
         );
 
         continue;
       }
 
-      final availableSections = sections
+      final courseSections = sections
           .where(
             (section) =>
                 section.courseCode == courseCode,
           )
           .toList();
 
-      if (availableSections.isEmpty) {
+      if (courseSections.isEmpty) {
         unscheduled.add(
           UnscheduledPlanItem(
             planItem: planItem,
             reason:
-                'No section data is currently available for $courseCode.',
+                'No section information is currently available for $courseCode.',
+          ),
+        );
+
+        continue;
+      }
+
+      final usableSections = courseSections
+          .where(_isUsableSection)
+          .toList();
+
+      if (usableSections.isEmpty) {
+        unscheduled.add(
+          UnscheduledPlanItem(
+            planItem: planItem,
+            reason:
+                'All known sections for $courseCode are closed, cancelled, or full.',
           ),
         );
 
@@ -96,29 +113,62 @@ class ScheduleGenerationService {
 
       final rankedSections =
           _matchingService.rankSections(
-        sections: availableSections,
+        sections: usableSections,
         instructors: instructors,
         preferences: preferences,
       );
 
-      SectionMatch? selectedMatch;
+      SectionMatch? bestMatch;
+      int? bestScore;
+      List<String>? bestReasons;
 
       for (final match in rankedSections) {
-        if (!_conflictsWithSchedule(
+        if (_conflictsWithSchedule(
           match.section,
           scheduled,
         )) {
-          selectedMatch = match;
-          break;
+          continue;
+        }
+
+        var score = match.score;
+        final reasons =
+            List<String>.from(match.reasons);
+
+        if (preferences.minimizeGaps &&
+            scheduled.isNotEmpty) {
+          final gapScore = _gapScore(
+            match.section,
+            scheduled,
+          );
+
+          score += gapScore;
+
+          if (gapScore >= 3) {
+            reasons.add(
+              'Fits closely with your existing classes',
+            );
+          } else if (gapScore > 0) {
+            reasons.add(
+              'Helps reduce gaps between classes',
+            );
+          }
+        }
+
+        if (bestMatch == null ||
+            bestScore == null ||
+            score > bestScore) {
+          bestMatch = match;
+          bestScore = score;
+          bestReasons = reasons;
         }
       }
 
-      if (selectedMatch == null) {
+      if (bestMatch == null) {
         unscheduled.add(
           UnscheduledPlanItem(
             planItem: planItem,
             reason:
-                'Available sections conflict with classes already selected.',
+                'Open sections are available, but they conflict with classes already selected.',
           ),
         );
 
@@ -128,23 +178,56 @@ class ScheduleGenerationService {
       scheduled.add(
         ScheduledCourseSection(
           planItem: planItem,
-          section: selectedMatch.section,
-          instructor: selectedMatch.instructor,
-          preferenceScore: selectedMatch.score,
-          matchReasons: selectedMatch.reasons,
+          section: bestMatch.section,
+          instructor: bestMatch.instructor,
+          preferenceScore:
+              bestScore ?? bestMatch.score,
+          matchReasons:
+              bestReasons ?? bestMatch.reasons,
         ),
       );
     }
 
     scheduled.sort(
-      (a, b) => _earliestStart(a.section)
-          .compareTo(_earliestStart(b.section)),
+      (a, b) => _earliestStart(
+        a.section,
+      ).compareTo(
+        _earliestStart(b.section),
+      ),
     );
 
     return GeneratedSchedule(
       scheduled: scheduled,
       unscheduled: unscheduled,
     );
+  }
+
+  bool _isUsableSection(
+    CourseSection section,
+  ) {
+    String? status;
+
+    try {
+      status = (section as dynamic)
+          .status
+          ?.toString()
+          .trim()
+          .toLowerCase();
+    } catch (_) {
+      return true;
+    }
+
+    if (status == null || status.isEmpty) {
+      return true;
+    }
+
+    if (status.contains('closed') ||
+        status.contains('cancel') ||
+        status.contains('full')) {
+      return false;
+    }
+
+    return true;
   }
 
   bool _conflictsWithSchedule(
@@ -175,8 +258,79 @@ class ScheduleGenerationService {
       return false;
     }
 
-    return first.startMinutes < second.endMinutes &&
-        first.endMinutes > second.startMinutes;
+    return first.startMinutes <
+            second.endMinutes &&
+        first.endMinutes >
+            second.startMinutes;
+  }
+
+  int _gapScore(
+    CourseSection candidate,
+    List<ScheduledCourseSection> scheduled,
+  ) {
+    int bestScore = 0;
+
+    for (final existing in scheduled) {
+      final sharedDay =
+          candidate.days.any(
+        existing.section.days.contains,
+      );
+
+      if (!sharedDay) {
+        continue;
+      }
+
+      final gap = _minutesBetween(
+        candidate,
+        existing.section,
+      );
+
+      if (gap == null) {
+        continue;
+      }
+
+      if (gap <= 15) {
+        bestScore =
+            bestScore < 4 ? 4 : bestScore;
+      } else if (gap <= 30) {
+        bestScore =
+            bestScore < 3 ? 3 : bestScore;
+      } else if (gap <= 60) {
+        bestScore =
+            bestScore < 2 ? 2 : bestScore;
+      } else if (gap <= 90) {
+        bestScore =
+            bestScore < 1 ? 1 : bestScore;
+      }
+    }
+
+    return bestScore;
+  }
+
+  int? _minutesBetween(
+    CourseSection first,
+    CourseSection second,
+  ) {
+    if (_sectionsConflict(
+      first,
+      second,
+    )) {
+      return null;
+    }
+
+    if (first.endMinutes <=
+        second.startMinutes) {
+      return second.startMinutes -
+          first.endMinutes;
+    }
+
+    if (second.endMinutes <=
+        first.startMinutes) {
+      return first.startMinutes -
+          second.endMinutes;
+    }
+
+    return null;
   }
 
   int _earliestStart(
