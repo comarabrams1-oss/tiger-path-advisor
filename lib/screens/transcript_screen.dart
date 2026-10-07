@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
+
 import '../data/test_student.dart';
 import '../models/student_course.dart';
-
-const _purple = Color(0xFF3A0B5C);
-const _darkPurple = Color(0xFF26063E);
-const _background = Color(0xFFF7F4FA);
 
 class TranscriptScreen extends StatelessWidget {
   const TranscriptScreen({super.key});
@@ -12,90 +9,76 @@ class TranscriptScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final inProgress = testStudent.courses
-        .where(
-          (course) => course.status == CourseStatus.inProgress,
-        )
+        .where((course) => course.status == CourseStatus.inProgress)
         .toList();
 
     final completed = testStudent.courses
-        .where(
-          (course) => course.status == CourseStatus.completed,
-        )
+        .where((course) => course.status == CourseStatus.completed)
         .toList();
 
     final completedByTerm = _groupByTerm(completed);
 
     final sortedTerms = completedByTerm.keys.toList()
-      ..sort(
-        (a, b) => _termSortValue(b).compareTo(
-          _termSortValue(a),
-        ),
-      );
+      ..sort((a, b) => _termSortValue(b).compareTo(_termSortValue(a)));
 
     return Scaffold(
-      backgroundColor: _background,
-      appBar: AppBar(
-        title: const Text('Transcript'),
-      ),
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AppBar(title: Text('Transcript')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildHeader(),
+          _buildHeader(context),
           const SizedBox(height: 22),
-          _buildAcademicSummary(),
+          _buildAcademicSummary(context),
           const SizedBox(height: 28),
           if (inProgress.isNotEmpty) ...[
             _sectionTitle(
+              context,
               icon: Icons.schedule,
               title: 'Current Semester',
-              subtitle:
-                  '${inProgress.length} courses currently in progress',
+              subtitle: '${inProgress.length} courses currently in progress',
             ),
             const SizedBox(height: 14),
-            _buildCurrentSemester(inProgress),
+            _buildCurrentSemester(context, inProgress),
             const SizedBox(height: 30),
           ],
           _sectionTitle(
+            context,
             icon: Icons.history,
             title: 'Academic History',
-            subtitle:
-                'Completed coursework organized by semester',
+            subtitle: 'Completed coursework organized by semester',
           ),
           const SizedBox(height: 14),
-          ...List.generate(
-            sortedTerms.length,
-            (index) {
-              final term = sortedTerms[index];
-              final courses = completedByTerm[term] ?? [];
+          ...List.generate(sortedTerms.length, (index) {
+            final term = sortedTerms[index];
+            final courses = completedByTerm[term] ?? [];
 
-              return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 12,
-                ),
-                child: _buildSemesterCard(
-                  term: term,
-                  courses: courses,
-                  initiallyExpanded: index == 0,
-                ),
-              );
-            },
-          ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _buildSemesterCard(
+                context,
+                term: term,
+                courses: courses,
+                initiallyExpanded: index == 0,
+              ),
+            );
+          }),
           const SizedBox(height: 25),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Academic Record',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,
-            color: _darkPurple,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         const SizedBox(height: 7),
@@ -103,7 +86,7 @@ class TranscriptScreen extends StatelessWidget {
           '${testStudent.major} • ${testStudent.classification}',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade700,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 3),
@@ -111,30 +94,24 @@ class TranscriptScreen extends StatelessWidget {
           testStudent.institution,
           style: TextStyle(
             fontSize: 14,
-            color: Colors.grey.shade600,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildAcademicSummary() {
+  Widget _buildAcademicSummary(BuildContext context) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            _darkPurple,
-            _purple,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: _purple.withValues(alpha: 0.16),
+            color: Theme.of(context).colorScheme.primary
+                .withValues(alpha: 0.16),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -151,18 +128,16 @@ class TranscriptScreen extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _summaryItem(
-                        testStudent.earnedCredits
-                            .toInt()
-                            .toString(),
+                        context,
+                        testStudent.earnedCredits.toInt().toString(),
                         'Earned Credits',
                       ),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: _summaryItem(
-                        testStudent.inProgressCredits
-                            .toInt()
-                            .toString(),
+                        context,
+                        testStudent.inProgressCredits.toInt().toString(),
                         'In Progress',
                       ),
                     ),
@@ -170,6 +145,7 @@ class TranscriptScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _summaryItem(
+                  context,
                   testStudent.gpa.toStringAsFixed(2),
                   'Cumulative GPA',
                 ),
@@ -181,24 +157,23 @@ class TranscriptScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: _summaryItem(
-                  testStudent.earnedCredits
-                      .toInt()
-                      .toString(),
+                  context,
+                  testStudent.earnedCredits.toInt().toString(),
                   'Earned Credits',
                 ),
               ),
-              _summaryDivider(),
+              _summaryDivider(context),
               Expanded(
                 child: _summaryItem(
-                  testStudent.inProgressCredits
-                      .toInt()
-                      .toString(),
+                  context,
+                  testStudent.inProgressCredits.toInt().toString(),
                   'In Progress',
                 ),
               ),
-              _summaryDivider(),
+              _summaryDivider(context),
               Expanded(
                 child: _summaryItem(
+                  context,
                   testStudent.gpa.toStringAsFixed(2),
                   'Cumulative GPA',
                 ),
@@ -210,25 +185,19 @@ class TranscriptScreen extends StatelessWidget {
     );
   }
 
-  Widget _summaryItem(
-    String value,
-    String label,
-  ) {
+  Widget _summaryItem(BuildContext context, String value, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 14,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
+        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
         children: [
           Text(
             value,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary,
               fontSize: 25,
               fontWeight: FontWeight.bold,
             ),
@@ -238,7 +207,8 @@ class TranscriptScreen extends StatelessWidget {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.onPrimary
+                  .withValues(alpha: 0.8),
               fontSize: 12,
             ),
           ),
@@ -247,18 +217,17 @@ class TranscriptScreen extends StatelessWidget {
     );
   }
 
-  Widget _summaryDivider() {
+  Widget _summaryDivider(BuildContext context) {
     return Container(
       width: 1,
       height: 45,
-      margin: const EdgeInsets.symmetric(
-        horizontal: 10,
-      ),
-      color: Colors.white.withValues(alpha: 0.18),
+      margin: const EdgeInsets.symmetric(horizontal: 10),
+      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.18),
     );
   }
 
-  Widget _sectionTitle({
+  Widget _sectionTitle(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
@@ -270,33 +239,32 @@ class TranscriptScreen extends StatelessWidget {
           width: 45,
           height: 45,
           decoration: BoxDecoration(
-            color: const Color(0xFFF0E8F5),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(
             icon,
-            color: _purple,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
         const SizedBox(width: 13),
         Expanded(
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
-                  color: _darkPurple,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
               const SizedBox(height: 3),
               Text(
                 subtitle,
                 style: TextStyle(
-                  color: Colors.grey.shade700,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
@@ -307,6 +275,7 @@ class TranscriptScreen extends StatelessWidget {
   }
 
   Widget _buildCurrentSemester(
+    BuildContext context,
     List<StudentCourse> courses,
   ) {
     final term = courses.first.term;
@@ -318,46 +287,43 @@ class TranscriptScreen extends StatelessWidget {
         children: [
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 18,
-              vertical: 14,
-            ),
-            color: const Color(0xFFFFF4DD),
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+            color: Theme.of(context).colorScheme.secondaryContainer,
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.calendar_month_outlined,
-                  color: Colors.orange,
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     term,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 17,
                       fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
                     ),
                   ),
                 ),
                 _statusBadge(
+                  context,
                   'In Progress',
-                  Colors.orange.shade800,
+                  Theme.of(context).colorScheme.onSecondaryContainer,
                 ),
               ],
             ),
           ),
           ...courses.map(
-            (course) => _courseRow(
-              course,
-              inProgress: true,
-            ),
+            (course) => _courseRow(context, course, inProgress: true),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSemesterCard({
+  Widget _buildSemesterCard(
+    BuildContext context, {
     required String term,
     required List<StudentCourse> courses,
     required bool initiallyExpanded,
@@ -369,29 +335,26 @@ class TranscriptScreen extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         shape: const Border(),
         collapsedShape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(
-          horizontal: 18,
-          vertical: 8,
-        ),
+        tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
         childrenPadding: EdgeInsets.zero,
         leading: Container(
           width: 42,
           height: 42,
           decoration: BoxDecoration(
-            color: const Color(0xFFEAF6EC),
+            color: Theme.of(context).colorScheme.primaryContainer,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(
             Icons.check_circle_outline,
-            color: Colors.green.shade700,
+            color: Theme.of(context).colorScheme.onPrimaryContainer,
           ),
         ),
         title: Text(
           term,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 17,
             fontWeight: FontWeight.bold,
-            color: _darkPurple,
+            color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
         subtitle: Padding(
@@ -400,29 +363,21 @@ class TranscriptScreen extends StatelessWidget {
             '${courses.length} completed ${courses.length == 1 ? 'course' : 'courses'}',
           ),
         ),
-        children: courses
-            .map(
-              (course) => _courseRow(course),
-            )
-            .toList(),
+        children: courses.map((course) => _courseRow(context, course)).toList(),
       ),
     );
   }
 
   Widget _courseRow(
+    BuildContext context,
     StudentCourse course, {
     bool inProgress = false,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 18,
-        vertical: 15,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: Colors.grey.shade200,
-          ),
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       child: Row(
@@ -432,39 +387,33 @@ class TranscriptScreen extends StatelessWidget {
             height: 39,
             decoration: BoxDecoration(
               color: inProgress
-                  ? const Color(0xFFFFF4DD)
-                  : const Color(0xFFEAF6EC),
+                  ? Theme.of(context).colorScheme.secondaryContainer
+                  : Theme.of(context).colorScheme.primaryContainer,
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(
-              inProgress
-                  ? Icons.schedule
-                  : Icons.check,
+              inProgress ? Icons.schedule : Icons.check,
               size: 21,
               color: inProgress
-                  ? Colors.orange.shade800
-                  : Colors.green.shade700,
+                  ? Theme.of(context).colorScheme.onSecondaryContainer
+                  : Theme.of(context).colorScheme.onPrimaryContainer,
             ),
           ),
           const SizedBox(width: 13),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   course.courseCode,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 if (!inProgress) ...[
                   const SizedBox(height: 3),
                   Text(
                     'Completed',
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
                       fontSize: 13,
                     ),
                   ),
@@ -474,38 +423,35 @@ class TranscriptScreen extends StatelessWidget {
           ),
           if (inProgress)
             _statusBadge(
+              context,
               'Current',
-              Colors.orange.shade800,
+              Theme.of(context).colorScheme.onSecondaryContainer,
             )
           else
-            _gradeBadge(course.grade),
+            _gradeBadge(context, course.grade),
         ],
       ),
     );
   }
 
-  Widget _gradeBadge(String? grade) {
+  Widget _gradeBadge(BuildContext context, String? grade) {
     if (grade == null || grade.isEmpty) {
       return const SizedBox();
     }
 
     return Container(
-      constraints: const BoxConstraints(
-        minWidth: 42,
-      ),
+      constraints: const BoxConstraints(minWidth: 42),
       height: 34,
       alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: const Color(0xFFEAF6EC),
+        color: Theme.of(context).colorScheme.primaryContainer,
         borderRadius: BorderRadius.circular(10),
       ),
       child: Text(
         grade,
         style: TextStyle(
-          color: Colors.green.shade800,
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
           fontWeight: FontWeight.bold,
           fontSize: 15,
         ),
@@ -513,17 +459,11 @@ class TranscriptScreen extends StatelessWidget {
     );
   }
 
-  Widget _statusBadge(
-    String label,
-    Color color,
-  ) {
+  Widget _statusBadge(BuildContext context, String label, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 5,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: Theme.of(context).colorScheme.secondaryContainer,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -537,18 +477,11 @@ class TranscriptScreen extends StatelessWidget {
     );
   }
 
-  Map<String, List<StudentCourse>> _groupByTerm(
-    List<StudentCourse> courses,
-  ) {
+  Map<String, List<StudentCourse>> _groupByTerm(List<StudentCourse> courses) {
     final grouped = <String, List<StudentCourse>>{};
 
     for (final course in courses) {
-      grouped
-          .putIfAbsent(
-            course.term,
-            () => [],
-          )
-          .add(course);
+      grouped.putIfAbsent(course.term, () => []).add(course);
     }
 
     return grouped;
@@ -561,10 +494,7 @@ class TranscriptScreen extends StatelessWidget {
       return 0;
     }
 
-    final year = int.tryParse(
-          match.group(1) ?? '',
-        ) ??
-        0;
+    final year = int.tryParse(match.group(1) ?? '') ?? 0;
 
     var semester = 0;
 

@@ -1,15 +1,11 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+
 import '../data/cs_program.dart';
 import '../data/test_student.dart';
 import '../models/degree_program.dart';
 import '../services/degree_audit_service.dart';
-
-const _benedictPurple = Color(0xFF3A0B5C);
-const _benedictDarkPurple = Color(0xFF26063E);
-const _benedictGold = Color(0xFFFFD22E);
-const _pageBackground = Color(0xFFF7F4FA);
 
 class DegreeProgressScreen extends StatefulWidget {
   const DegreeProgressScreen({super.key});
@@ -25,14 +21,14 @@ class _DegreeProgressScreenState
 
   void _toggleStatusFilter(RequirementStatus status) {
     setState(() {
-      _selectedStatus = _selectedStatus == status ? null : status;
+      _selectedStatus =
+          _selectedStatus == status ? null : status;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final auditService = DegreeAuditService();
-
     final audit = auditService.auditProgram(
       testStudent,
       benedictComputerScience2024,
@@ -43,9 +39,9 @@ class _DegreeProgressScreenState
     final requiredCredits = testStudent.requiredCredits;
 
     final projectedCredits = math.min(
-  requiredCredits,
-  completedCredits + inProgressCredits,
-).toDouble();
+      requiredCredits,
+      completedCredits + inProgressCredits,
+    ).toDouble();
 
     final completedProgress =
         (completedCredits / requiredCredits).clamp(0.0, 1.0);
@@ -54,21 +50,21 @@ class _DegreeProgressScreenState
         (projectedCredits / requiredCredits).clamp(0.0, 1.0);
 
     final projectedRemaining = math.max(
-  0,
-  requiredCredits - projectedCredits,
-).toDouble();
+      0,
+      requiredCredits - projectedCredits,
+    ).toDouble();
 
     return Scaffold(
-      backgroundColor: _pageBackground,
       appBar: AppBar(
         title: const Text('Degree Progress'),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildHeader(),
+          _buildHeader(context),
           const SizedBox(height: 22),
           _buildOverallProgress(
+            context,
             completedCredits: completedCredits,
             inProgressCredits: inProgressCredits,
             requiredCredits: requiredCredits,
@@ -78,7 +74,7 @@ class _DegreeProgressScreenState
             projectedProgress: projectedProgress,
           ),
           const SizedBox(height: 26),
-          _buildStatusLegend(),
+          _buildStatusLegend(context),
           const SizedBox(height: 24),
           _buildCategory(
             context,
@@ -136,16 +132,18 @@ class _DegreeProgressScreenState
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Computer Science - B.S.',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,
-            color: _benedictDarkPurple,
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 7),
@@ -153,14 +151,15 @@ class _DegreeProgressScreenState
           '${testStudent.institution} • Catalog ${testStudent.catalogYear}',
           style: TextStyle(
             fontSize: 16,
-            color: Colors.grey.shade700,
+            color: colors.onSurfaceVariant,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildOverallProgress({
+  Widget _buildOverallProgress(
+    BuildContext context, {
     required double completedCredits,
     required double inProgressCredits,
     required double requiredCredits,
@@ -169,24 +168,19 @@ class _DegreeProgressScreenState
     required double completedProgress,
     required double projectedProgress,
   }) {
+    final colors = Theme.of(context).colorScheme;
+    final bannerColor = colors.primary;
+    final bannerText = colors.onPrimary;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            _benedictDarkPurple,
-            _benedictPurple,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: bannerColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: _benedictPurple.withValues(
-              alpha: 0.18,
-            ),
+            color: bannerColor.withValues(alpha: 0.20),
             blurRadius: 22,
             offset: const Offset(0, 8),
           ),
@@ -195,10 +189,10 @@ class _DegreeProgressScreenState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Overall Graduation Progress',
             style: TextStyle(
-              color: Colors.white,
+              color: bannerText,
               fontSize: 22,
               fontWeight: FontWeight.bold,
             ),
@@ -211,6 +205,7 @@ class _DegreeProgressScreenState
                   value:
                       '${completedCredits.toInt()} / ${requiredCredits.toInt()}',
                   label: 'Credits Completed',
+                  foreground: bannerText,
                 ),
               ),
               const SizedBox(width: 12),
@@ -218,6 +213,7 @@ class _DegreeProgressScreenState
                 child: _summaryBox(
                   value: testStudent.gpa.toStringAsFixed(2),
                   label: 'Cumulative GPA',
+                  foreground: bannerText,
                 ),
               ),
               const SizedBox(width: 12),
@@ -225,6 +221,7 @@ class _DegreeProgressScreenState
                 child: _summaryBox(
                   value: inProgressCredits.toInt().toString(),
                   label: 'In Progress',
+                  foreground: bannerText,
                 ),
               ),
             ],
@@ -234,6 +231,7 @@ class _DegreeProgressScreenState
             label: 'Completed',
             value:
                 '${(completedProgress * 100).toStringAsFixed(1)}%',
+            foreground: bannerText,
           ),
           const SizedBox(height: 8),
           ClipRRect(
@@ -242,10 +240,9 @@ class _DegreeProgressScreenState
               value: completedProgress,
               minHeight: 11,
               backgroundColor:
-                  Colors.white.withValues(alpha: 0.18),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(
-                _benedictGold,
+                  bannerText.withValues(alpha: 0.20),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                bannerText,
               ),
             ),
           ),
@@ -254,6 +251,7 @@ class _DegreeProgressScreenState
             label: 'Projected after current semester',
             value:
                 '${projectedCredits.toInt()} / ${requiredCredits.toInt()}',
+            foreground: bannerText,
           ),
           const SizedBox(height: 8),
           ClipRRect(
@@ -262,10 +260,9 @@ class _DegreeProgressScreenState
               value: projectedProgress,
               minHeight: 11,
               backgroundColor:
-                  Colors.white.withValues(alpha: 0.18),
-              valueColor:
-                  AlwaysStoppedAnimation<Color>(
-                _benedictGold.withValues(alpha: 0.72),
+                  bannerText.withValues(alpha: 0.20),
+              valueColor: AlwaysStoppedAnimation<Color>(
+                bannerText.withValues(alpha: 0.75),
               ),
             ),
           ),
@@ -274,7 +271,7 @@ class _DegreeProgressScreenState
             '${(projectedProgress * 100).toStringAsFixed(1)}% projected • '
             '${projectedRemaining.toInt()} credits remaining after current semester',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.85),
+              color: bannerText.withValues(alpha: 0.82),
               fontSize: 13,
             ),
           ),
@@ -286,6 +283,7 @@ class _DegreeProgressScreenState
   Widget _summaryBox({
     required String value,
     required String label,
+    required Color foreground,
   }) {
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -293,16 +291,19 @@ class _DegreeProgressScreenState
         vertical: 14,
       ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
+        color: foreground.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(15),
+        border: Border.all(
+          color: foreground.withValues(alpha: 0.12),
+        ),
       ),
       child: Column(
         children: [
           Text(
             value,
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: foreground,
               fontSize: 21,
               fontWeight: FontWeight.bold,
             ),
@@ -312,7 +313,7 @@ class _DegreeProgressScreenState
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.80),
+              color: foreground.withValues(alpha: 0.78),
               fontSize: 12,
             ),
           ),
@@ -324,22 +325,23 @@ class _DegreeProgressScreenState
   Widget _progressLabel({
     required String label,
     required String value,
+    required Color foreground,
   }) {
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: TextStyle(
+              color: foreground,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: foreground,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -347,107 +349,113 @@ class _DegreeProgressScreenState
     );
   }
 
-  Widget _buildStatusLegend() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        _selectedStatus == null
-            ? 'Tap a status to filter requirements'
-            : 'Showing ${_statusText(_selectedStatus!)} requirements',
-        style: TextStyle(
-          color: Colors.grey.shade700,
-          fontSize: 13,
-        ),
-      ),
-      const SizedBox(height: 10),
-      Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: [
-          _legendChip(
-            status: RequirementStatus.completed,
-            icon: Icons.check_circle,
-            text: 'Completed',
-            color: Colors.green.shade700,
-          ),
-          _legendChip(
-            status: RequirementStatus.inProgress,
-            icon: Icons.schedule,
-            text: 'In Progress',
-            color: Colors.orange.shade800,
-          ),
-          _legendChip(
-            status: RequirementStatus.remaining,
-            icon: Icons.radio_button_unchecked,
-            text: 'Remaining',
-            color: Colors.grey.shade700,
-          ),
-        ],
-      ),
-    ],
-  );
-}
+  Widget _buildStatusLegend(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
-  Widget _legendChip({
-  required RequirementStatus status,
-  required IconData icon,
-  required String text,
-  required Color color,
-}) {
-  final selected = _selectedStatus == status;
-
-  return InkWell(
-    borderRadius: BorderRadius.circular(30),
-    onTap: () => _toggleStatusFilter(status),
-    child: AnimatedContainer(
-      duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 10,
-      ),
-      decoration: BoxDecoration(
-        color: selected
-            ? color.withValues(alpha: 0.12)
-            : Colors.white,
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: selected
-              ? color
-              : Colors.grey.shade300,
-          width: selected ? 2 : 1,
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            icon,
-            size: 19,
-            color: color,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          _selectedStatus == null
+              ? 'Tap a status to filter requirements'
+              : 'Showing ${_statusText(_selectedStatus!)} requirements',
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontSize: 13,
           ),
-          const SizedBox(width: 7),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: selected ? color : null,
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: [
+            _legendChip(
+              context,
+              status: RequirementStatus.completed,
+              icon: Icons.check_circle,
+              text: 'Completed',
             ),
-          ),
-          if (selected) ...[
-            const SizedBox(width: 7),
-            Icon(
-              Icons.close,
-              size: 16,
-              color: color,
+            _legendChip(
+              context,
+              status: RequirementStatus.inProgress,
+              icon: Icons.schedule,
+              text: 'In Progress',
+            ),
+            _legendChip(
+              context,
+              status: RequirementStatus.remaining,
+              icon: Icons.radio_button_unchecked,
+              text: 'Remaining',
             ),
           ],
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _legendChip(
+    BuildContext context, {
+    required RequirementStatus status,
+    required IconData icon,
+    required String text,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    final selected = _selectedStatus == status;
+    final statusColor = _statusColor(context, status);
+
+    return InkWell(
+      borderRadius: BorderRadius.circular(30),
+      onTap: () => _toggleStatusFilter(status),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 10,
+        ),
+        decoration: BoxDecoration(
+          color: selected
+              ? statusColor.withValues(alpha: 0.14)
+              : colors.surface,
+          borderRadius: BorderRadius.circular(30),
+          border: Border.all(
+            color: selected
+                ? statusColor
+                : colors.outlineVariant,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 19,
+              color: statusColor,
+            ),
+            const SizedBox(width: 7),
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: selected
+                    ? statusColor
+                    : colors.onSurface,
+              ),
+            ),
+            if (selected) ...[
+              const SizedBox(width: 7),
+              Icon(
+                Icons.close,
+                size: 16,
+                color: statusColor,
+              ),
+            ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   List<DegreeAuditItem> _itemsForCategory(
     List<DegreeAuditItem> audit,
@@ -468,40 +476,40 @@ class _DegreeProgressScreenState
     required List<DegreeAuditItem> items,
     bool initiallyExpanded = false,
   }) {
+    final colors = Theme.of(context).colorScheme;
+
     final completed = items
         .where(
           (item) =>
-              item.status ==
-              RequirementStatus.completed,
+              item.status == RequirementStatus.completed,
         )
         .length;
 
     final inProgress = items
         .where(
           (item) =>
-              item.status ==
-              RequirementStatus.inProgress,
+              item.status == RequirementStatus.inProgress,
         )
         .length;
 
     final remaining = items
         .where(
           (item) =>
-              item.status ==
-              RequirementStatus.remaining,
+              item.status == RequirementStatus.remaining,
         )
         .length;
 
     final progress =
         items.isEmpty ? 0.0 : completed / items.length;
+
     final visibleItems = _selectedStatus == null
-    ? items
-    : items
-        .where(
-          (item) =>
-              item.status == _selectedStatus,
-        )
-        .toList();
+        ? items
+        : items
+            .where(
+              (item) => item.status == _selectedStatus,
+            )
+            .toList();
+
     return Card(
       margin: EdgeInsets.zero,
       clipBehavior: Clip.antiAlias,
@@ -523,27 +531,26 @@ class _DegreeProgressScreenState
           width: 46,
           height: 46,
           decoration: BoxDecoration(
-            color: const Color(0xFFF2EAF7),
+            color: colors.primary.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(
             icon,
-            color: _benedictPurple,
+            color: colors.primary,
           ),
         ),
         title: Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: _benedictDarkPurple,
+            color: colors.onSurface,
           ),
         ),
         subtitle: Padding(
           padding: const EdgeInsets.only(top: 7),
           child: Column(
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 _sectionSummary(
@@ -552,7 +559,7 @@ class _DegreeProgressScreenState
                   remaining,
                 ),
                 style: TextStyle(
-                  color: Colors.grey.shade700,
+                  color: colors.onSurfaceVariant,
                 ),
               ),
               const SizedBox(height: 9),
@@ -562,36 +569,35 @@ class _DegreeProgressScreenState
                   value: progress,
                   minHeight: 5,
                   backgroundColor:
-                      const Color(0xFFEADDF1),
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(
-                    _benedictPurple,
+                      colors.primary.withValues(alpha: 0.14),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colors.primary,
                   ),
                 ),
               ),
             ],
           ),
         ),
-       children: visibleItems.isEmpty
-    ? [
-        Padding(
-          padding: const EdgeInsets.all(20),
-          child: Text(
-            'No ${_selectedStatus == null ? '' : _statusText(_selectedStatus!).toLowerCase()} requirements in this section.',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ),
-      ]
-    : visibleItems
-        .map(
-          (item) => _buildRequirementCard(
-            context,
-            item,
-          ),
-        )
-        .toList(),
+        children: visibleItems.isEmpty
+            ? [
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Text(
+                    'No ${_selectedStatus == null ? '' : _statusText(_selectedStatus!).toLowerCase()} requirements in this section.',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ]
+            : visibleItems
+                .map(
+                  (item) => _buildRequirementCard(
+                    context,
+                    item,
+                  ),
+                )
+                .toList(),
       ),
     );
   }
@@ -626,9 +632,9 @@ class _DegreeProgressScreenState
     BuildContext context,
     DegreeAuditItem item,
   ) {
+    final colors = Theme.of(context).colorScheme;
     final requirement = item.requirement;
-
-    final statusColor = _statusColor(item.status);
+    final statusColor = _statusColor(context, item.status);
     final statusIcon = _statusIcon(item.status);
 
     return Container(
@@ -636,10 +642,12 @@ class _DegreeProgressScreenState
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colors.surfaceContainerHighest.withValues(
+          alpha: 0.45,
+        ),
         borderRadius: BorderRadius.circular(17),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: colors.outlineVariant,
         ),
       ),
       child: Row(
@@ -649,7 +657,7 @@ class _DegreeProgressScreenState
             width: 42,
             height: 42,
             decoration: BoxDecoration(
-              color: statusColor.withValues(alpha: 0.10),
+              color: statusColor.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(
@@ -661,19 +669,18 @@ class _DegreeProgressScreenState
           const SizedBox(width: 14),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Text(
                         requirement.title,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
                         ),
                       ),
                     ),
@@ -683,8 +690,9 @@ class _DegreeProgressScreenState
                             const EdgeInsets.only(left: 10),
                         child: Text(
                           _creditLabel(item),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
                           ),
                         ),
                       ),
@@ -699,16 +707,16 @@ class _DegreeProgressScreenState
                 Text(
                   _requirementProgressText(item),
                   style: TextStyle(
-                    color: Colors.grey.shade800,
+                    color: colors.onSurfaceVariant,
                   ),
                 ),
-                if (requirement.courseCodes
-                    .isNotEmpty) ...[
+                if (requirement.courseCodes.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
                     requirement.courseCodes.join(' / '),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
                     ),
                   ),
                 ],
@@ -717,7 +725,7 @@ class _DegreeProgressScreenState
                   Text(
                     'Minimum grade: ${requirement.minimumGrade}',
                     style: TextStyle(
-                      color: Colors.grey.shade700,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                 ],
@@ -726,13 +734,17 @@ class _DegreeProgressScreenState
                   const SizedBox(height: 8),
                   Text(
                     'Current GPA: ${testStudent.gpa.toStringAsFixed(2)}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
+                      color: colors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     'Required GPA: ${(requirement.minimumGpa ?? 0).toStringAsFixed(2)}',
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                    ),
                   ),
                 ],
               ],
@@ -743,13 +755,10 @@ class _DegreeProgressScreenState
     );
   }
 
-  String _creditLabel(
-    DegreeAuditItem item,
-  ) {
+  String _creditLabel(DegreeAuditItem item) {
     final requirement = item.requirement;
 
-    if (requirement.type ==
-        RequirementType.creditHours) {
+    if (requirement.type == RequirementType.creditHours) {
       final remaining = math.max(
         0,
         requirement.creditsRequired -
@@ -757,8 +766,7 @@ class _DegreeProgressScreenState
             item.inProgressCredits,
       );
 
-      if (item.status ==
-          RequirementStatus.remaining) {
+      if (item.status == RequirementStatus.remaining) {
         return '${remaining.toInt()} cr left';
       }
     }
@@ -789,8 +797,7 @@ class _DegreeProgressScreenState
       return 'Requirement met according to your degree audit.';
     }
 
-    if (requirement.type ==
-        RequirementType.totalCredits) {
+    if (requirement.type == RequirementType.totalCredits) {
       final projected =
           testStudent.earnedCredits +
               testStudent.inProgressCredits;
@@ -807,16 +814,14 @@ class _DegreeProgressScreenState
           '${remaining.toInt()} credits remaining';
     }
 
-    if (requirement.type ==
-        RequirementType.minimumGpa) {
+    if (requirement.type == RequirementType.minimumGpa) {
       return testStudent.gpa >=
               (requirement.minimumGpa ?? 0)
           ? 'GPA requirement met'
           : 'GPA requirement not yet met';
     }
 
-    if (requirement.type ==
-        RequirementType.creditHours) {
+    if (requirement.type == RequirementType.creditHours) {
       if (item.inProgressCredits > 0) {
         return '${item.completedCredits.toInt()} of '
             '${requirement.creditsRequired.toInt()} completed • '
@@ -827,10 +832,8 @@ class _DegreeProgressScreenState
           '${requirement.creditsRequired.toInt()} credits completed';
     }
 
-    if (requirement.type ==
-        RequirementType.elective) {
-      return item.status ==
-              RequirementStatus.completed
+    if (requirement.type == RequirementType.elective) {
+      return item.status == RequirementStatus.completed
           ? 'Requirement completed'
           : 'Approved elective credit is still required';
     }
@@ -838,10 +841,8 @@ class _DegreeProgressScreenState
     switch (item.status) {
       case RequirementStatus.completed:
         return 'Requirement completed';
-
       case RequirementStatus.inProgress:
         return 'Currently in progress';
-
       case RequirementStatus.remaining:
         return 'Still required for your degree';
     }
@@ -857,7 +858,7 @@ class _DegreeProgressScreenState
         vertical: 5,
       ),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
+        color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -872,45 +873,44 @@ class _DegreeProgressScreenState
   }
 
   Color _statusColor(
+    BuildContext context,
     RequirementStatus status,
   ) {
+    final dark = Theme.of(context).brightness ==
+        Brightness.dark;
+    final colors = Theme.of(context).colorScheme;
+
     switch (status) {
       case RequirementStatus.completed:
-        return Colors.green.shade700;
-
+        return dark
+            ? Colors.green.shade300
+            : Colors.green.shade700;
       case RequirementStatus.inProgress:
-        return Colors.orange.shade800;
-
+        return dark
+            ? Colors.orange.shade300
+            : Colors.orange.shade800;
       case RequirementStatus.remaining:
-        return Colors.grey.shade700;
+        return colors.onSurfaceVariant;
     }
   }
 
-  IconData _statusIcon(
-    RequirementStatus status,
-  ) {
+  IconData _statusIcon(RequirementStatus status) {
     switch (status) {
       case RequirementStatus.completed:
         return Icons.check_circle;
-
       case RequirementStatus.inProgress:
         return Icons.schedule;
-
       case RequirementStatus.remaining:
         return Icons.radio_button_unchecked;
     }
   }
 
-  String _statusText(
-    RequirementStatus status,
-  ) {
+  String _statusText(RequirementStatus status) {
     switch (status) {
       case RequirementStatus.completed:
         return 'Completed';
-
       case RequirementStatus.inProgress:
         return 'In Progress';
-
       case RequirementStatus.remaining:
         return 'Remaining';
     }

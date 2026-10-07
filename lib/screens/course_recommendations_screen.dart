@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../data/cs_course_catalog.dart';
 import '../data/cs_program.dart';
 import '../data/test_student.dart';
@@ -6,11 +7,6 @@ import '../models/degree_program.dart';
 import '../services/course_eligibility_service.dart';
 import '../services/course_priority_service.dart';
 import '../services/degree_audit_service.dart';
-
-const _purple = Color(0xFF3A0B5C);
-const _darkPurple = Color(0xFF26063E);
-const _gold = Color(0xFFFFD22E);
-const _background = Color(0xFFF7F4FA);
 
 enum RecommendationView {
   recommended,
@@ -34,8 +30,10 @@ class _CourseRecommendationsScreenState
 
   @override
   Widget build(BuildContext context) {
-    final eligibilityService = CourseEligibilityService();
-    final priorityService = CoursePriorityService();
+    final eligibilityService =
+        CourseEligibilityService();
+    final priorityService =
+        CoursePriorityService();
     final auditService = DegreeAuditService();
 
     final eligibilityResults =
@@ -45,7 +43,8 @@ class _CourseRecommendationsScreenState
       computerScienceCourseCatalog,
     );
 
-    final priorityResults = priorityService.rankCourses(
+    final priorityResults =
+        priorityService.rankCourses(
       testStudent,
       benedictComputerScience2024,
       computerScienceCourseCatalog,
@@ -59,22 +58,26 @@ class _CourseRecommendationsScreenState
     final remainingRequirements = audit
         .where(
           (item) =>
-              item.status == RequirementStatus.remaining &&
-              item.requirement.category != 'Graduation',
+              item.status ==
+                  RequirementStatus.remaining &&
+              item.requirement.category !=
+                  'Graduation',
         )
         .toList();
 
     final readyNow = eligibilityResults
         .where(
           (result) =>
-              result.status == EligibilityStatus.eligible,
+              result.status ==
+              EligibilityStatus.eligible,
         )
         .toList();
 
     final later = eligibilityResults
         .where(
           (result) =>
-              result.status != EligibilityStatus.eligible,
+              result.status !=
+              EligibilityStatus.eligible,
         )
         .toList();
 
@@ -84,67 +87,73 @@ class _CourseRecommendationsScreenState
               result.eligibility.status ==
                   EligibilityStatus.eligible ||
               result.eligibility.status ==
-                  EligibilityStatus.eligibleAfterCurrentTerm,
+                  EligibilityStatus
+                      .eligibleAfterCurrentTerm,
         )
         .take(5)
         .toList();
 
     return Scaffold(
-      backgroundColor: _background,
       appBar: AppBar(
-        title: const Text('Course Recommendations'),
+        title: const Text(
+          'Course Recommendations',
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildHeader(),
+          _buildHeader(context),
           const SizedBox(height: 22),
-
           _buildOverview(
+            context,
             remainingRequirements.length,
             readyNow.length,
             recommendedNext.length,
           ),
-
           const SizedBox(height: 22),
-
           _buildNavigation(
-            recommendedCount: recommendedNext.length,
-            neededCount: remainingRequirements.length,
+            context,
+            recommendedCount:
+                recommendedNext.length,
+            neededCount:
+                remainingRequirements.length,
             eligibleCount: readyNow.length,
             laterCount: later.length,
           ),
-
           const SizedBox(height: 24),
-
           _buildSelectedContent(
             context,
-            recommendedNext: recommendedNext,
-            remainingRequirements: remainingRequirements,
+            recommendedNext:
+                recommendedNext,
+            remainingRequirements:
+                remainingRequirements,
             readyNow: readyNow,
             later: later,
           ),
-
           const SizedBox(height: 20),
-
-          _buildDisclaimer(),
-
+          _buildDisclaimer(context),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(
+    BuildContext context,
+  ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Academic Advice',
           style: TextStyle(
             fontSize: 29,
             fontWeight: FontWeight.bold,
-            color: _darkPurple,
+            color: colors.onSurface,
           ),
         ),
         const SizedBox(height: 7),
@@ -154,7 +163,7 @@ class _CourseRecommendationsScreenState
           style: TextStyle(
             fontSize: 15,
             height: 1.4,
-            color: Colors.grey.shade700,
+            color: colors.onSurfaceVariant,
           ),
         ),
       ],
@@ -162,25 +171,25 @@ class _CourseRecommendationsScreenState
   }
 
   Widget _buildOverview(
+    BuildContext context,
     int remaining,
     int eligible,
     int recommended,
   ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(22),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [
-            _darkPurple,
-            _purple,
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
+        color: colors.primary,
+        borderRadius:
+            BorderRadius.circular(22),
         boxShadow: [
           BoxShadow(
-            color: _purple.withValues(alpha: 0.15),
+            color: colors.primary.withValues(
+              alpha: 0.18,
+            ),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -190,20 +199,23 @@ class _CourseRecommendationsScreenState
         children: [
           Expanded(
             child: _overviewItem(
+              context,
               value: '$recommended',
               label: 'Top Picks',
             ),
           ),
-          _verticalDivider(),
+          _verticalDivider(context),
           Expanded(
             child: _overviewItem(
+              context,
               value: '$eligible',
               label: 'Eligible Now',
             ),
           ),
-          _verticalDivider(),
+          _verticalDivider(context),
           Expanded(
             child: _overviewItem(
+              context,
               value: '$remaining',
               label: 'Requirements Left',
             ),
@@ -213,16 +225,20 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _overviewItem({
+  Widget _overviewItem(
+    BuildContext context, {
     required String value,
     required String label,
   }) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Column(
       children: [
         Text(
           value,
-          style: const TextStyle(
-            color: Colors.white,
+          style: TextStyle(
+            color: colors.onPrimary,
             fontSize: 27,
             fontWeight: FontWeight.bold,
           ),
@@ -232,7 +248,8 @@ class _CourseRecommendationsScreenState
           label,
           textAlign: TextAlign.center,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.8),
+            color: colors.onPrimary
+                .withValues(alpha: 0.80),
             fontSize: 12,
           ),
         ),
@@ -240,15 +257,23 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _verticalDivider() {
+  Widget _verticalDivider(
+    BuildContext context,
+  ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Container(
       width: 1,
       height: 42,
-      color: Colors.white.withValues(alpha: 0.18),
+      color: colors.onPrimary.withValues(
+        alpha: 0.22,
+      ),
     );
   }
 
-  Widget _buildNavigation({
+  Widget _buildNavigation(
+    BuildContext context, {
     required int recommendedCount,
     required int neededCount,
     required int eligibleCount,
@@ -259,24 +284,32 @@ class _CourseRecommendationsScreenState
       runSpacing: 10,
       children: [
         _filterChip(
-          view: RecommendationView.recommended,
+          context,
+          view:
+              RecommendationView.recommended,
           icon: Icons.auto_awesome,
           label: 'Recommended',
           count: recommendedCount,
         ),
         _filterChip(
+          context,
           view: RecommendationView.needed,
-          icon: Icons.assignment_outlined,
+          icon:
+              Icons.assignment_outlined,
           label: 'Need',
           count: neededCount,
         ),
         _filterChip(
-          view: RecommendationView.eligible,
-          icon: Icons.check_circle_outline,
+          context,
+          view:
+              RecommendationView.eligible,
+          icon:
+              Icons.check_circle_outline,
           label: 'Eligible Now',
           count: eligibleCount,
         ),
         _filterChip(
+          context,
           view: RecommendationView.later,
           icon: Icons.schedule,
           label: 'Later',
@@ -286,70 +319,89 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _filterChip({
+  Widget _filterChip(
+    BuildContext context, {
     required RecommendationView view,
     required IconData icon,
     required String label,
     required int count,
   }) {
-    final selected = _selectedView == view;
+    final colors =
+        Theme.of(context).colorScheme;
+    final selected =
+        _selectedView == view;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(30),
+      borderRadius:
+          BorderRadius.circular(30),
       onTap: () {
         setState(() {
           _selectedView = view;
         });
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
+        duration:
+            const Duration(milliseconds: 180),
         padding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 10,
         ),
         decoration: BoxDecoration(
-          color: selected ? _purple : Colors.white,
-          borderRadius: BorderRadius.circular(30),
+          color: selected
+              ? colors.primary
+              : colors.surface,
+          borderRadius:
+              BorderRadius.circular(30),
           border: Border.all(
             color: selected
-                ? _purple
-                : Colors.grey.shade300,
+                ? colors.primary
+                : colors.outlineVariant,
           ),
         ),
         child: Row(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
             Icon(
               icon,
               size: 18,
               color: selected
-                  ? _gold
-                  : _purple,
+                  ? colors.onPrimary
+                  : colors.primary,
             ),
             const SizedBox(width: 7),
             Text(
               label,
               style: TextStyle(
                 color: selected
-                    ? Colors.white
-                    : _darkPurple,
-                fontWeight: FontWeight.w600,
+                    ? colors.onPrimary
+                    : colors.onSurface,
+                fontWeight:
+                    FontWeight.w600,
               ),
             ),
             const SizedBox(width: 7),
             Container(
-              constraints: const BoxConstraints(
+              constraints:
+                  const BoxConstraints(
                 minWidth: 24,
               ),
               height: 24,
               alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(
+              padding:
+                  const EdgeInsets.symmetric(
                 horizontal: 6,
               ),
               decoration: BoxDecoration(
                 color: selected
-                    ? Colors.white.withValues(alpha: 0.16)
-                    : const Color(0xFFF0E8F5),
+                    ? colors.onPrimary
+                        .withValues(
+                          alpha: 0.15,
+                        )
+                    : colors.primary
+                        .withValues(
+                          alpha: 0.12,
+                        ),
                 borderRadius:
                     BorderRadius.circular(20),
               ),
@@ -357,10 +409,11 @@ class _CourseRecommendationsScreenState
                 '$count',
                 style: TextStyle(
                   color: selected
-                      ? Colors.white
-                      : _purple,
+                      ? colors.onPrimary
+                      : colors.primary,
                   fontSize: 12,
-                  fontWeight: FontWeight.bold,
+                  fontWeight:
+                      FontWeight.bold,
                 ),
               ),
             ),
@@ -372,10 +425,14 @@ class _CourseRecommendationsScreenState
 
   Widget _buildSelectedContent(
     BuildContext context, {
-    required List<CoursePriorityResult> recommendedNext,
-    required List<DegreeAuditItem> remainingRequirements,
-    required List<CourseEligibilityResult> readyNow,
-    required List<CourseEligibilityResult> later,
+    required List<CoursePriorityResult>
+        recommendedNext,
+    required List<DegreeAuditItem>
+        remainingRequirements,
+    required List<CourseEligibilityResult>
+        readyNow,
+    required List<CourseEligibilityResult>
+        later,
   }) {
     switch (_selectedView) {
       case RecommendationView.recommended:
@@ -404,13 +461,18 @@ class _CourseRecommendationsScreenState
     }
   }
 
-  Widget _sectionHeader({
+  Widget _sectionHeader(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String subtitle,
   }) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 15),
+      padding:
+          const EdgeInsets.only(bottom: 15),
       child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
@@ -419,13 +481,16 @@ class _CourseRecommendationsScreenState
             width: 45,
             height: 45,
             decoration: BoxDecoration(
-              color: const Color(0xFFF0E8F5),
+              color: colors.primary
+                  .withValues(
+                    alpha: 0.12,
+                  ),
               borderRadius:
                   BorderRadius.circular(13),
             ),
             child: Icon(
               icon,
-              color: _purple,
+              color: colors.primary,
             ),
           ),
           const SizedBox(width: 13),
@@ -436,17 +501,20 @@ class _CourseRecommendationsScreenState
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 21,
-                    fontWeight: FontWeight.bold,
-                    color: _darkPurple,
+                    fontWeight:
+                        FontWeight.bold,
+                    color:
+                        colors.onSurface,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: Colors.grey.shade700,
+                    color: colors
+                        .onSurfaceVariant,
                   ),
                 ),
               ],
@@ -461,10 +529,15 @@ class _CourseRecommendationsScreenState
     BuildContext context,
     List<CoursePriorityResult> results,
   ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
         _sectionHeader(
+          context,
           icon: Icons.auto_awesome,
           title: 'Recommended Next',
           subtitle:
@@ -472,65 +545,97 @@ class _CourseRecommendationsScreenState
         ),
         if (results.isEmpty)
           _emptyState(
+            context,
             'No course recommendations are available.',
           ),
         ...List.generate(
           results.length,
           (index) {
-            final result = results[index];
+            final result =
+                results[index];
 
             final eligibleNow =
                 result.eligibility.status ==
-                    EligibilityStatus.eligible;
+                    EligibilityStatus
+                        .eligible;
 
             return _courseCard(
+              context,
               leading: Container(
                 width: 44,
                 height: 44,
-                alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: _purple,
+                alignment:
+                    Alignment.center,
+                decoration: BoxDecoration(
+                  color: colors.primary,
                   shape: BoxShape.circle,
                 ),
                 child: Text(
                   '${index + 1}',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
+                  style: TextStyle(
+                    color:
+                        colors.onPrimary,
+                    fontWeight:
+                        FontWeight.bold,
                   ),
                 ),
               ),
               code: result.course.code,
               title: result.course.title,
-              credits: result.course.credits,
+              credits:
+                  result.course.credits,
               badge: eligibleNow
                   ? 'Eligible Now'
                   : 'After Current Term',
-              badgeColor: eligibleNow
-                  ? Colors.green.shade700
-                  : Colors.orange.shade800,
+              badgeColor: _statusColor(
+                context,
+                eligibleNow
+                    ? _RecommendationStatus
+                        .success
+                    : _RecommendationStatus
+                        .warning,
+              ),
               body: Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Why recommended',
                     style: TextStyle(
-                      fontWeight: FontWeight.bold,
+                      fontWeight:
+                          FontWeight.bold,
+                      color:
+                          colors.onSurface,
                     ),
                   ),
                   const SizedBox(height: 6),
                   ...result.reasons.map(
                     (reason) => Padding(
                       padding:
-                          const EdgeInsets.only(bottom: 4),
+                          const EdgeInsets
+                              .only(
+                        bottom: 4,
+                      ),
                       child: Row(
                         crossAxisAlignment:
-                            CrossAxisAlignment.start,
+                            CrossAxisAlignment
+                                .start,
                         children: [
-                          const Text('• '),
+                          Text(
+                            '• ',
+                            style: TextStyle(
+                              color: colors
+                                  .onSurfaceVariant,
+                            ),
+                          ),
                           Expanded(
-                            child: Text(reason),
+                            child: Text(
+                              reason,
+                              style: TextStyle(
+                                color: colors
+                                    .onSurfaceVariant,
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -550,27 +655,38 @@ class _CourseRecommendationsScreenState
     List<DegreeAuditItem> requirements,
   ) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          icon: Icons.assignment_outlined,
+          context,
+          icon:
+              Icons.assignment_outlined,
           title: 'Still Needed',
           subtitle:
               'Official requirements that are not yet complete.',
         ),
         if (requirements.isEmpty)
           _emptyState(
+            context,
             'No remaining degree requirements.',
           ),
         ...requirements.map(
           (item) {
-            final requirement = item.requirement;
+            final requirement =
+                item.requirement;
 
             return _requirementCard(
+              context,
               item,
-              title: requirement.title,
-              category: requirement.category,
-              message: _requirementMessage(item),
+              title:
+                  requirement.title,
+              category:
+                  requirement.category,
+              message:
+                  _requirementMessage(
+                item,
+              ),
             );
           },
         ),
@@ -582,33 +698,52 @@ class _CourseRecommendationsScreenState
     BuildContext context,
     List<CourseEligibilityResult> results,
   ) {
+    final success =
+        _statusColor(
+      context,
+      _RecommendationStatus.success,
+    );
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          icon: Icons.check_circle_outline,
+          context,
+          icon:
+              Icons.check_circle_outline,
           title: 'Eligible Now',
           subtitle:
               'Courses whose prerequisites are already satisfied.',
         ),
         if (results.isEmpty)
           _emptyState(
+            context,
             'No courses are currently eligible.',
           ),
         ...results.map(
           (result) => _courseCard(
+            context,
             leading: _statusIcon(
               Icons.check,
-              Colors.green.shade700,
+              success,
             ),
             code: result.course.code,
             title: result.course.title,
-            credits: result.course.credits,
+            credits:
+                result.course.credits,
             badge: 'Eligible Now',
-            badgeColor: Colors.green.shade700,
+            badgeColor: success,
             body: result.reason == null
                 ? null
-                : Text(result.reason!),
+                : Text(
+                    result.reason!,
+                    style: TextStyle(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .onSurfaceVariant,
+                    ),
+                  ),
           ),
         ),
       ],
@@ -623,7 +758,8 @@ class _CourseRecommendationsScreenState
         .where(
           (result) =>
               result.status ==
-              EligibilityStatus.eligibleAfterCurrentTerm,
+              EligibilityStatus
+                  .eligibleAfterCurrentTerm,
         )
         .toList();
 
@@ -631,7 +767,8 @@ class _CourseRecommendationsScreenState
         .where(
           (result) =>
               result.status ==
-              EligibilityStatus.requiresPermission,
+              EligibilityStatus
+                  .requiresPermission,
         )
         .toList();
 
@@ -643,62 +780,85 @@ class _CourseRecommendationsScreenState
         )
         .toList();
 
+    final warning = _statusColor(
+      context,
+      _RecommendationStatus.warning,
+    );
+    final info = _statusColor(
+      context,
+      _RecommendationStatus.info,
+    );
+    final neutral = _statusColor(
+      context,
+      _RecommendationStatus.neutral,
+    );
+
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
       children: [
         _sectionHeader(
+          context,
           icon: Icons.schedule,
           title: 'Later',
           subtitle:
               'Courses that require current coursework, permission, or additional prerequisites.',
         ),
-
         if (afterCurrentTerm.isNotEmpty) ...[
           _subheading(
+            context,
             'After Current Semester',
           ),
           ...afterCurrentTerm.map(
             (result) => _laterCard(
+              context,
               result,
-              badge: 'After Current Term',
-              color: Colors.orange.shade800,
+              badge:
+                  'After Current Term',
+              color: warning,
               icon: Icons.schedule,
             ),
           ),
           const SizedBox(height: 18),
         ],
-
         if (permission.isNotEmpty) ...[
           _subheading(
+            context,
             'Instructor Permission',
           ),
           ...permission.map(
             (result) => _laterCard(
+              context,
               result,
-              badge: 'Permission Required',
-              color: Colors.blue.shade700,
-              icon: Icons.person_outline,
+              badge:
+                  'Permission Required',
+              color: info,
+              icon:
+                  Icons.person_outline,
             ),
           ),
           const SizedBox(height: 18),
         ],
-
         if (blocked.isNotEmpty) ...[
           _subheading(
+            context,
             'Not Yet Eligible',
           ),
           ...blocked.map(
             (result) => _laterCard(
+              context,
               result,
-              badge: 'Prerequisites Needed',
-              color: Colors.grey.shade700,
-              icon: Icons.lock_outline,
+              badge:
+                  'Prerequisites Needed',
+              color: neutral,
+              icon:
+                  Icons.lock_outline,
             ),
           ),
         ],
-
         if (results.isEmpty)
           _emptyState(
+            context,
             'No later courses to display.',
           ),
       ],
@@ -706,6 +866,7 @@ class _CourseRecommendationsScreenState
   }
 
   Widget _laterCard(
+    BuildContext context,
     CourseEligibilityResult result, {
     required String badge,
     required Color color,
@@ -713,7 +874,9 @@ class _CourseRecommendationsScreenState
   }) {
     String? extraText;
 
-    if (result.missingPrerequisites.isNotEmpty) {
+    if (result
+        .missingPrerequisites
+        .isNotEmpty) {
       extraText =
           'Missing: ${result.missingPrerequisites.join(', ')}';
     } else if (result.reason != null) {
@@ -721,6 +884,7 @@ class _CourseRecommendationsScreenState
     }
 
     return _courseCard(
+      context,
       leading: _statusIcon(
         icon,
         color,
@@ -730,12 +894,21 @@ class _CourseRecommendationsScreenState
       credits: result.course.credits,
       badge: badge,
       badgeColor: color,
-      body:
-          extraText == null ? null : Text(extraText),
+      body: extraText == null
+          ? null
+          : Text(
+              extraText,
+              style: TextStyle(
+                color: Theme.of(context)
+                    .colorScheme
+                    .onSurfaceVariant,
+              ),
+            ),
     );
   }
 
-  Widget _courseCard({
+  Widget _courseCard(
+    BuildContext context, {
     required Widget leading,
     required String code,
     required String title,
@@ -744,8 +917,12 @@ class _CourseRecommendationsScreenState
     required Color badgeColor,
     Widget? body,
   }) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin:
+          const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(17),
         child: Row(
@@ -766,24 +943,34 @@ class _CourseRecommendationsScreenState
                       Expanded(
                         child: Text(
                           code,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 17,
                             fontWeight:
                                 FontWeight.bold,
+                            color:
+                                colors.onSurface,
                           ),
                         ),
                       ),
                       Text(
                         '${credits.toInt()} cr',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight:
                               FontWeight.bold,
+                          color:
+                              colors.onSurface,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 3),
-                  Text(title),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: colors
+                          .onSurfaceVariant,
+                    ),
+                  ),
                   const SizedBox(height: 9),
                   _badge(
                     badge,
@@ -803,13 +990,23 @@ class _CourseRecommendationsScreenState
   }
 
   Widget _requirementCard(
+    BuildContext context,
     DegreeAuditItem item, {
     required String title,
     required String category,
     required String message,
   }) {
+    final colors =
+        Theme.of(context).colorScheme;
+
+    final warning = _statusColor(
+      context,
+      _RecommendationStatus.warning,
+    );
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin:
+          const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(17),
         child: Row(
@@ -818,7 +1015,7 @@ class _CourseRecommendationsScreenState
           children: [
             _statusIcon(
               Icons.priority_high,
-              Colors.orange.shade800,
+              warning,
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -833,10 +1030,12 @@ class _CourseRecommendationsScreenState
                       Expanded(
                         child: Text(
                           title,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight:
                                 FontWeight.bold,
+                            color:
+                                colors.onSurface,
                           ),
                         ),
                       ),
@@ -844,9 +1043,11 @@ class _CourseRecommendationsScreenState
                         _requirementCreditLabel(
                           item,
                         ),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontWeight:
                               FontWeight.bold,
+                          color:
+                              colors.onSurface,
                         ),
                       ),
                     ],
@@ -855,19 +1056,29 @@ class _CourseRecommendationsScreenState
                   Text(
                     category,
                     style: TextStyle(
-                      color: Colors.grey.shade600,
+                      color: colors
+                          .onSurfaceVariant,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  Text(message),
-                  if (item.requirement.courseCodes
+                  Text(
+                    message,
+                    style: TextStyle(
+                      color: colors
+                          .onSurfaceVariant,
+                    ),
+                  ),
+                  if (item.requirement
+                      .courseCodes
                       .isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      item.requirement.courseCodes
+                      item.requirement
+                          .courseCodes
                           .join(' / '),
-                      style: const TextStyle(
-                        color: _purple,
+                      style: TextStyle(
+                        color:
+                            colors.primary,
                         fontWeight:
                             FontWeight.bold,
                       ),
@@ -885,7 +1096,8 @@ class _CourseRecommendationsScreenState
   String _requirementCreditLabel(
     DegreeAuditItem item,
   ) {
-    final requirement = item.requirement;
+    final requirement =
+        item.requirement;
 
     if (requirement.type ==
         RequirementType.creditHours) {
@@ -903,7 +1115,8 @@ class _CourseRecommendationsScreenState
   String _requirementMessage(
     DegreeAuditItem item,
   ) {
-    final requirement = item.requirement;
+    final requirement =
+        item.requirement;
 
     switch (requirement.type) {
       case RequirementType.requiredCourse:
@@ -938,13 +1151,17 @@ class _CourseRecommendationsScreenState
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
-        padding: const EdgeInsets.symmetric(
+        padding:
+            const EdgeInsets.symmetric(
           horizontal: 10,
           vertical: 5,
         ),
         decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.10),
-          borderRadius: BorderRadius.circular(20),
+          color: color.withValues(
+            alpha: 0.14,
+          ),
+          borderRadius:
+              BorderRadius.circular(20),
         ),
         child: Text(
           text,
@@ -966,8 +1183,11 @@ class _CourseRecommendationsScreenState
       width: 44,
       height: 44,
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(
+          alpha: 0.14,
+        ),
+        borderRadius:
+            BorderRadius.circular(12),
       ),
       child: Icon(
         icon,
@@ -976,67 +1196,136 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _subheading(String text) {
+  Widget _subheading(
+    BuildContext context,
+    String text,
+  ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Padding(
-      padding: const EdgeInsets.only(
-        bottom: 10,
-      ),
+      padding:
+          const EdgeInsets.only(bottom: 10),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 17,
           fontWeight: FontWeight.bold,
-          color: _darkPurple,
+          color: colors.onSurface,
         ),
       ),
     );
   }
 
-  Widget _emptyState(String text) {
+  Widget _emptyState(
+    BuildContext context,
+    String text,
+  ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color:
+            colors.surfaceContainerHighest
+                .withValues(alpha: 0.45),
+        borderRadius:
+            BorderRadius.circular(18),
         border: Border.all(
-          color: Colors.grey.shade200,
+          color: colors.outlineVariant,
         ),
       ),
       child: Text(
         text,
         textAlign: TextAlign.center,
         style: TextStyle(
-          color: Colors.grey.shade700,
+          color: colors.onSurfaceVariant,
         ),
       ),
     );
   }
 
-  Widget _buildDisclaimer() {
+  Widget _buildDisclaimer(
+    BuildContext context,
+  ) {
+    final colors =
+        Theme.of(context).colorScheme;
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF0E8F5),
-        borderRadius: BorderRadius.circular(16),
+        color: colors.primary.withValues(
+          alpha: 0.10,
+        ),
+        borderRadius:
+            BorderRadius.circular(16),
+        border: Border.all(
+          color: colors.primary.withValues(
+            alpha: 0.18,
+          ),
+        ),
       ),
-      child: const Row(
+      child: Row(
         crossAxisAlignment:
             CrossAxisAlignment.start,
         children: [
           Icon(
             Icons.info_outline,
-            color: _purple,
+            color: colors.primary,
           ),
-          SizedBox(width: 11),
+          const SizedBox(width: 11),
           Expanded(
             child: Text(
               'Actual enrollment also depends on course availability, '
               'section times, open seats, and official advising requirements.',
+              style: TextStyle(
+                color:
+                    colors.onSurfaceVariant,
+              ),
             ),
           ),
         ],
       ),
     );
   }
+
+  Color _statusColor(
+    BuildContext context,
+    _RecommendationStatus status,
+  ) {
+    final dark =
+        Theme.of(context).brightness ==
+            Brightness.dark;
+    final colors =
+        Theme.of(context).colorScheme;
+
+    switch (status) {
+      case _RecommendationStatus.success:
+        return dark
+            ? Colors.green.shade300
+            : Colors.green.shade700;
+
+      case _RecommendationStatus.warning:
+        return dark
+            ? Colors.orange.shade300
+            : Colors.orange.shade800;
+
+      case _RecommendationStatus.info:
+        return dark
+            ? Colors.blue.shade300
+            : Colors.blue.shade700;
+
+      case _RecommendationStatus.neutral:
+        return colors.onSurfaceVariant;
+    }
+  }
+}
+
+enum _RecommendationStatus {
+  success,
+  warning,
+  info,
+  neutral,
 }
