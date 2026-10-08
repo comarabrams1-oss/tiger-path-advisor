@@ -2,6 +2,7 @@ import '../models/course.dart';
 import '../models/degree_program.dart';
 import '../models/student.dart';
 import '../models/student_course.dart';
+import 'course_completion_service.dart';
 
 enum EligibilityStatus {
   eligible,
@@ -25,6 +26,7 @@ class CourseEligibilityResult {
 }
 
 class CourseEligibilityService {
+  final CourseCompletionService _completion = CourseCompletionService();
   List<CourseEligibilityResult> checkProgramCourses(
     Student student,
     DegreeProgram program,
@@ -32,62 +34,54 @@ class CourseEligibilityService {
   ) {
     final requiredCourseCodes = program.requirements
         .where(
-          (requirement) =>
-              requirement.type == RequirementType.requiredCourse,
+          (requirement) => requirement.type == RequirementType.requiredCourse,
         )
         .expand((requirement) => requirement.courseCodes)
         .toSet();
 
-    final completedCodes = student.courses
-        .where(
-          (course) => course.status == CourseStatus.completed,
-        )
-        .map((course) => course.courseCode)
-        .toSet();
+    final completedCodes = _completion.satisfiedCodes(student, program);
 
     final inProgressCodes = student.courses
-        .where(
-          (course) => course.status == CourseStatus.inProgress,
-        )
-        .map((course) => course.courseCode)
+        .where((course) => course.status == CourseStatus.inProgress)
+        .map((course) => _completion.normalizeCode(course.courseCode))
         .toSet();
 
     final remainingCourses = catalog.where(
       (course) =>
-          requiredCourseCodes.contains(course.code) &&
-          !completedCodes.contains(course.code) &&
-          !inProgressCodes.contains(course.code),
+          requiredCourseCodes.any(
+            (code) =>
+                _completion.normalizeCode(code) ==
+                _completion.normalizeCode(course.code),
+          ) &&
+          !completedCodes.contains(_completion.normalizeCode(course.code)) &&
+          !inProgressCodes.contains(_completion.normalizeCode(course.code)),
     );
 
     return remainingCourses
-        .map(
-          (course) => checkCourse(
-            student,
-            course,
-          ),
-        )
+        .map((course) => checkCourse(student, course, program: program))
         .toList();
   }
 
   CourseEligibilityResult checkCourse(
     Student student,
-    Course course,
-  ) {
-    final completedCodes = student.courses
-        .where(
-          (studentCourse) =>
-              studentCourse.status == CourseStatus.completed,
-        )
-        .map((studentCourse) => studentCourse.courseCode)
-        .toSet();
+    Course course, {
+    DegreeProgram? program,
+  }) {
+    CourseCompletionStatus statusFor(String code) => _completion.evaluate(
+      student,
+      code,
+      minimumGrade: program == null
+          ? null
+          : _completion.minimumGradeForCourse(program, code),
+    );
 
-    final inProgressCodes = student.courses
-        .where(
-          (studentCourse) =>
-              studentCourse.status == CourseStatus.inProgress,
-        )
-        .map((studentCourse) => studentCourse.courseCode)
-        .toSet();
+    if (statusFor(course.code) == CourseCompletionStatus.needsReview) {
+      return CourseEligibilityResult(
+        course: course,
+        status: EligibilityStatus.blocked,
+        reason: 'Previous grade needs review before recommending a retake.',
+      );
+    }
 
     if (!_meetsClassStanding(
       student.classification,
@@ -105,7 +99,7 @@ class CourseEligibilityService {
 
     for (final group in course.prerequisiteGroups) {
       final completedRequirement = group.any(
-        completedCodes.contains,
+        (code) => statusFor(code) == CourseCompletionStatus.satisfied,
       );
 
       if (completedRequirement) {
@@ -113,7 +107,7 @@ class CourseEligibilityService {
       }
 
       final inProgressRequirement = group.any(
-        inProgressCodes.contains,
+        (code) => statusFor(code) == CourseCompletionStatus.inProgress,
       );
 
       if (inProgressRequirement) {
@@ -130,8 +124,7 @@ class CourseEligibilityService {
           course: course,
           status: EligibilityStatus.requiresPermission,
           missingPrerequisites: missing,
-          reason:
-              'Missing prerequisite requirements, but instructor permission may be allowed.',
+          reason: 'Missing prerequisite requirements, but instructor permission may be allowed.',
         );
       }
 
@@ -139,7 +132,7 @@ class CourseEligibilityService {
         course: course,
         status: EligibilityStatus.blocked,
         missingPrerequisites: missing,
-        reason: 'Prerequisites have not been completed.',
+        reason: 'Prerequisites need a qualifying passing grade. Unknown grades need review.',
       );
     }
 
@@ -147,32 +140,32 @@ class CourseEligibilityService {
       return CourseEligibilityResult(
         course: course,
         status: EligibilityStatus.eligibleAfterCurrentTerm,
-        reason:
-            'Eligible if the current prerequisite course is completed successfully.',
+        reason: 'Eligible if the current prerequisite course is completed successfully.',
       );
     }
 
     return CourseEligibilityResult(
       course: course,
       status: EligibilityStatus.eligible,
-      reason: 'Prerequisites completed.',
+      reason:
+          statusFor(course.code) != CourseCompletionStatus.satisfied &&
+              student.courses.any(
+                (attempt) =>
+                    _completion.normalizeCode(attempt.courseCode) ==
+                        _completion.normalizeCode(course.code) &&
+                    attempt.status == CourseStatus.completed,
+              )
+          ? 'Retake or grade review needed: this course has no qualifying completed attempt.'
+          : 'Prerequisites completed.',
     );
   }
 
-  bool _meetsClassStanding(
-    String currentStanding,
-    String? requiredStanding,
-  ) {
+  bool _meetsClassStanding(String currentStanding, String? requiredStanding) {
     if (requiredStanding == null) {
       return true;
     }
 
-    final standings = {
-      'Freshman': 1,
-      'Sophomore': 2,
-      'Junior': 3,
-      'Senior': 4,
-    };
+    final standings = {'Freshman': 1, 'Sophomore': 2, 'Junior': 3, 'Senior': 4};
 
     final current = standings[currentStanding];
     final required = standings[requiredStanding];
