@@ -3,6 +3,7 @@ import '../models/degree_program.dart';
 import '../models/student.dart';
 import '../models/student_course.dart';
 import 'course_eligibility_service.dart';
+import 'course_completion_service.dart';
 
 class CoursePriorityResult {
   final Course course;
@@ -29,27 +30,18 @@ class CoursePriorityService {
     DegreeProgram program,
     List<Course> catalog,
   ) {
-    final eligibilityResults =
-        _eligibilityService.checkProgramCourses(
+    final eligibilityResults = _eligibilityService.checkProgramCourses(
       student,
       program,
       catalog,
     );
 
-    final completedCodes = student.courses
-        .where(
-          (course) =>
-              course.status == CourseStatus.completed,
-        )
-        .map((course) => course.courseCode)
-        .toSet();
+    final completion = CourseCompletionService();
+    final completedCodes = completion.satisfiedCodes(student, program);
 
     final inProgressCodes = student.courses
-        .where(
-          (course) =>
-              course.status == CourseStatus.inProgress,
-        )
-        .map((course) => course.courseCode)
+        .where((course) => course.status == CourseStatus.inProgress)
+        .map((course) => completion.normalizeCode(course.courseCode))
         .toSet();
 
     final results = <CoursePriorityResult>[];
@@ -60,35 +52,29 @@ class CoursePriorityService {
       var score = 20;
 
       final reasons = <String>[
-        'Required for your Computer Science degree',
+        'Required for your ${program.name} degree',
+        if (eligibility.reason?.startsWith('Retake') ?? false)
+          eligibility.reason!,
       ];
 
       switch (eligibility.status) {
         case EligibilityStatus.eligible:
           score += 40;
-          reasons.add(
-            'Prerequisites are already completed',
-          );
+          reasons.add('Prerequisites are already completed');
           break;
 
         case EligibilityStatus.eligibleAfterCurrentTerm:
           score += 25;
-          reasons.add(
-            'Can become available after your current semester',
-          );
+          reasons.add('Can become available after your current semester');
           break;
 
         case EligibilityStatus.requiresPermission:
           score += 10;
-          reasons.add(
-            'May be available with instructor permission',
-          );
+          reasons.add('May be available with instructor permission');
           break;
 
         case EligibilityStatus.blocked:
-          reasons.add(
-            'Currently blocked by prerequisites or class standing',
-          );
+          reasons.add('Currently blocked by prerequisites or class standing');
           break;
       }
 
@@ -102,9 +88,7 @@ class CoursePriorityService {
       if (unlocks.isNotEmpty) {
         score += unlocks.length * 10;
 
-        reasons.add(
-          'Helps unlock ${unlocks.join(', ')}',
-        );
+        reasons.add('Helps unlock ${unlocks.join(', ')}');
       }
 
       results.add(
@@ -118,9 +102,7 @@ class CoursePriorityService {
       );
     }
 
-    results.sort(
-      (a, b) => b.score.compareTo(a.score),
-    );
+    results.sort((a, b) => b.score.compareTo(a.score));
 
     return results;
   }
@@ -140,8 +122,7 @@ class CoursePriorityService {
         continue;
       }
 
-      final dependsOnCourse =
-          course.prerequisiteGroups.any(
+      final dependsOnCourse = course.prerequisiteGroups.any(
         (group) => group.contains(courseCode),
       );
 

@@ -1,0 +1,74 @@
+name: Mobile builds
+
+on:
+  push:
+    branches:
+      - fix/grade-aware-planning
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-builds-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter --version
+      - run: flutter pub get
+      - run: flutter analyze --no-fatal-infos
+      - run: flutter test test/academic_rules_test.dart
+      - run: flutter build apk --debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tigerpath-android-test-apk
+          path: build/app/outputs/flutter-apk/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
+
+  ios:
+    runs-on: macos-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - run: flutter --version
+      - run: xcodebuild -version
+      - run: flutter pub get
+      - run: flutter test test/academic_rules_test.dart
+      - name: Build unsigned iPhone app
+        run: flutter build ios --release --no-codesign
+      - name: Package unsigned iPhone app
+        run: ditto -c -k --keepParent build/ios/iphoneos/Runner.app tigerpath-ios-unsigned.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tigerpath-ios-unsigned
+          path: tigerpath-ios-unsigned.zip
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build simulator app
+        run: flutter build ios --simulator --debug
+      - name: Package simulator app
+        run: ditto -c -k --keepParent build/ios/iphonesimulator/Runner.app tigerpath-ios-simulator.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tigerpath-ios-simulator
+          path: tigerpath-ios-simulator.zip
+          if-no-files-found: error
+          retention-days: 14

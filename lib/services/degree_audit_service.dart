@@ -1,12 +1,8 @@
 import '../models/degree_program.dart';
 import '../models/student.dart';
-import '../models/student_course.dart';
+import 'course_completion_service.dart';
 
-enum RequirementStatus {
-  completed,
-  inProgress,
-  remaining,
-}
+enum RequirementStatus { completed, inProgress, remaining }
 
 class DegreeAuditItem {
   final DegreeRequirement requirement;
@@ -23,15 +19,10 @@ class DegreeAuditItem {
 }
 
 class DegreeAuditService {
-  List<DegreeAuditItem> auditProgram(
-    Student student,
-    DegreeProgram program,
-  ) {
+  final CourseCompletionService _completion = CourseCompletionService();
+  List<DegreeAuditItem> auditProgram(Student student, DegreeProgram program) {
     return program.requirements
-        .map(
-          (requirement) =>
-              _auditRequirement(student, requirement),
-        )
+        .map((requirement) => _auditRequirement(student, requirement))
         .toList();
   }
 
@@ -41,37 +32,25 @@ class DegreeAuditService {
   ) {
     switch (requirement.type) {
       case RequirementType.requiredCourse:
-        return _auditRequiredCourse(
-          student,
-          requirement,
-        );
+        return _auditRequiredCourse(student, requirement);
 
       case RequirementType.oneOfCourses:
-        return _auditOneOfCourses(
-          student,
-          requirement,
-        );
+        return _auditOneOfCourses(student, requirement);
 
       case RequirementType.creditHours:
-        return _auditCreditHours(
-          student,
-          requirement,
-        );
+        return _auditCreditHours(student, requirement);
 
       case RequirementType.totalCredits:
         return DegreeAuditItem(
           requirement: requirement,
-          status: student.earnedCredits >=
-                  requirement.creditsRequired
+          status: student.earnedCredits >= requirement.creditsRequired
               ? RequirementStatus.completed
-              : student.earnedCredits +
-                          student.inProgressCredits >=
-                      requirement.creditsRequired
-                  ? RequirementStatus.inProgress
-                  : RequirementStatus.remaining,
+              : student.earnedCredits + student.inProgressCredits >=
+                    requirement.creditsRequired
+              ? RequirementStatus.inProgress
+              : RequirementStatus.remaining,
           completedCredits: student.earnedCredits,
-          inProgressCredits:
-              student.inProgressCredits,
+          inProgressCredits: student.inProgressCredits,
         );
 
       case RequirementType.minimumGpa:
@@ -98,72 +77,43 @@ class DegreeAuditService {
     Student student,
     DegreeRequirement requirement,
   ) {
-    for (final studentCourse in student.courses) {
-      if (!requirement.courseCodes
-          .contains(studentCourse.courseCode)) {
-        continue;
-      }
-
-      if (studentCourse.status == CourseStatus.completed &&
-          _meetsMinimumGrade(
-            studentCourse.grade,
-            requirement.minimumGrade,
-          )) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.completed,
-          completedCredits:
-              requirement.creditsRequired,
-        );
-      }
-
-      if (studentCourse.status ==
-          CourseStatus.inProgress) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.inProgress,
-          inProgressCredits:
-              requirement.creditsRequired,
-        );
-      }
-    }
-
-    return DegreeAuditItem(
-      requirement: requirement,
-      status: RequirementStatus.remaining,
-    );
+    return _auditCourseOptions(student, requirement);
   }
 
   DegreeAuditItem _auditOneOfCourses(
     Student student,
     DegreeRequirement requirement,
   ) {
-    for (final studentCourse in student.courses) {
-      if (!requirement.courseCodes
-          .contains(studentCourse.courseCode)) {
-        continue;
-      }
+    return _auditCourseOptions(student, requirement);
+  }
 
-      if (studentCourse.status == CourseStatus.completed) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.completed,
-          completedCredits:
-              requirement.creditsRequired,
-        );
-      }
-
-      if (studentCourse.status ==
-          CourseStatus.inProgress) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.inProgress,
-          inProgressCredits:
-              requirement.creditsRequired,
-        );
-      }
+  DegreeAuditItem _auditCourseOptions(
+    Student student,
+    DegreeRequirement requirement,
+  ) {
+    final statuses = requirement.courseCodes
+        .map(
+          (code) => _completion.evaluate(
+            student,
+            code,
+            minimumGrade: requirement.minimumGrade,
+          ),
+        )
+        .toList();
+    if (statuses.contains(CourseCompletionStatus.satisfied)) {
+      return DegreeAuditItem(
+        requirement: requirement,
+        status: RequirementStatus.completed,
+        completedCredits: requirement.creditsRequired,
+      );
     }
-
+    if (statuses.contains(CourseCompletionStatus.inProgress)) {
+      return DegreeAuditItem(
+        requirement: requirement,
+        status: RequirementStatus.inProgress,
+        inProgressCredits: requirement.creditsRequired,
+      );
+    }
     return DegreeAuditItem(
       requirement: requirement,
       status: RequirementStatus.remaining,
@@ -177,19 +127,19 @@ class DegreeAuditService {
     double completed = 0;
     double inProgress = 0;
 
-    for (final course in student.courses) {
-      if (!requirement.courseCodes.contains(course.courseCode)) {
-        continue;
-      }
-
-      final credits = _creditsForCourse(
-        course.courseCode,
+    final codes = requirement.courseCodes
+        .map(_completion.normalizeCode)
+        .toSet();
+    for (final code in codes) {
+      final status = _completion.evaluate(
+        student,
+        code,
+        minimumGrade: requirement.minimumGrade,
       );
-
-      if (course.status == CourseStatus.completed) {
+      final credits = _creditsForCourse(code);
+      if (status == CourseCompletionStatus.satisfied) {
         completed += credits;
-      } else if (course.status ==
-          CourseStatus.inProgress) {
+      } else if (status == CourseCompletionStatus.inProgress) {
         inProgress += credits;
       }
     }
@@ -203,8 +153,7 @@ class DegreeAuditService {
       );
     }
 
-    if (completed + inProgress >=
-        requirement.creditsRequired) {
+    if (completed + inProgress >= requirement.creditsRequired) {
       return DegreeAuditItem(
         requirement: requirement,
         status: RequirementStatus.inProgress,
@@ -242,83 +191,33 @@ class DegreeAuditService {
     return credits[code] ?? 0;
   }
 
-  bool _meetsMinimumGrade(
-    String? grade,
-    String? minimumGrade,
-  ) {
-    if (minimumGrade == null) {
-      return true;
-    }
-
-    if (grade == null) {
-      return false;
-    }
-
-    final gradeValues = {
-      'A+': 12,
-      'A': 11,
-      'A-': 10,
-      'B+': 9,
-      'B': 8,
-      'B-': 7,
-      'C+': 6,
-      'C': 5,
-      'C-': 4,
-      'D+': 3,
-      'D': 2,
-      'D-': 1,
-      'F': 0,
-    };
-
-    final studentGrade =
-        gradeValues[grade.toUpperCase()];
-    final requiredGrade =
-        gradeValues[minimumGrade.toUpperCase()];
-
-    if (studentGrade == null ||
-        requiredGrade == null) {
-      return false;
-    }
-
-    return studentGrade >= requiredGrade;
-  }
-
   List<DegreeAuditItem> completedRequirements(
     Student student,
     DegreeProgram program,
   ) {
-    return auditProgram(student, program)
-        .where(
-          (item) =>
-              item.status ==
-              RequirementStatus.completed,
-        )
-        .toList();
+    return auditProgram(
+      student,
+      program,
+    ).where((item) => item.status == RequirementStatus.completed).toList();
   }
 
   List<DegreeAuditItem> inProgressRequirements(
     Student student,
     DegreeProgram program,
   ) {
-    return auditProgram(student, program)
-        .where(
-          (item) =>
-              item.status ==
-              RequirementStatus.inProgress,
-        )
-        .toList();
+    return auditProgram(
+      student,
+      program,
+    ).where((item) => item.status == RequirementStatus.inProgress).toList();
   }
 
   List<DegreeAuditItem> remainingRequirements(
     Student student,
     DegreeProgram program,
   ) {
-    return auditProgram(student, program)
-        .where(
-          (item) =>
-              item.status ==
-              RequirementStatus.remaining,
-        )
-        .toList();
+    return auditProgram(
+      student,
+      program,
+    ).where((item) => item.status == RequirementStatus.remaining).toList();
   }
 }
