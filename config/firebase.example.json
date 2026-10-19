@@ -1,0 +1,11 @@
+{
+  "FIREBASE_API_KEY": "your-firebase-app-api-key-not-a-gemini-key",
+  "FIREBASE_PROJECT_ID": "your-firebase-project-id",
+  "FIREBASE_MESSAGING_SENDER_ID": "your-project-number",
+  "FIREBASE_ANDROID_APP_ID": "your-android-firebase-app-id",
+  "FIREBASE_IOS_APP_ID": "your-ios-firebase-app-id",
+  "FIREBASE_MACOS_APP_ID": "",
+  "FIREBASE_WEB_APP_ID": "",
+  "FIREBASE_RECAPTCHA_SITE_KEY": "",
+  "GEMINI_MODEL": "gemini-3.8-flash"
+}

@@ -1,4 +1,8 @@
+import '../services/current_advisor_context.dart';
+import 'academic_advisor_screen.dart';
+
 import 'package:flutter/material.dart';
+
 import '../data/cs_course_catalog.dart';
 import '../data/cs_program.dart';
 import '../data/test_student.dart';
@@ -23,18 +27,13 @@ class SemesterPlanScreen extends StatelessWidget {
     );
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Semester Plan'),
-      ),
+      appBar: AppBar(title: const Text('Semester Plan')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
           const Text(
             'Recommended Semester Plan',
-            style: TextStyle(
-              fontSize: 26,
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
@@ -51,10 +50,7 @@ class SemesterPlanScreen extends StatelessWidget {
                 children: [
                   const Text(
                     'Plan Summary',
-                    style: TextStyle(
-                      fontSize: 19,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 14),
                   Text(
@@ -65,8 +61,7 @@ class SemesterPlanScreen extends StatelessWidget {
                   LinearProgressIndicator(
                     value: plan.maxCredits == 0
                         ? 0
-                        : (plan.totalCredits / plan.maxCredits)
-                            .clamp(0.0, 1.0),
+                        : (plan.totalCredits / plan.maxCredits).clamp(0.0, 1.0),
                     minHeight: 10,
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -80,21 +75,29 @@ class SemesterPlanScreen extends StatelessWidget {
                     preferences == null
                         ? 'Using default maximum: 15 credits'
                         : 'Using your saved maximum: '
-                            '${preferences.maxCredits} credits',
+                              '${preferences.maxCredits} credits',
                   ),
                 ],
               ),
             ),
           ),
 
+          OutlinedButton.icon(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => AcademicAdvisorScreen(
+                  academicContext: currentAdvisorContext(plan: plan),
+                ),
+              ),
+            ),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Ask AI about classes I need'),
+          ),
+          const SizedBox(height: 12),
           const SizedBox(height: 30),
 
-          ...plan.items.map(
-            (item) => buildPlanItem(
-              context,
-              item,
-            ),
-          ),
+          ...plan.items.map((item) => buildPlanItem(context, item)),
 
           if (plan.items.isEmpty)
             const Card(
@@ -115,23 +118,14 @@ class SemesterPlanScreen extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        GeneratedScheduleScreen(
-                      plan: plan,
-                    ),
+                    builder: (context) => GeneratedScheduleScreen(plan: plan),
                   ),
                 );
               },
-              icon: const Icon(
-                Icons.calendar_month,
-              ),
+              icon: const Icon(Icons.calendar_month),
               label: const Padding(
-                padding: EdgeInsets.symmetric(
-                  vertical: 14,
-                ),
-                child: Text(
-                  'Generate Class Schedule',
-                ),
+                padding: EdgeInsets.symmetric(vertical: 14),
+                child: Text('Generate Class Schedule'),
               ),
             ),
 
@@ -155,12 +149,8 @@ class SemesterPlanScreen extends StatelessWidget {
     );
   }
 
-  Widget buildPlanItem(
-    BuildContext context,
-    SemesterPlanItem item,
-  ) {
-    final isCourse =
-        item.type == SemesterPlanItemType.course;
+  Widget buildPlanItem(BuildContext context, SemesterPlanItem item) {
+    final isCourse = item.type == SemesterPlanItemType.course;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
@@ -170,9 +160,7 @@ class SemesterPlanScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Icon(
-              isCourse
-                  ? Icons.menu_book_outlined
-                  : Icons.extension_outlined,
+              isCourse ? Icons.menu_book_outlined : Icons.extension_outlined,
             ),
             const SizedBox(width: 14),
 
@@ -194,8 +182,7 @@ class SemesterPlanScreen extends StatelessWidget {
                   Text(
                     item.title,
                     style: TextStyle(
-                      fontSize:
-                          item.courseCode == null ? 17 : 15,
+                      fontSize: item.courseCode == null ? 17 : 15,
                       fontWeight: item.courseCode == null
                           ? FontWeight.bold
                           : FontWeight.normal,
@@ -204,9 +191,7 @@ class SemesterPlanScreen extends StatelessWidget {
 
                   const SizedBox(height: 6),
 
-                  Text(
-                    item.category,
-                  ),
+                  Text(item.category),
 
                   const SizedBox(height: 8),
 
@@ -214,11 +199,9 @@ class SemesterPlanScreen extends StatelessWidget {
                     isCourse
                         ? 'Recommended course'
                         : item.courseCode != null
-                            ? 'Required course'
-                            : 'Requirement slot',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                    ),
+                        ? 'Required course'
+                        : 'Requirement slot',
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
 
                   if (item.projectedEligibility) ...[
@@ -233,8 +216,7 @@ class SemesterPlanScreen extends StatelessWidget {
 
                   Text(
                     item.reason,
-                    style:
-                        Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ],
               ),
@@ -244,9 +226,7 @@ class SemesterPlanScreen extends StatelessWidget {
 
             Text(
               '${item.credits.toInt()} cr',
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ],
         ),
