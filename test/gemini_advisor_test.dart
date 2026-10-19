@@ -151,13 +151,25 @@ void main() {
     expect(find.textContaining('Still needed:'), findsOneWidget);
     expect(advisor.calls, 0);
     final ask = find.widgetWithText(FilledButton, 'Ask Gemini');
-    await tester.scrollUntilVisible(ask, 300);
+    await tester.scrollUntilVisible(
+      ask,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     expect(tester.widget<FilledButton>(ask).onPressed, isNull);
     final consent = find.byType(CheckboxListTile);
-    await tester.scrollUntilVisible(consent, 400);
+    await tester.scrollUntilVisible(
+      consent,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(consent);
     await tester.pump();
-    await tester.scrollUntilVisible(ask, 300);
+    await tester.scrollUntilVisible(
+      ask,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(advisor.calls, 1);
@@ -177,16 +189,28 @@ void main() {
       ),
     );
     final consent = find.byType(CheckboxListTile);
-    await tester.scrollUntilVisible(consent, 400);
+    await tester.scrollUntilVisible(
+      consent,
+      400,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(consent);
     await tester.pump();
     final ask = find.widgetWithText(FilledButton, 'Ask Gemini');
-    await tester.scrollUntilVisible(ask, 300);
+    await tester.scrollUntilVisible(
+      ask,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(find.text('Try again.'), findsOneWidget);
     advisor.fail = false;
-    await tester.scrollUntilVisible(ask, 300);
+    await tester.scrollUntilVisible(
+      ask,
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(advisor.calls, 2);

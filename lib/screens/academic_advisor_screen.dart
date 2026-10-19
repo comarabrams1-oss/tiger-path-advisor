@@ -56,10 +56,11 @@ class _AcademicAdvisorScreenState extends State<AcademicAdvisorScreen> {
     } on AdvisorException catch (error) {
       if (mounted) setState(() => _error = error.message);
     } catch (_) {
-      if (mounted)
+      if (mounted) {
         setState(
           () => _error = 'The AI advisor is unavailable. Please try again.',
         );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
