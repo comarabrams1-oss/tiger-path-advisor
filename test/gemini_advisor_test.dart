@@ -4,10 +4,10 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../lib/screens/academic_advisor_screen.dart';
-import '../lib/services/academic_advisor_context.dart';
-import '../lib/services/current_advisor_context.dart';
-import '../lib/services/gemini_advisor_service.dart';
+import 'package:tiger_path/screens/academic_advisor_screen.dart';
+import 'package:tiger_path/services/academic_advisor_context.dart';
+import 'package:tiger_path/services/current_advisor_context.dart';
+import 'package:tiger_path/services/gemini_advisor_service.dart';
 
 void main() {
   test(
@@ -151,13 +151,13 @@ void main() {
     expect(find.textContaining('Still needed:'), findsOneWidget);
     expect(advisor.calls, 0);
     final ask = find.widgetWithText(FilledButton, 'Ask Gemini');
-    await tester.ensureVisible(ask);
+    await tester.scrollUntilVisible(ask, 300);
     expect(tester.widget<FilledButton>(ask).onPressed, isNull);
     final consent = find.byType(CheckboxListTile);
     await tester.scrollUntilVisible(consent, 400);
     await tester.tap(consent);
     await tester.pump();
-    await tester.ensureVisible(ask);
+    await tester.scrollUntilVisible(ask, 300);
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(advisor.calls, 1);
@@ -181,12 +181,12 @@ void main() {
     await tester.tap(consent);
     await tester.pump();
     final ask = find.widgetWithText(FilledButton, 'Ask Gemini');
-    await tester.ensureVisible(ask);
+    await tester.scrollUntilVisible(ask, 300);
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(find.text('Try again.'), findsOneWidget);
     advisor.fail = false;
-    await tester.ensureVisible(ask);
+    await tester.scrollUntilVisible(ask, 300);
     await tester.tap(ask);
     await tester.pumpAndSettle();
     expect(advisor.calls, 2);
