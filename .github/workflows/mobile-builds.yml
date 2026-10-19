@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - fix/grade-aware-planning
+      - feat/gemini-advisor
   workflow_dispatch:
 
 permissions:
@@ -30,7 +31,9 @@ jobs:
       - run: flutter --version
       - run: flutter pub get
       - run: flutter analyze --no-fatal-infos
-      - run: flutter test test/academic_rules_test.dart
+      - run: flutter test
+      - name: Dependency lockfile
+        run: cat pubspec.lock
       - run: flutter build apk --debug
       - uses: actions/upload-artifact@v4
         with:
@@ -51,7 +54,7 @@ jobs:
       - run: flutter --version
       - run: xcodebuild -version
       - run: flutter pub get
-      - run: flutter test test/academic_rules_test.dart
+      - run: flutter test
       - name: Build unsigned iPhone app
         run: flutter build ios --release --no-codesign
       - name: Package unsigned iPhone app
@@ -72,3 +75,4 @@ jobs:
           path: tigerpath-ios-simulator.zip
           if-no-files-found: error
           retention-days: 14
+
