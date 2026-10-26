@@ -1,4 +1,7 @@
 import 'dart:convert';
+import 'dart:io';
+
+import 'package:tiger_path/models/course_section.dart';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:tiger_path/data/test_student.dart';
@@ -40,5 +43,38 @@ void main() {
       );
       expect(recommendations[i]['openSections'], 0);
     }
+  });
+  test('question-specific offering context carries teachers and all meeting blocks within request budget', () {
+    final sections =
+        (jsonDecode(
+              File('assets/data/course_sections_spring_2027.json')
+                  .readAsStringSync(),
+            ) as List)
+            .map(
+              (json) => CourseSection.fromJson(Map<String, dynamic>.from(json)),
+            )
+            .toList();
+    final target = sections.firstWhere((s) => s.allInstructorNames.isNotEmpty);
+    final context = AdvisorContextService().build(
+      student: fictionalStudent,
+      program: benedictComputerScience2024,
+      catalog: computerScienceCourseCatalog,
+      sections: sections,
+      term: CourseSectionRepository.spring2027Term,
+      question: 'Who teaches ${target.courseCode} and when?',
+    );
+    final details = context['sectionDetails'] as List;
+    expect(details.length, 45);
+    final actual = details.firstWhere(
+      (d) =>
+          d['courseCode'] == target.courseCode &&
+          d['section'] == target.sectionNumber,
+    );
+    expect(actual['instructors'], target.allInstructorNames);
+    expect(actual['schedule'], target.scheduleDisplay);
+    expect(actual['openSeats'], target.openSeats);
+    expect(context['classification'], 'Freshman');
+    expect(utf8.encode(jsonEncode(context)).length, lessThan(40000));
+    expect(jsonEncode(context), isNot(contains(fictionalStudent.name)));
   });
 }

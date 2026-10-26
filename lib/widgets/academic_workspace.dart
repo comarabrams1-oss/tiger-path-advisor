@@ -52,12 +52,12 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final current = testStudent.courses
+    final current = activeStudent.courses
         .where((course) => course.status == CourseStatus.inProgress)
         .toList();
     final recommended = CoursePriorityService()
         .rankCourses(
-          testStudent,
+          activeStudent,
           benedictComputerScience2024,
           computerScienceCourseCatalog,
         )
@@ -231,7 +231,12 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
             onSelectionChanged: (value) => setState(() => _tab = value.first),
           ),
           const SizedBox(height: 16),
-          panels[_tab],
+          AnimatedSwitcher(
+            duration: Duration(
+              milliseconds: MediaQuery.disableAnimationsOf(context) ? 0 : 220,
+            ),
+            child: KeyedSubtree(key: ValueKey(_tab), child: panels[_tab]),
+          ),
         ] else
           LayoutBuilder(
             builder: (context, constraints) {

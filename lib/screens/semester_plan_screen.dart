@@ -16,7 +16,7 @@ class SemesterPlanScreen extends StatelessWidget {
     final maxCredits = preferences?.maxCredits ?? 15;
 
     final plan = SemesterPlanService().generatePlan(
-      student: testStudent,
+      student: activeStudent,
       program: benedictComputerScience2024,
       catalog: computerScienceCourseCatalog,
       maxCredits: maxCredits,

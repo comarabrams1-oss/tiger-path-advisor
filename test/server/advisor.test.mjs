@@ -6,7 +6,7 @@ const request = body => new Request('https://example.com/.netlify/functions/advi
 });
 const body = {messages: [{role: 'user', text: 'What classes do I need?'}], context: {
   schedule: {term: '2026-2027 - Spring', unresolved: [{courseCode:'CSC 237',reason:'Time conflict'}]},
-  classification: 'Junior', requirements: [], recommendations: [], name: 'PRIVATE NAME',
+  sectionDetails: [{courseCode:'CSC 132',instructors:['Test Instructor'],schedule:'MWF 10:00 AM'}], sectionCoverage:{included:1,total:1}, offeredCourseCodes:['CSC 132'], classification: 'Junior', requirements: [], recommendations: [], name: 'PRIVATE NAME',
 }};
 test('advisor handles disabled, validation, success and quota without leaking secrets', async () => {
   const originalFetch = globalThis.fetch;
@@ -21,6 +21,8 @@ test('advisor handles disabled, validation, success and quota without leaking se
       assert(!url.includes('test-only'));
       assert(!options.body.includes('PRIVATE NAME'));
       assert(options.body.includes('Junior'));
+      assert(options.body.includes('Test Instructor'));
+      assert(options.body.includes('MWF 10:00 AM'));
       assert(options.body.includes('Time conflict'));
       return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({answer:'Take eligible courses from your plan.',actions:[{type:'changeTheme',target:'goldBlack'},{type:'execute',target:'anything'},{type:'navigate',target:'admin'},{type:'customTheme',target:'custom',primaryHex:'#008080',accentHex:'#ff8800',darkMode:true},{type:'customTheme',target:'custom',primaryHex:'red',accentHex:'#FFFFFF',darkMode:true}]})}]}}]});
     };

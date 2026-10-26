@@ -200,3 +200,47 @@ const Student testStudent = Student(
     ),
   ],
 );
+
+/// The selected local demo record. This prototype has one active session.
+Student activeStudent = testStudent;
+
+const mockStudentEmail = 'demo.student@my.benedict.edu';
+const fictionalStudent = Student(
+  name: 'Jordan Taylor (Demo)',
+  institution: 'Benedict College',
+  major: 'Computer Science',
+  catalogYear: '2024',
+  classification: 'Freshman',
+  gpa: 3.0,
+  earnedCredits: 6,
+  inProgressCredits: 6,
+  requiredCredits: 120,
+  courses: [
+    StudentCourse(
+      courseCode: 'ENG 131',
+      grade: 'B',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'HIST 130',
+      grade: 'B',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'CSC 132',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'CSC 133',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+  ],
+);
+
+void selectDemoStudent(String? email) {
+  activeStudent = email == mockStudentEmail ? fictionalStudent : testStudent;
+}

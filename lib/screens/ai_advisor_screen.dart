@@ -22,12 +22,12 @@ class AiAdvisorScreen extends StatefulWidget {
   final AiAdvisorService? service;
   final Student student;
   final AdvisorHistoryService history;
-  const AiAdvisorScreen({
+  AiAdvisorScreen({
     super.key,
     this.service,
-    this.student = testStudent,
+    Student? student,
     this.history = const AdvisorHistoryService(),
-  });
+  }) : student = student ?? activeStudent;
   @override
   State<AiAdvisorScreen> createState() => _AiAdvisorScreenState();
 }
@@ -61,16 +61,18 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     }
   }
 
-  Future<Map<String, Object?>> _buildContext() async {
-    final sections = await CourseSectionRepository.loadForTerm(
-      CourseSectionRepository.spring2027Term,
-    );
+  Future<Map<String, Object?>> _buildContext([String question = '']) async {
+    final term = RegExp(r'fall\s*2026', caseSensitive: false).hasMatch(question)
+        ? CourseSectionRepository.fall2026Term
+        : CourseSectionRepository.spring2027Term;
+    final sections = await CourseSectionRepository.loadForTerm(term);
     final context = AdvisorContextService().build(
       student: widget.student,
       program: benedictComputerScience2024,
       catalog: computerScienceCourseCatalog,
       sections: sections,
-      term: CourseSectionRepository.spring2027Term,
+      term: term,
+      question: question,
     );
     final theme = await ThemeService.load();
     context['currentTheme'] = theme.preset.name;
@@ -198,7 +200,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     });
     try {
       // Recompute on every turn. Saved messages never become academic truth.
-      final fresh = await _buildContext();
+      final fresh = await _buildContext(text);
       if (!mounted) return;
       setState(() {
         _context = fresh;
@@ -476,7 +478,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               final wide = size.maxWidth >= 1000;
               final chat = Column(
                 children: [
-                  _header(colors),
+                  if (size.maxHeight >= 420) _header(colors),
                   if (_loading) const LinearProgressIndicator(),
                   if (_storageError != null)
                     Padding(

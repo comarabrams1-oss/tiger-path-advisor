@@ -35,7 +35,8 @@ class WorkspaceShell extends StatelessWidget {
     final design = AppDesignTokens.of(context).design;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 1000;
+        final wide =
+            constraints.maxWidth >= (design == AppDesign.classic ? 1200 : 1000);
         final navigation = NavigationBar(
           selectedIndex: selectedIndex,
           labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -51,11 +52,12 @@ class WorkspaceShell extends StatelessWidget {
           ],
         );
         if (!wide) {
-          if (MediaQuery.viewInsetsOf(context).bottom > 0) return child;
           return Column(
             children: [
               Expanded(child: child),
-              if (design == AppDesign.soft)
+              if (MediaQuery.viewInsetsOf(context).bottom > 0)
+                const SizedBox.shrink()
+              else if (design == AppDesign.soft)
                 Container(
                   margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                   clipBehavior: Clip.antiAlias,
@@ -82,10 +84,10 @@ class WorkspaceShell extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
-                      Icon(Icons.school_outlined, color: colors.primary),
+                      const _CollegeLogo(),
                       const SizedBox(width: 10),
                       const Text(
-                        'Tiger Path',
+                        'Tiger Path Advisor',
                         style: TextStyle(fontWeight: FontWeight.w800),
                       ),
                       const Spacer(),
@@ -121,7 +123,7 @@ class WorkspaceShell extends StatelessWidget {
                 labelType: NavigationRailLabelType.all,
                 leading: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  child: Icon(Icons.school, color: colors.primary),
+                  child: const _CollegeLogo(),
                 ),
                 destinations: [
                   for (var index = 0; index < labels.length; index++)
@@ -150,14 +152,10 @@ class WorkspaceShell extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(
-                            Icons.school_outlined,
-                            color: colors.primary,
-                            size: 30,
-                          ),
+                          const _CollegeLogo(),
                           const SizedBox(height: 12),
                           const Text(
-                            'Tiger Path',
+                            'Tiger Path Advisor',
                             style: TextStyle(
                               fontSize: 23,
                               fontWeight: FontWeight.w800,
@@ -199,4 +197,23 @@ class WorkspaceShell extends StatelessWidget {
       },
     );
   }
+}
+
+class _CollegeLogo extends StatelessWidget {
+  const _CollegeLogo();
+  @override
+  Widget build(BuildContext context) => Container(
+    width: 36,
+    height: 40,
+    padding: const EdgeInsets.all(3),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(6),
+    ),
+    child: Image.asset(
+      'assets/images/benedict_logo.png',
+      fit: BoxFit.contain,
+      semanticLabel: 'Benedict College logo',
+    ),
+  );
 }

@@ -42,7 +42,8 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
       'AiAdvisorScreen': 4,
       'ThemeSettingsScreen': 5,
     };
-    final index = route?.isFirst == true ? 0 : names[route?.settings.name];
+    final index =
+        names[route?.settings.name] ?? (route?.isFirst == true ? 0 : null);
     if (index != null && index != _navIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _navIndex = index);
@@ -60,6 +61,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     try {
       final settings = await ThemeService.load();
       final session = await _auth.restore();
+      selectDemoStudent(session?.email);
 
       if (!mounted) {
         return;
@@ -86,6 +88,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     await _auth.signOut();
     if (!mounted) return;
     _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    selectDemoStudent(null);
     setState(() => _session = null);
   }
 
@@ -99,8 +102,10 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
   void _navigate(int index) {
     final navigator = _navigatorKey.currentState;
     if (navigator == null) return;
-    navigator.popUntil((route) => route.isFirst);
-    if (index == 0) return;
+    if (index == 0) {
+      navigator.popUntil((route) => route.isFirst);
+      return;
+    }
     final Widget screen = switch (index) {
       1 => const CourseRecommendationsScreen(),
       2 => const DegreeProgressScreen(),
@@ -116,11 +121,25 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
         onThemeChanged: _applyTheme,
       ),
     };
-    navigator.push(
-      MaterialPageRoute(
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    navigator.pushAndRemoveUntil(
+      PageRouteBuilder(
         settings: RouteSettings(name: screen.runtimeType.toString()),
-        builder: (_) => screen,
+        transitionDuration: Duration(milliseconds: reduceMotion ? 0 : 260),
+        reverseTransitionDuration: Duration(
+          milliseconds: reduceMotion ? 0 : 180,
+        ),
+        pageBuilder: (_, animation, secondaryAnimation) => screen,
+        transitionsBuilder: (_, animation, secondaryAnimation, child) =>
+            FadeTransition(
+              opacity: CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              ),
+              child: child,
+            ),
       ),
+      (route) => route.isFirst,
     );
   }
 
@@ -138,13 +157,15 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
         onSignOut: _signOut,
         child: AdvisorAppActions(
           onThemeChanged: _applyTheme,
-          child: _session == null
-              ? child!
-              : WorkspaceShell(
-                  onNavigate: _navigate,
-                  selectedIndex: _navIndex,
-                  child: child!,
-                ),
+          child: Overlay.wrap(
+            child: _session == null
+                ? child!
+                : WorkspaceShell(
+                    onNavigate: _navigate,
+                    selectedIndex: _navIndex,
+                    child: child!,
+                  ),
+          ),
         ),
       ),
       theme: theme,
@@ -152,7 +173,10 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
           ? const _ThemeLoadingScreen()
           : _session == null
           ? LoginScreen(
-              onSignedIn: (session) => setState(() => _session = session),
+              onSignedIn: (session) {
+                selectDemoStudent(session.email);
+                setState(() => _session = session);
+              },
             )
           : HomeScreen(
               key: ValueKey(_session!.email),
@@ -256,8 +280,11 @@ class HomeScreen extends StatelessWidget {
   Widget _buildHero(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final design = AppDesignTokens.of(context);
+    final compact = MediaQuery.sizeOf(context).width < 600;
     final heading = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: compact
+          ? CrossAxisAlignment.center
+          : CrossAxisAlignment.start,
       children: [
         Row(
           children: [
@@ -308,6 +335,7 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 24),
         Text(
           'Tiger Path Advisor',
+          textAlign: compact ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: colors.onPrimary,
             fontSize: 34,
@@ -318,6 +346,7 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Fall 2026 overview · Spring 2027 planning',
+          textAlign: compact ? TextAlign.center : TextAlign.start,
           style: TextStyle(
             color: colors.onPrimary.withValues(alpha: .8),
             fontSize: 15,
@@ -325,23 +354,24 @@ class HomeScreen extends StatelessWidget {
         ),
         const SizedBox(height: 22),
         Wrap(
+          alignment: compact ? WrapAlignment.center : WrapAlignment.start,
           spacing: 8,
           runSpacing: 8,
           children: [
             _heroBadge(
               context,
               Icons.school_outlined,
-              '${testStudent.major} B.S.',
+              '${activeStudent.major} B.S.',
             ),
             _heroBadge(
               context,
               Icons.badge_outlined,
-              testStudent.classification,
+              activeStudent.classification,
             ),
             _heroBadge(
               context,
               Icons.menu_book_outlined,
-              'Catalog ${testStudent.catalogYear}',
+              'Catalog ${activeStudent.catalogYear}',
             ),
           ],
         ),
@@ -413,6 +443,21 @@ class HomeScreen extends StatelessWidget {
 
   Widget _compactHeader(BuildContext context) => Row(
     children: [
+      Container(
+        width: 44,
+        height: 48,
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Image.asset(
+          'assets/images/benedict_logo.png',
+          fit: BoxFit.contain,
+          semanticLabel: 'Benedict College logo',
+        ),
+      ),
+      const SizedBox(width: 10),
       Expanded(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -424,7 +469,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 5),
             Text(
-              '${testStudent.major} · ${testStudent.classification} · Catalog ${testStudent.catalogYear}',
+              '${activeStudent.major} · ${activeStudent.classification} · Catalog ${activeStudent.catalogYear}',
             ),
           ],
         ),
@@ -450,14 +495,14 @@ class HomeScreen extends StatelessWidget {
   Widget _compactSummary(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final remaining =
-        (testStudent.requiredCredits -
-                testStudent.earnedCredits -
-                testStudent.inProgressCredits)
-            .clamp(0, testStudent.requiredCredits)
+        (activeStudent.requiredCredits -
+                activeStudent.earnedCredits -
+                activeStudent.inProgressCredits)
+            .clamp(0, activeStudent.requiredCredits)
             .toInt();
     final values = [
-      ('${testStudent.earnedCredits.toInt()}', 'Credits earned'),
-      ('${testStudent.inProgressCredits.toInt()}', 'In progress'),
+      ('${activeStudent.earnedCredits.toInt()}', 'Credits earned'),
+      ('${activeStudent.inProgressCredits.toInt()}', 'In progress'),
       ('$remaining', 'Left after this term'),
     ];
     return Card(

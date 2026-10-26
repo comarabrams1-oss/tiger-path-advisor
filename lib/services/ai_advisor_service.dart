@@ -119,14 +119,28 @@ class AiAdvisorService {
     Map<String, Object?> context,
   ) async {
     try {
+      final recent = List<AdvisorMessage>.of(messages);
+      String encodeRequest() => jsonEncode({
+        'messages': recent.map((m) => m.toJson()).toList(),
+        'context': context,
+      });
+      var requestBody = encodeRequest();
+      // Preserve the latest question and remove whole older exchanges to keep
+      // the role sequence valid when offering details increase context size.
+      while (utf8.encode(requestBody).length > 63000 && recent.length > 2) {
+        recent.removeRange(0, 2);
+        requestBody = encodeRequest();
+      }
+      if (utf8.encode(requestBody).length > 64000) {
+        throw const AdvisorException(
+          'Course context is too large. Ask about one course at a time.',
+        );
+      }
       final response = await _client
           .post(
             endpoint,
             headers: {'Content-Type': 'application/json'},
-            body: jsonEncode({
-              'messages': messages.map((m) => m.toJson()).toList(),
-              'context': context,
-            }),
+            body: requestBody,
           )
           .timeout(const Duration(seconds: 50));
       dynamic body;

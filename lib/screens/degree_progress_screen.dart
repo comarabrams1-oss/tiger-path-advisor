@@ -30,13 +30,13 @@ class _DegreeProgressScreenState
   Widget build(BuildContext context) {
     final auditService = DegreeAuditService();
     final audit = auditService.auditProgram(
-      testStudent,
+      activeStudent,
       benedictComputerScience2024,
     );
 
-    final completedCredits = testStudent.earnedCredits;
-    final inProgressCredits = testStudent.inProgressCredits;
-    final requiredCredits = testStudent.requiredCredits;
+    final completedCredits = activeStudent.earnedCredits;
+    final inProgressCredits = activeStudent.inProgressCredits;
+    final requiredCredits = activeStudent.requiredCredits;
 
     final projectedCredits = math.min(
       requiredCredits,
@@ -148,7 +148,7 @@ class _DegreeProgressScreenState
         ),
         const SizedBox(height: 7),
         Text(
-          '${testStudent.institution} • Catalog ${testStudent.catalogYear}',
+          '${activeStudent.institution} • Catalog ${activeStudent.catalogYear}',
           style: TextStyle(
             fontSize: 16,
             color: colors.onSurfaceVariant,
@@ -211,7 +211,7 @@ class _DegreeProgressScreenState
               const SizedBox(width: 12),
               Expanded(
                 child: _summaryBox(
-                  value: testStudent.gpa.toStringAsFixed(2),
+                  value: activeStudent.gpa.toStringAsFixed(2),
                   label: 'Cumulative GPA',
                   foreground: bannerText,
                 ),
@@ -733,7 +733,7 @@ class _DegreeProgressScreenState
                     RequirementType.minimumGpa) ...[
                   const SizedBox(height: 8),
                   Text(
-                    'Current GPA: ${testStudent.gpa.toStringAsFixed(2)}',
+                    'Current GPA: ${activeStudent.gpa.toStringAsFixed(2)}',
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: colors.onSurface,
@@ -758,7 +758,7 @@ class _DegreeProgressScreenState
   String _displayCourseCodes(DegreeAuditItem item) {
     final requirement = item.requirement;
     if (requirement.type == RequirementType.oneOfCourses && item.status != RequirementStatus.remaining) {
-      final matches = testStudent.courses.where((course) =>
+      final matches = activeStudent.courses.where((course) =>
         requirement.courseCodes.contains(course.courseCode) && course.status.name == item.status.name);
       if (matches.isNotEmpty) return matches.first.courseCode;
     }
@@ -795,23 +795,23 @@ class _DegreeProgressScreenState
 
     if (requirement.type == RequirementType.totalCredits) {
       final projected =
-          testStudent.earnedCredits +
-              testStudent.inProgressCredits;
+          activeStudent.earnedCredits +
+              activeStudent.inProgressCredits;
 
       final remaining = math.max(
         0,
-        testStudent.requiredCredits - projected,
+        activeStudent.requiredCredits - projected,
       );
 
-      return '${testStudent.earnedCredits.toInt()} completed • '
-          '${testStudent.inProgressCredits.toInt()} in progress\n'
+      return '${activeStudent.earnedCredits.toInt()} completed • '
+          '${activeStudent.inProgressCredits.toInt()} in progress\n'
           'Projected: ${projected.toInt()} / '
-          '${testStudent.requiredCredits.toInt()} • '
+          '${activeStudent.requiredCredits.toInt()} • '
           '${remaining.toInt()} credits remaining';
     }
 
     if (requirement.type == RequirementType.minimumGpa) {
-      return testStudent.gpa >=
+      return activeStudent.gpa >=
               (requirement.minimumGpa ?? 0)
           ? 'GPA requirement met'
           : 'GPA requirement not yet met';

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tiger_path/main.dart';
+import 'package:tiger_path/data/test_student.dart';
 import 'package:tiger_path/services/mock_auth_service.dart';
 
 Future<void> settle(WidgetTester tester) async {
@@ -84,19 +85,35 @@ void main() {
     await tester.tap(find.text('Continue to Tiger Path'));
     await settle(tester);
     expect(find.text('demo.student@my.benedict.edu'), findsOneWidget);
-    expect(find.text('Tiger Path Advisor'), findsOneWidget);
+    expect(find.text('Tiger Path Advisor'), findsWidgets);
+    expect(activeStudent, same(fictionalStudent));
     await tester.tap(find.text('Plan'));
     await settle(tester);
     expect(find.text('Schedule Builder'), findsOneWidget);
     await tester.pageBack();
     await settle(tester);
-    expect(find.text('Tiger Path Advisor'), findsOneWidget);
+    expect(find.text('Tiger Path Advisor'), findsWidgets);
     await tester.tap(find.text('Sign out'));
     await settle(tester);
     expect(find.text('Sign in'), findsOneWidget);
     expect(await MockAuthService().restore(), isNull);
+    expect(activeStudent, same(testStudent));
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
+    await tester.ensureVisible(find.text('Use fictional test student'));
+    await tester.tap(find.text('Use fictional test student'));
+    await settle(tester);
+    expect(activeStudent, same(fictionalStudent));
+    expect(find.text(mockStudentEmail), findsOneWidget);
+    await tester.tap(find.text('Degree'));
+    await settle(tester);
+    expect(find.text('Degree Progress'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Home'));
+    await settle(tester);
+    await tester.tap(find.text('Sign out'));
+    await settle(tester);
+    expect(activeStudent, same(testStudent));
   });
 }

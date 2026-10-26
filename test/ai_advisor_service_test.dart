@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -62,5 +64,27 @@ void main() {
       );
       service.dispose();
     }
+  });
+  test('offering context trims older exchanges without dropping the latest question', () async {
+    final service = AiAdvisorService(
+      client: MockClient((request) async {
+        expect(utf8.encode(request.body).length, lessThanOrEqualTo(64000));
+        final messages = (jsonDecode(request.body) as Map)['messages'] as List;
+        expect(messages.last['text'], 'Who teaches CSC 135?');
+        expect(messages.first['role'], 'user');
+        expect(messages.length.isOdd, isTrue);
+        expect(messages.length, lessThan(11));
+        return http.Response('{"answer":"Test response"}', 200);
+      }),
+    );
+    await service.ask(
+      [
+        for (var i = 0; i < 10; i++)
+          AdvisorMessage(i.isEven ? 'user' : 'assistant', 'x' * 4000),
+        const AdvisorMessage('user', 'Who teaches CSC 135?'),
+      ],
+      {'sectionDetails': 'x' * 35000},
+    );
+    service.dispose();
   });
 }

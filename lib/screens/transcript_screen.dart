@@ -8,11 +8,11 @@ class TranscriptScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final inProgress = testStudent.courses
+    final inProgress = activeStudent.courses
         .where((course) => course.status == CourseStatus.inProgress)
         .toList();
 
-    final completed = testStudent.courses
+    final completed = activeStudent.courses
         .where((course) => course.status == CourseStatus.completed)
         .toList();
 
@@ -83,7 +83,7 @@ class TranscriptScreen extends StatelessWidget {
         ),
         const SizedBox(height: 7),
         Text(
-          '${testStudent.major} • ${testStudent.classification}',
+          '${activeStudent.major} • ${activeStudent.classification}',
           style: TextStyle(
             fontSize: 16,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -91,7 +91,7 @@ class TranscriptScreen extends StatelessWidget {
         ),
         const SizedBox(height: 3),
         Text(
-          testStudent.institution,
+          activeStudent.institution,
           style: TextStyle(
             fontSize: 14,
             color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -129,7 +129,7 @@ class TranscriptScreen extends StatelessWidget {
                     Expanded(
                       child: _summaryItem(
                         context,
-                        testStudent.earnedCredits.toInt().toString(),
+                        activeStudent.earnedCredits.toInt().toString(),
                         'Earned Credits',
                       ),
                     ),
@@ -137,7 +137,7 @@ class TranscriptScreen extends StatelessWidget {
                     Expanded(
                       child: _summaryItem(
                         context,
-                        testStudent.inProgressCredits.toInt().toString(),
+                        activeStudent.inProgressCredits.toInt().toString(),
                         'In Progress',
                       ),
                     ),
@@ -146,7 +146,7 @@ class TranscriptScreen extends StatelessWidget {
                 const SizedBox(height: 10),
                 _summaryItem(
                   context,
-                  testStudent.gpa.toStringAsFixed(2),
+                  activeStudent.gpa.toStringAsFixed(2),
                   'Cumulative GPA',
                 ),
               ],
@@ -158,7 +158,7 @@ class TranscriptScreen extends StatelessWidget {
               Expanded(
                 child: _summaryItem(
                   context,
-                  testStudent.earnedCredits.toInt().toString(),
+                  activeStudent.earnedCredits.toInt().toString(),
                   'Earned Credits',
                 ),
               ),
@@ -166,7 +166,7 @@ class TranscriptScreen extends StatelessWidget {
               Expanded(
                 child: _summaryItem(
                   context,
-                  testStudent.inProgressCredits.toInt().toString(),
+                  activeStudent.inProgressCredits.toInt().toString(),
                   'In Progress',
                 ),
               ),
@@ -174,7 +174,7 @@ class TranscriptScreen extends StatelessWidget {
               Expanded(
                 child: _summaryItem(
                   context,
-                  testStudent.gpa.toStringAsFixed(2),
+                  activeStudent.gpa.toStringAsFixed(2),
                   'Cumulative GPA',
                 ),
               ),

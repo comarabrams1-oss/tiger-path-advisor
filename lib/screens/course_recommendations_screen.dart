@@ -38,20 +38,20 @@ class _CourseRecommendationsScreenState
 
     final eligibilityResults =
         eligibilityService.checkProgramCourses(
-      testStudent,
+      activeStudent,
       benedictComputerScience2024,
       computerScienceCourseCatalog,
     );
 
     final priorityResults =
         priorityService.rankCourses(
-      testStudent,
+      activeStudent,
       benedictComputerScience2024,
       computerScienceCourseCatalog,
     );
 
     final audit = auditService.auditProgram(
-      testStudent,
+      activeStudent,
       benedictComputerScience2024,
     );
 

@@ -47,7 +47,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   bool _advisorReview = false;
   List<CoursePriorityResult> get _alternatives => CoursePriorityService()
       .rankCourses(
-        testStudent,
+        activeStudent,
         benedictComputerScience2024,
         computerScienceCourseCatalog,
       )
@@ -279,6 +279,10 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         {
           'courseCode': section.courseCode,
           'section': section.sectionNumber,
+          'instructors': section.allInstructorNames,
+          'location': section.location,
+          'delivery': section.deliveryMethod,
+          'openSeats': section.openSeats,
           'days': section.days,
           'start': section.startTime,
           'end': section.endTime,
@@ -326,7 +330,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       var plan = update.preferences.maxCredits == preferences.maxCredits
           ? _plan
           : SemesterPlanService().generatePlan(
-              student: testStudent,
+              student: activeStudent,
               program: benedictComputerScience2024,
               catalog: computerScienceCourseCatalog,
               maxCredits: update.preferences.maxCredits,

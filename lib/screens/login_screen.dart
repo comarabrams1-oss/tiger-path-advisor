@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/mock_auth_service.dart';
+import '../data/test_student.dart';
 import '../themes/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             SizedBox(height: wide ? 26 : 16),
                             Text(
-                              'TIGER PATH',
+                              'TIGER PATH ADVISOR',
                               style: TextStyle(
                                 color: colors.onPrimary,
                                 fontSize: 12,
@@ -233,6 +234,27 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('Continue to Tiger Path'),
                                 ),
                               ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.person_outline),
+                                  label: const Text(
+                                    'Use fictional test student',
+                                  ),
+                                  onPressed: _busy
+                                      ? null
+                                      : () {
+                                          _email.text = mockStudentEmail;
+                                          _signIn();
+                                        },
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'Jordan Taylor · Freshman · 6 earned credits\nTest email: demo.student@my.benedict.edu',
+                                style: TextStyle(fontSize: 12),
+                              ),
                               const SizedBox(height: 22),
                               Container(
                                 padding: const EdgeInsets.all(14),
@@ -241,7 +263,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Text(
-                                  'This is a mock login, not Tiger Portal. No password is needed, and email ownership is not verified. You’ll explore the sample student record. Chats are saved separately for each email on this browser.',
+                                  'This is a mock login, not Tiger Portal. No password is needed, and email ownership is not verified. The fictional test student has a separate sample academic record. Other student emails open the original sample record. Chats are saved separately for each email on this browser.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.6,

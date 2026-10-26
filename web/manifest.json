@@ -1,12 +1,12 @@
 {
-    "name": "tiger_path",
-    "short_name": "tiger_path",
+    "name": "Tiger Path Advisor",
+    "short_name": "Tiger Path Advisor",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
+    "background_color": "#32164F",
+    "theme_color": "#32164F",
+    "description": "Benedict College course planning and degree progress.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {
