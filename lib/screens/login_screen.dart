@@ -268,12 +268,12 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Alex Morgan · Computer Engineering · Freshman\nTest email: demo.engineering@my.benedict.edu',
+                                'Alex Morgan · Computer Engineering · Freshman · 16 current credits\nTest email: demo.engineering@my.benedict.edu',
                                 style: TextStyle(fontSize: 12),
                               ),
                               const SizedBox(height: 8),
                               const Text(
-                                'Jordan Taylor · Freshman · 6 earned credits\nTest email: demo.student@my.benedict.edu',
+                                'Jordan Taylor · Computer Science · Freshman · 16 current credits\nTest email: demo.student@my.benedict.edu',
                                 style: TextStyle(fontSize: 12),
                               ),
                               const SizedBox(height: 22),

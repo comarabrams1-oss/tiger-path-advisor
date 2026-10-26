@@ -90,18 +90,34 @@ void main() {
           isTrue,
         );
         if (student.classification == 'Freshman') {
-          expect(codes, contains('AA 111'));
+          expect(
+            codes,
+            contains(
+              student.courses.any((c) => c.courseCode == 'AA 111')
+                  ? 'AA 211'
+                  : 'AA 111',
+            ),
+          );
           expect(codes.any((c) => c!.startsWith('ENG ')), isTrue);
           expect(
             codes.any((c) => c!.startsWith('CSC 3') || c.startsWith('CSC 4')),
             isFalse,
           );
-          expect(
-            codes.contains('AR 233') ||
-                codes.contains('FS 233') ||
-                codes.contains('SP 233'),
-            isFalse,
-          );
+          if (!student.courses.any((c) => c.courseCode == 'AR 130')) {
+            expect(
+              codes.contains('AR 233') ||
+                  codes.contains('FS 233') ||
+                  codes.contains('SP 233'),
+              isFalse,
+            );
+          } else if (codes.contains('AR 233')) {
+            expect(
+              plan.items
+                  .firstWhere((i) => i.courseCode == 'AR 233')
+                  .projectedEligibility,
+              isTrue,
+            );
+          }
           expect(
             codes.contains('ART 130') && codes.contains('MUS 130'),
             isFalse,

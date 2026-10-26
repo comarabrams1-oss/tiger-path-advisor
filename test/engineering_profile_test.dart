@@ -68,7 +68,12 @@ void main() {
         sections: sections,
       );
       final codes = plan.items.map((i) => i.courseCode).toSet();
-      expect(codes, contains('ENGR 130'));
+      expect(codes, isNot(contains('ENGR 130')));
+      expect(
+        engineeringStudent.courses.any((c) => c.courseCode == 'ENGR 130'),
+        isTrue,
+      );
+      expect(codes, contains('CSC 135'));
       expect(codes, isNot(contains('CSC 139')));
       expect(codes, isNot(contains('CSC 133')));
       expect(

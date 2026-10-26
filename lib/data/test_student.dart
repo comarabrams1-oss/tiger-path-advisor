@@ -206,27 +206,29 @@ const Student testStudent = Student(
 Student activeStudent = testStudent;
 
 const mockStudentEmail = 'demo.student@my.benedict.edu';
+// Fictional first-year students with limited pre-college dual-enrollment credit.
+// Each has a full 16-credit current semester; no current course has a final grade.
 const fictionalStudent = Student(
   name: 'Jordan Taylor (Demo)',
   institution: 'Benedict College',
   major: 'Computer Science',
   catalogYear: '2024',
   classification: 'Freshman',
-  gpa: 3.0,
+  gpa: 3.5,
   earnedCredits: 6,
-  inProgressCredits: 6,
+  inProgressCredits: 16,
   requiredCredits: 120,
   courses: [
     StudentCourse(
       courseCode: 'ENG 131',
-      grade: 'B',
-      term: 'Spring 2026',
+      grade: 'A',
+      term: 'Spring 2026 (dual enrollment)',
       status: CourseStatus.completed,
     ),
     StudentCourse(
       courseCode: 'HIST 130',
       grade: 'B',
-      term: 'Spring 2026',
+      term: 'Spring 2026 (dual enrollment)',
       status: CourseStatus.completed,
     ),
     StudentCourse(
@@ -236,6 +238,26 @@ const fictionalStudent = Student(
     ),
     StudentCourse(
       courseCode: 'CSC 133',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'ENG 132',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'MATH 138',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'AA 111',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'AR 130',
       term: 'Fall 2026',
       status: CourseStatus.inProgress,
     ),
@@ -249,33 +271,27 @@ const engineeringStudent = Student(
   major: 'Computer Engineering',
   catalogYear: '2025–2026',
   classification: 'Freshman',
-  gpa: 3.25,
-  earnedCredits: 10,
-  inProgressCredits: 7,
+  gpa: 3.33,
+  earnedCredits: 9,
+  inProgressCredits: 16,
   requiredCredits: 125,
   courses: [
     StudentCourse(
       courseCode: 'ENG 131',
       grade: 'B',
-      term: 'Spring 2026',
+      term: 'Spring 2026 (dual enrollment)',
       status: CourseStatus.completed,
     ),
     StudentCourse(
       courseCode: 'HIST 130',
       grade: 'A',
-      term: 'Spring 2026',
+      term: 'Spring 2026 (dual enrollment)',
       status: CourseStatus.completed,
     ),
     StudentCourse(
       courseCode: 'MATH 138',
       grade: 'B',
-      term: 'Spring 2026',
-      status: CourseStatus.completed,
-    ),
-    StudentCourse(
-      courseCode: 'AA 111',
-      grade: 'A',
-      term: 'Spring 2026',
+      term: 'Spring 2026 (dual enrollment)',
       status: CourseStatus.completed,
     ),
     StudentCourse(
@@ -284,7 +300,27 @@ const engineeringStudent = Student(
       status: CourseStatus.inProgress,
     ),
     StudentCourse(
-      courseCode: 'MATH 143',
+      courseCode: 'MATH 139',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'ENGR 130',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'ENG 132',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'AA 111',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'AR 130',
       term: 'Fall 2026',
       status: CourseStatus.inProgress,
     ),
