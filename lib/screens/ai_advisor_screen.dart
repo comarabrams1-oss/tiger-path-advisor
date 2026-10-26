@@ -578,7 +578,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       ),
       borderRadius: BorderRadius.circular(24),
     ),
-    child: Row(
+    child: Column(
       children: [
         Container(
           padding: const EdgeInsets.all(12),
@@ -588,12 +588,14 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           ),
           child: Icon(Icons.auto_awesome, color: colors.primary, size: 25),
         ),
-        const SizedBox(width: 14),
-        Expanded(
+        const SizedBox(height: 10),
+        SizedBox(
+          width: double.infinity,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
+                textAlign: TextAlign.center,
                 'Academic advisor',
                 style: TextStyle(
                   fontSize: 20,
@@ -603,6 +605,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ),
               const SizedBox(height: 5),
               Text(
+                textAlign: TextAlign.center,
                 '${widget.student.classification} · ${widget.student.major} · Spring 2027',
                 style: TextStyle(
                   fontSize: 12,
@@ -611,6 +614,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ),
               const SizedBox(height: 7),
               Text(
+                textAlign: TextAlign.center,
                 _busy
                     ? 'Thinking with your latest plan'
                     : _saved
@@ -630,9 +634,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   Widget _welcome(ColorScheme colors) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 20),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
+          textAlign: TextAlign.center,
           'Ask Tiger Path',
           style: TextStyle(
             fontSize: 25,
@@ -642,6 +647,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         ),
         const SizedBox(height: 9),
         Text(
+          textAlign: TextAlign.center,
           'Get course recommendations, review degree requirements, or change app settings.',
           style: TextStyle(color: colors.onSurfaceVariant, height: 1.5),
         ),

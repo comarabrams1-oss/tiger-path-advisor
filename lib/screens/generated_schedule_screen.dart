@@ -177,6 +177,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               Text(
+                textAlign: TextAlign.center,
                 'Your Semester Schedule',
                 style: TextStyle(
                   fontSize: 28,
@@ -186,6 +187,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               ),
               const SizedBox(height: 6),
               Text(
+                textAlign: TextAlign.center,
                 'Tiger Path Advisor selected the best available sections based on your semester plan and schedule preferences.',
                 style: TextStyle(
                   fontSize: 15,
@@ -489,14 +491,16 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     child: Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
+            textAlign: TextAlign.center,
             'Build with Tiger Path',
             style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 6),
           const Text(
+            textAlign: TextAlign.center,
             'Set a credit goal or ask for a change. Tiger Path rebuilds the timetable here and checks courses, labs, availability and conflicts.',
           ),
           const SizedBox(height: 12),

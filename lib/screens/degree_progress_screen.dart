@@ -136,9 +136,10 @@ class _DegreeProgressScreenState
     final colors = Theme.of(context).colorScheme;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
+          textAlign: TextAlign.center,
           '${activeStudent.major} - ${activeStudent.degreeLabel}',
           style: TextStyle(
             fontSize: 30,
@@ -148,11 +149,9 @@ class _DegreeProgressScreenState
         ),
         const SizedBox(height: 7),
         Text(
+          textAlign: TextAlign.center,
           '${activeStudent.institution} • Catalog ${activeStudent.catalogYear}',
-          style: TextStyle(
-            fontSize: 16,
-            color: colors.onSurfaceVariant,
-          ),
+          style: TextStyle(fontSize: 16, color: colors.onSurfaceVariant),
         ),
         if (activeStudent.major == 'Computer Engineering')
           const Padding(

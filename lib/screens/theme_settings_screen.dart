@@ -256,6 +256,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             children: [
               Text(
+                textAlign: TextAlign.center,
                 'Choose Your Look',
                 style: TextStyle(
                   fontSize: 28,
@@ -265,6 +266,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
               const SizedBox(height: 6),
               Text(
+                textAlign: TextAlign.center,
                 'Combine an interface design with your favorite colors. Your choices apply throughout Tiger Path.',
                 style: TextStyle(
                   color: colors.onSurface.withValues(alpha: 0.65),

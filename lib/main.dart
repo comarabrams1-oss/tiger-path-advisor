@@ -305,7 +305,7 @@ class HomeScreen extends StatelessWidget {
           Row(
             children: [
               Container(
-                width: 42,
+                width: 48,
                 height: 46,
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -321,9 +321,10 @@ class HomeScreen extends StatelessWidget {
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
+                      textAlign: TextAlign.center,
                       'Benedict College',
                       style: TextStyle(
                         fontSize: 12,
@@ -332,6 +333,7 @@ class HomeScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
+                      textAlign: TextAlign.center,
                       'Tiger Path Advisor',
                       style: TextStyle(
                         fontSize: 23,
@@ -343,6 +345,7 @@ class HomeScreen extends StatelessWidget {
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               IconButton(
                 tooltip: 'Open Theme Studio',
                 icon: const Icon(Icons.tune),
@@ -364,9 +367,10 @@ class HomeScreen extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final details = Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
+                    textAlign: TextAlign.center,
                     '${activeStudent.major} B.S. · ${activeStudent.classification}',
                     style: const TextStyle(
                       fontSize: 14,
@@ -375,6 +379,7 @@ class HomeScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 5),
                   Text(
+                    textAlign: TextAlign.center,
                     'Fall 2026 overview · Spring 2027 planning',
                     style: TextStyle(
                       fontSize: 12,
@@ -402,11 +407,12 @@ class HomeScreen extends StatelessWidget {
                   children: [details, const SizedBox(height: 14), button],
                 );
               }
-              return Row(
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(child: details),
-                  const SizedBox(width: 20),
-                  button,
+                  details,
+                  const SizedBox(height: 14),
+                  Center(child: button),
                 ],
               );
             },
@@ -419,7 +425,7 @@ class HomeScreen extends StatelessWidget {
   Widget _compactHeader(BuildContext context) => Row(
     children: [
       Container(
-        width: 44,
+        width: 48,
         height: 48,
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
@@ -435,20 +441,23 @@ class HomeScreen extends StatelessWidget {
       const SizedBox(width: 10),
       Expanded(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
+              textAlign: TextAlign.center,
               'Tiger Path Advisor',
               style: Theme.of(context).textTheme.headlineMedium
                   ?.copyWith(fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 5),
             Text(
+              textAlign: TextAlign.center,
               '${activeStudent.major} · ${activeStudent.classification} · Catalog ${activeStudent.catalogYear}',
             ),
           ],
         ),
       ),
+      const SizedBox(width: 10),
       IconButton(
         tooltip: 'Open Theme Studio',
         onPressed: () => Navigator.push(

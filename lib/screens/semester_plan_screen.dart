@@ -57,11 +57,13 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
         padding: const EdgeInsets.all(20),
         children: [
           Text(
+            textAlign: TextAlign.center,
             '${activeStudent.classification} semester plan',
             style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
+            textAlign: TextAlign.center,
             'A draft of specific courses for Spring 2027. Current prerequisites must be completed successfully. Meeting times are checked in the next step.',
           ),
           if (activeStudent.major == 'Computer Engineering')

@@ -137,17 +137,14 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _buildHeader(
-    BuildContext context,
-  ) {
-    final colors =
-        Theme.of(context).colorScheme;
+  Widget _buildHeader(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
 
     return Column(
-      crossAxisAlignment:
-          CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
+          textAlign: TextAlign.center,
           'Academic Advice',
           style: TextStyle(
             fontSize: 29,
@@ -157,6 +154,7 @@ class _CourseRecommendationsScreenState
         ),
         const SizedBox(height: 7),
         Text(
+          textAlign: TextAlign.center,
           'Recommendations based on your degree requirements, '
           'completed courses, current enrollment, and prerequisites.',
           style: TextStyle(

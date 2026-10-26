@@ -196,8 +196,10 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
       children: [
         Row(
           children: [
+            const SizedBox(width: 32),
             Expanded(
               child: Text(
+                textAlign: TextAlign.center,
                 'Your academic workspace',
                 style: Theme.of(context).textTheme.headlineSmall
                     ?.copyWith(fontWeight: FontWeight.w800),
@@ -208,9 +210,13 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
           ],
         ),
         const SizedBox(height: 6),
-        Text(
-          'Current coursework, next steps, and the requirements behind your plan.',
-          style: TextStyle(color: colors.onSurfaceVariant),
+        SizedBox(
+          width: double.infinity,
+          child: Text(
+            textAlign: TextAlign.center,
+            'Current coursework, next steps, and the requirements behind your plan.',
+            style: TextStyle(color: colors.onSurfaceVariant),
+          ),
         ),
         const SizedBox(height: 18),
         if (AppDesignTokens.of(context).design == AppDesign.sharp) ...[
@@ -299,15 +305,28 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
               ],
             ),
             const SizedBox(height: 14),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              description,
-              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
+            SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    textAlign: TextAlign.center,
+                    title,
+                    style: Theme.of(context).textTheme.titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    textAlign: TextAlign.center,
+                    description,
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 22),
             ...children,

@@ -250,10 +250,11 @@ class TranscriptScreen extends StatelessWidget {
         const SizedBox(width: 13),
         Expanded(
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 title,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 21,
                   fontWeight: FontWeight.bold,
@@ -263,6 +264,7 @@ class TranscriptScreen extends StatelessWidget {
               const SizedBox(height: 3),
               Text(
                 subtitle,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -270,6 +272,7 @@ class TranscriptScreen extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(width: 58),
       ],
     );
   }

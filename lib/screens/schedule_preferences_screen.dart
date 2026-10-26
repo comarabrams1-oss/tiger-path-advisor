@@ -142,6 +142,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               Text(
+                textAlign: TextAlign.center,
                 activeStudent.classification.toLowerCase() == 'freshman'
                     ? 'Plan your first-year courses'
                     : 'Plan your next semester',
@@ -153,6 +154,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
               ),
               const SizedBox(height: 6),
               Text(
+                textAlign: TextAlign.center,
                 activeStudent.classification.toLowerCase() == 'freshman'
                     ? 'Start with introductory major courses, English, and other remaining foundations. Then choose the times that work for you.'
                     : 'Choose your preferences for courses that fit your remaining requirements.',
