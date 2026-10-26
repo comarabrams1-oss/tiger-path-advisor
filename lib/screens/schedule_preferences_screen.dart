@@ -342,9 +342,9 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Avoid early classes'),
+                      title: const Text('Prefer later starts'),
                       subtitle: const Text(
-                        'Prefer classes starting at 9:00 AM or later.',
+                        'Favor starts at 10:00 AM or later. Earlier sections may still be selected.',
                       ),
                       value: avoidEarlyClasses,
                       onChanged: (value) {
@@ -356,9 +356,9 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                     const Divider(),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Avoid late classes'),
+                      title: const Text('Prefer earlier finishes'),
                       subtitle: const Text(
-                        'Prefer classes ending before the evening.',
+                        'Favor finishes by 5:00 PM. Later sections may still be selected.',
                       ),
                       value: avoidLateClasses,
                       onChanged: (value) {

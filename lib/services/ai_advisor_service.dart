@@ -138,6 +138,7 @@ class AiAdvisorService {
       if (response.statusCode != 200) {
         final code = body is Map ? body['code'] : null;
         final message = switch (code) {
+          'PROVIDER_BUSY' => 'Gemini is temporarily busy. Your message is kept below; please retry shortly.',
           'QUOTA' => 'Gemini request quota reached. Wait a moment and retry; your free-tier quota may need to reset.',
           'MODEL_UNAVAILABLE' => 'The configured Gemini model is unavailable. The server model setting needs updating.',
           'PROVIDER_ACCESS' => 'Gemini rejected access. The server API key or permissions need attention.',

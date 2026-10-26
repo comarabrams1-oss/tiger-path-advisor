@@ -94,7 +94,7 @@ class _DegreeProgressScreenState
               audit,
               'Major',
             ),
-            initiallyExpanded: true,
+            initiallyExpanded: false,
           ),
           const SizedBox(height: 14),
           _buildCategory(

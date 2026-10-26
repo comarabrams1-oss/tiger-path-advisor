@@ -59,7 +59,7 @@ class TranscriptScreen extends StatelessWidget {
                 context,
                 term: term,
                 courses: courses,
-                initiallyExpanded: index == 0,
+                initiallyExpanded: false,
               ),
             );
           }),

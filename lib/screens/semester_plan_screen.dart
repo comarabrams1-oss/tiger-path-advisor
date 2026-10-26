@@ -142,10 +142,9 @@ class SemesterPlanScreen extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Text(
                 'This is an academic plan, not a final registered '
-                'schedule. TigerPath still needs actual Tiger Portal '
-                'sections to verify that each course is offered and '
-                'to compare professors, meeting times, open seats, '
-                'and schedule conflicts.',
+                'schedule. Generate a class schedule to check imported '
+                'Tiger Portal offerings, meeting times, seat snapshots, '
+                'and time conflicts. Confirm registration with your advisor.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),

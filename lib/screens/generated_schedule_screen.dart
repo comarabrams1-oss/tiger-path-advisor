@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 
+import '../services/schedule_assistant_service.dart';
+import '../services/course_priority_service.dart';
+import '../services/course_eligibility_service.dart';
+import '../services/schedule_recovery_service.dart';
+import '../data/test_student.dart';
+import '../data/cs_program.dart';
+import '../data/cs_course_catalog.dart';
+
 import '../data/test_course_sections.dart';
 import '../data/test_instructors.dart';
 import '../models/course_section.dart';
@@ -13,8 +21,13 @@ enum ScheduleView { weekly, list }
 
 class GeneratedScheduleScreen extends StatefulWidget {
   final SemesterPlan plan;
+  final ScheduleAssistantService? assistant;
 
-  const GeneratedScheduleScreen({super.key, required this.plan});
+  const GeneratedScheduleScreen({
+    super.key,
+    required this.plan,
+    this.assistant,
+  });
 
   @override
   State<GeneratedScheduleScreen> createState() =>
@@ -23,6 +36,44 @@ class GeneratedScheduleScreen extends StatefulWidget {
 
 class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   static const String _plannedTerm = CourseSectionRepository.spring2027Term;
+
+  final _request = TextEditingController();
+  late final _assistant = widget.assistant ?? ScheduleAssistantService();
+  SemesterPlan? _updatedPlan;
+  SchedulePreferences? _updatedPreferences;
+  Map<String, String> _preferredSections = {};
+  String? _assistantStatus;
+  List<SemesterPlanItem> _deferred = [];
+  bool _advisorReview = false;
+  List<CoursePriorityResult> get _alternatives => CoursePriorityService()
+      .rankCourses(
+        testStudent,
+        benedictComputerScience2024,
+        computerScienceCourseCatalog,
+      )
+      .where(
+        (item) =>
+            [
+              EligibilityStatus.eligible,
+              EligibilityStatus.eligibleAfterCurrentTerm,
+            ].contains(item.eligibility.status) &&
+            _sections.any(
+              (section) =>
+                  section.courseCode == item.course.code &&
+                  section.isOpen &&
+                  section.hasOpenSeats,
+            ),
+      )
+      .toList();
+  bool _updating = false;
+  SemesterPlan get _plan => _updatedPlan ?? widget.plan;
+
+  @override
+  void dispose() {
+    _request.dispose();
+    if (widget.assistant == null) _assistant.dispose();
+    super.dispose();
+  }
 
   ScheduleView selectedView = ScheduleView.weekly;
   List<CourseSection> _sections = testCourseSections;
@@ -90,6 +141,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     }
 
     final preferences =
+        _updatedPreferences ??
         PreferencesService.preferences ??
         const SchedulePreferences(
           preferredTime: 'No Preference',
@@ -103,10 +155,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         );
 
     final generatedSchedule = ScheduleGenerationService().generateSchedule(
-      plan: widget.plan,
+      plan: _plan,
       sections: _sections,
       instructors: testInstructors,
       preferences: preferences,
+      preferredSections: _preferredSections,
     );
 
     final colors = Theme.of(context).colorScheme;
@@ -137,6 +190,27 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               ),
               const SizedBox(height: 24),
               _buildSummary(context, generatedSchedule, preferences),
+              const SizedBox(height: 12),
+              _buildAssistant(context, generatedSchedule, preferences),
+              if (_deferred.isNotEmpty)
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Deferred from this term: ${_deferred.map((item) => item.courseCode ?? item.title).toSet().join(", ")}. These requirements remain outstanding; alternative courses do not replace them in your degree.',
+                    ),
+                  ),
+                ),
+              if (_advisorReview)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Text(
+                      'Advisor review recommended: check deferred requirements, conditional prerequisites, and the proposed course changes before registration.',
+                    ),
+                  ),
+                ),
+
               const SizedBox(height: 22),
               _buildViewToggle(context),
               const SizedBox(height: 20),
@@ -157,6 +231,260 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       ),
     );
   }
+
+  Map<String, Object?> _scheduleContext(
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences,
+  ) => {
+    'term': _plannedTerm,
+    'source': _usingRealData ? 'Imported snapshot' : 'Demo sections',
+    'preferences': preferences.toJson()..remove('preferredProfessors'),
+    'selected': [
+      for (final item in schedule.scheduled)
+        {
+          'courseCode': item.section.courseCode,
+          'section': item.section.sectionNumber,
+        },
+    ],
+    'alternatives': [
+      for (final item in _alternatives)
+        {
+          'courseCode': item.course.code,
+          'credits': item.course.credits,
+          'eligibility': item.eligibility.status.name,
+          'reason': item.reasons,
+        },
+    ],
+    'unresolved': [
+      for (final item in schedule.unscheduled)
+        {
+          'courseCode': item.planItem.courseCode,
+          'requirement': item.planItem.title,
+          'reason': item.reason,
+        },
+    ],
+    'choices': [
+      for (final section
+          in _sections
+              .where(
+                (section) =>
+                    _plan.items.any(
+                      (item) => item.courseCode == section.courseCode,
+                    ) ||
+                    _alternatives.any(
+                      (item) => item.course.code == section.courseCode,
+                    ),
+              )
+              .take(100))
+        {
+          'courseCode': section.courseCode,
+          'section': section.sectionNumber,
+          'days': section.days,
+          'start': section.startTime,
+          'end': section.endTime,
+          'meetings': [
+            for (final meeting in section.meetings) meeting.displayText,
+          ],
+          'open': section.isOpen && section.hasOpenSeats,
+        },
+    ],
+  };
+
+  Future<void> _updateSchedule(
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences,
+  ) async {
+    final text = _request.text.trim();
+    if (_updating || text.isEmpty) return;
+    setState(() {
+      _updating = true;
+      _assistantStatus = 'Updating your schedule…';
+    });
+    try {
+      final available = _sections
+          .where(
+            (section) =>
+                _plan.items.any(
+                  (item) => item.courseCode == section.courseCode,
+                ) ||
+                _alternatives.any(
+                  (item) => item.course.code == section.courseCode,
+                ),
+          )
+          .toList();
+      final update = await _assistant.update(
+        text,
+        _scheduleContext(schedule, preferences),
+        preferences,
+        available,
+        eligibleCourses: {
+          ..._alternatives.map((item) => item.course.code),
+          ..._plan.items.map((item) => item.courseCode).whereType<String>(),
+        }.toList(),
+      );
+      // Only the deterministic planner chooses eligible courses and credit totals.
+      var plan = update.preferences.maxCredits == preferences.maxCredits
+          ? _plan
+          : SemesterPlanService().generatePlan(
+              student: testStudent,
+              program: benedictComputerScience2024,
+              catalog: computerScienceCourseCatalog,
+              maxCredits: update.preferences.maxCredits,
+            );
+      final choices = Map<String, String>.from(_preferredSections)
+        ..addAll(update.sectionChoices);
+
+      final recovery = ScheduleRecoveryService().recover(
+        plan: plan,
+        candidates: _alternatives,
+        requestedCourses: update.courseChoices,
+        sections: _sections,
+        instructors: testInstructors,
+        preferences: update.preferences,
+        preferredSections: choices,
+      );
+      plan = recovery.plan;
+      choices.removeWhere(
+        (course, _) => !plan.items.any((item) => item.courseCode == course),
+      );
+      final rebuilt = ScheduleGenerationService().generateSchedule(
+        plan: plan,
+        sections: _sections,
+        instructors: testInstructors,
+        preferences: update.preferences,
+        preferredSections: choices,
+      );
+      if (!mounted) return;
+      setState(() {
+        _deferred = [..._deferred, ...recovery.deferred]
+            .where(
+              (item) => !plan.items.any(
+                (active) =>
+                    active.courseCode != null &&
+                    active.courseCode == item.courseCode,
+              ),
+            )
+            .toList();
+        _advisorReview =
+            update.advisorReview ||
+            _deferred.isNotEmpty ||
+            plan.items.any(
+              (item) =>
+                  item.projectedEligibility ||
+                  item.type == SemesterPlanItemType.requirementSlot,
+            ) ||
+            rebuilt.scheduled.any(
+              (item) => !item.section.hasPrimaryMeetingTime,
+            );
+        _updatedPlan = plan;
+        _updatedPreferences = update.preferences;
+        _preferredSections = choices;
+        final remaining = rebuilt.unscheduled.length;
+        final missed = choices.entries
+            .where(
+              (choice) => !rebuilt.scheduled.any(
+                (item) =>
+                    item.section.courseCode == choice.key &&
+                    item.section.sectionNumber == choice.value,
+              ),
+            )
+            .length;
+        _assistantStatus =
+            'Draft rebuilt: ${rebuilt.scheduled.length} courses, ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits, $remaining unresolved. Review before registration.'
+            '${missed > 0 ? " Some requested sections could not fit without conflicts." : ""}';
+        _request.clear();
+      });
+      PreferencesService.savePreferences(update.preferences);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _assistantStatus = error is StateError
+              ? '${error.message} Your schedule is unchanged.'
+              : error is FormatException
+              ? 'Gemini suggested an unverified schedule option. Your schedule is unchanged. Please retry.'
+              : 'Could not apply this request. Your schedule is unchanged. Please retry or use the preference controls.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Widget _buildAssistant(
+    BuildContext context,
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences,
+  ) => Card(
+    child: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Build with Tiger Path',
+            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Tell me what to change. Your schedule updates here after availability and conflict checks.',
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _request,
+            enabled: !_updating,
+            maxLength: 1000,
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _updateSchedule(schedule, preferences),
+            decoration: const InputDecoration(
+              labelText: 'Change my schedule',
+              hintText:
+                  'Try mornings, avoid Friday, or use a different section…',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          FilledButton.icon(
+            onPressed: _updating
+                ? null
+                : () => _updateSchedule(schedule, preferences),
+            icon: _updating
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.auto_awesome),
+            label: Text(_updating ? 'Updating…' : 'Update schedule'),
+          ),
+          OutlinedButton.icon(
+            onPressed: _updating
+                ? null
+                : () {
+                    _request.text = 'Resolve time conflicts and missing offerings using other eligible remaining degree courses. Aim to fill my credit limit. Keep deferred requirements for advisor review.';
+                    _updateSchedule(schedule, preferences);
+                  },
+            icon: const Icon(Icons.build_circle_outlined),
+            label: const Text('Resolve issues and fill schedule'),
+          ),
+          if (_assistantStatus != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Text(_assistantStatus!),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            'Current preferences: ${preferences.preferredTime}; max ${preferences.maxCredits} credits'
+            '${preferences.avoidEarlyClasses ? "; favor starts from 10 AM" : ""}'
+            '${preferences.avoidLateClasses ? "; favor finishes by 5 PM" : ""}'
+            '${preferences.avoidedDays.isNotEmpty ? "; prefer to avoid ${preferences.avoidedDays.join(", ")}" : ""}.',
+          ),
+          const Text(
+            'Preferences are flexible. Missing offerings and required approvals can remain unresolved.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _buildSummary(
     BuildContext context,
@@ -291,8 +619,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           color: colors.primary.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
+        child: Wrap(
           children: [
             _viewButton(
               context,
@@ -717,6 +1044,34 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                           const SizedBox(height: 3),
                           Text(unscheduled.planItem.title),
                         ],
+                        if (unscheduled.reason.contains('conflict'))
+                          TextButton.icon(
+                            icon: const Icon(Icons.auto_awesome, size: 16),
+                            label: const Text(
+                              'Try resolving schedule conflicts',
+                            ),
+                            onPressed: _updating
+                                ? null
+                                : () {
+                                    _request.text =
+                                        'Try to resolve time conflicts for ${unscheduled.planItem.courseCode ?? unscheduled.planItem.title} using available sections. Keep my other preferences.';
+                                    _updateSchedule(
+                                      schedule,
+                                      _updatedPreferences ??
+                                          PreferencesService.preferences ??
+                                          const SchedulePreferences(
+                                            preferredTime: 'No Preference',
+                                            preferredDays: [],
+                                            avoidedDays: [],
+                                            preferredProfessors: [],
+                                            maxCredits: 15,
+                                            avoidEarlyClasses: false,
+                                            avoidLateClasses: false,
+                                            minimizeGaps: true,
+                                          ),
+                                    );
+                                  },
+                          ),
                         const SizedBox(height: 8),
                         Text(
                           unscheduled.reason,

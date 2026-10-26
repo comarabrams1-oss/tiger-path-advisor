@@ -23,18 +23,12 @@ class ScheduleMatchingService {
     required SchedulePreferences preferences,
   }) {
     final matches = sections.map((section) {
-      final instructor = _findInstructor(
-        section.instructorId,
-        instructors,
-      );
+      final instructor = _findInstructor(section.instructorId, instructors);
 
       var score = 0;
       final reasons = <String>[];
 
-      final timeScore = _scorePreferredTime(
-        section,
-        preferences.preferredTime,
-      );
+      final timeScore = _scorePreferredTime(section, preferences.preferredTime);
 
       score += timeScore;
 
@@ -45,9 +39,7 @@ class ScheduleMatchingService {
       }
 
       final preferredDayMatches = section.days
-          .where(
-            preferences.preferredDays.contains,
-          )
+          .where(preferences.preferredDays.contains)
           .length;
 
       if (preferredDayMatches > 0) {
@@ -59,9 +51,7 @@ class ScheduleMatchingService {
       }
 
       final avoidedDayMatches = section.days
-          .where(
-            preferences.avoidedDays.contains,
-          )
+          .where(preferences.avoidedDays.contains)
           .length;
 
       if (avoidedDayMatches > 0) {
@@ -72,33 +62,34 @@ class ScheduleMatchingService {
         );
       }
 
+      // Include secondary meetings (for example, an evening lab).
+      final starts = [
+        if (section.hasPrimaryMeetingTime) section.startMinutes,
+        for (final meeting in section.meetings)
+          if (meeting.hasTime) meeting.startMinutes!,
+      ];
+      final ends = [
+        if (section.hasPrimaryMeetingTime) section.endMinutes,
+        for (final meeting in section.meetings)
+          if (meeting.hasTime) meeting.endMinutes!,
+      ];
       if (preferences.avoidEarlyClasses) {
-        if (section.hasPrimaryMeetingTime &&
-            section.startMinutes < 9 * 60) {
+        if (starts.any((start) => start < 10 * 60)) {
           score -= 6;
-          reasons.add(
-            'Starts earlier than preferred',
-          );
-        } else if (section.hasPrimaryMeetingTime) {
+          reasons.add('Starts earlier than preferred');
+        } else if (starts.isNotEmpty) {
           score += 2;
-          reasons.add(
-            'Avoids an early start',
-          );
+          reasons.add('Avoids an early start');
         }
       }
 
       if (preferences.avoidLateClasses) {
-        if (section.hasPrimaryMeetingTime &&
-            section.endMinutes > 17 * 60) {
+        if (ends.any((end) => end > 17 * 60)) {
           score -= 6;
-          reasons.add(
-            'Ends later than preferred',
-          );
-        } else if (section.hasPrimaryMeetingTime) {
+          reasons.add('Ends later than preferred');
+        } else if (ends.isNotEmpty) {
           score += 2;
-          reasons.add(
-            'Avoids a late ending',
-          );
+          reasons.add('Avoids a late ending');
         }
       }
 
@@ -108,42 +99,30 @@ class ScheduleMatchingService {
         preferences.preferredProfessors,
       )) {
         score += 7;
-        reasons.add(
-          'Matches a preferred professor',
-        );
+        reasons.add('Matches a preferred professor');
       }
 
       if (section.openSeats != null) {
         if (section.openSeats! <= 0) {
           score -= 100;
-          reasons.add(
-            'No open seats',
-          );
+          reasons.add('No open seats');
         } else {
           score += 3;
-          reasons.add(
-            'Has open seats',
-          );
+          reasons.add('Has open seats');
         }
       }
 
-      final normalizedStatus =
-          section.status?.trim().toLowerCase();
+      final normalizedStatus = section.status?.trim().toLowerCase();
 
-      if (normalizedStatus != null &&
-          normalizedStatus.isNotEmpty) {
+      if (normalizedStatus != null && normalizedStatus.isNotEmpty) {
         if (normalizedStatus.contains('closed') ||
             normalizedStatus.contains('cancel') ||
             normalizedStatus.contains('full')) {
           score -= 100;
-          reasons.add(
-            'Section is not currently open',
-          );
+          reasons.add('Section is not currently open');
         } else if (normalizedStatus.contains('open')) {
           score += 2;
-          reasons.add(
-            'Section is open',
-          );
+          reasons.add('Section is open');
         }
       }
 
@@ -155,26 +134,23 @@ class ScheduleMatchingService {
       );
     }).toList();
 
-    matches.sort(
-      (a, b) {
-        final scoreComparison =
-            b.score.compareTo(a.score);
+    matches.sort((a, b) {
+      final scoreComparison = b.score.compareTo(a.score);
 
-        if (scoreComparison != 0) {
-          return scoreComparison;
-        }
+      if (scoreComparison != 0) {
+        return scoreComparison;
+      }
 
-        final aStart = a.section.hasPrimaryMeetingTime
-            ? a.section.startMinutes
-            : 24 * 60;
+      final aStart = a.section.hasPrimaryMeetingTime
+          ? a.section.startMinutes
+          : 24 * 60;
 
-        final bStart = b.section.hasPrimaryMeetingTime
-            ? b.section.startMinutes
-            : 24 * 60;
+      final bStart = b.section.hasPrimaryMeetingTime
+          ? b.section.startMinutes
+          : 24 * 60;
 
-        return aStart.compareTo(bStart);
-      },
-    );
+      return aStart.compareTo(bStart);
+    });
 
     return matches;
   }
@@ -196,10 +172,7 @@ class ScheduleMatchingService {
     return null;
   }
 
-  int _scorePreferredTime(
-    CourseSection section,
-    String preferredTime,
-  ) {
+  int _scorePreferredTime(CourseSection section, String preferredTime) {
     if (!section.hasPrimaryMeetingTime) {
       return 0;
     }
@@ -208,8 +181,7 @@ class ScheduleMatchingService {
 
     switch (preferredTime.toLowerCase()) {
       case 'morning':
-        if (start >= 8 * 60 &&
-            start < 12 * 60) {
+        if (start >= 8 * 60 && start < 12 * 60) {
           return 5;
         }
 
@@ -220,13 +192,11 @@ class ScheduleMatchingService {
         return -2;
 
       case 'afternoon':
-        if (start >= 12 * 60 &&
-            start < 17 * 60) {
+        if (start >= 12 * 60 && start < 17 * 60) {
           return 5;
         }
 
-        if (start >= 10 * 60 &&
-            start < 18 * 60) {
+        if (start >= 10 * 60 && start < 18 * 60) {
           return 2;
         }
 
@@ -258,8 +228,7 @@ class ScheduleMatchingService {
     }
 
     final possibleNames = <String>[
-      if (instructor != null)
-        instructor.name,
+      if (instructor != null) instructor.name,
       ...section.allInstructorNames,
     ];
 
@@ -268,36 +237,26 @@ class ScheduleMatchingService {
     }
 
     for (final preferred in preferredProfessors) {
-      final normalizedPreferred =
-          _normalizeName(preferred);
+      final normalizedPreferred = _normalizeName(preferred);
 
       if (normalizedPreferred.isEmpty) {
         continue;
       }
 
       for (final name in possibleNames) {
-        final normalizedName =
-            _normalizeName(name);
+        final normalizedName = _normalizeName(name);
 
         if (normalizedName.isEmpty) {
           continue;
         }
 
-        if (normalizedName ==
-                normalizedPreferred ||
-            normalizedName.contains(
-              normalizedPreferred,
-            ) ||
-            normalizedPreferred.contains(
-              normalizedName,
-            )) {
+        if (normalizedName == normalizedPreferred ||
+            normalizedName.contains(normalizedPreferred) ||
+            normalizedPreferred.contains(normalizedName)) {
           return true;
         }
 
-        if (_namesMatchByParts(
-          normalizedName,
-          normalizedPreferred,
-        )) {
+        if (_namesMatchByParts(normalizedName, normalizedPreferred)) {
           return true;
         }
       }
@@ -306,9 +265,7 @@ class ScheduleMatchingService {
     return false;
   }
 
-  String _normalizeName(
-    String value,
-  ) {
+  String _normalizeName(String value) {
     return value
         .toLowerCase()
         .replaceAll(',', ' ')
@@ -317,10 +274,7 @@ class ScheduleMatchingService {
         .trim();
   }
 
-  bool _namesMatchByParts(
-    String first,
-    String second,
-  ) {
+  bool _namesMatchByParts(String first, String second) {
     final firstParts = first
         .split(' ')
         .where((part) => part.isNotEmpty)
@@ -331,13 +285,11 @@ class ScheduleMatchingService {
         .where((part) => part.isNotEmpty)
         .toSet();
 
-    if (firstParts.isEmpty ||
-        secondParts.isEmpty) {
+    if (firstParts.isEmpty || secondParts.isEmpty) {
       return false;
     }
 
-    final shared =
-        firstParts.intersection(secondParts);
+    final shared = firstParts.intersection(secondParts);
 
     if (shared.length >= 2) {
       return true;

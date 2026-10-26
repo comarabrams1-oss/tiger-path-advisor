@@ -375,11 +375,11 @@ class HomeScreen extends StatelessWidget {
         color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(30),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        spacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           Icon(icon, size: 16, color: Theme.of(context).colorScheme.onPrimary),
-          const SizedBox(width: 6),
           Text(
             label,
             style: TextStyle(
@@ -411,12 +411,14 @@ class HomeScreen extends StatelessWidget {
               children: [
                 Icon(Icons.insights_outlined, color: colors.primary),
                 const SizedBox(width: 9),
-                Text(
-                  'Academic Snapshot',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
+                Flexible(
+                  child: Text(
+                    'Academic Snapshot',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface,
+                    ),
                   ),
                 ),
               ],

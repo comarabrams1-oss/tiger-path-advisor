@@ -120,3 +120,47 @@ The proxy returns safe error codes for quota, model access, provider access,
 timeout, malformed response/action, and connection failures. The client maps
 these codes to specific messages, without displaying upstream response bodies
 or secrets. Failed questions remain in the composer for retrying.
+
+## Schedule assistance
+
+Generated Schedule includes an inline **Build with Tiger Path** input. Gemini
+returns structured preference settings and optional section choices. The client
+validates the settings and checks section IDs against known open offerings, then
+rebuilds the schedule in place using the deterministic scheduler. Changing the
+credit cap regenerates the eligible semester plan through SemesterPlanService.
+The AI cannot edit transcripts, override prerequisites, enroll, or invent offerings.
+The **Resolve issues and fill schedule** button asks Gemini to redirect the builder
+using other remaining degree courses from a deterministic eligibility whitelist.
+Only verified eligible or eligible-after-current-term candidates with open offerings
+can be proposed. The recovery service checks credits and all time conflicts again.
+Courses moved out of this term are listed as deferred and remain degree requirements;
+no academic substitution or waiver is implied. Conditional prerequisites, deferred
+courses, unknown meeting times, and AI-requested review trigger an advisor-review notice.
+This recovery is best effort and cannot guarantee a full schedule when offerings or
+eligibility prevent it. No student identity or transcript is included in the schedule request. Requests
+contain current preferences (excluding professor names), selected section IDs,
+unresolved reasons, and up to 100 offered candidate sections for planned courses and eligible alternatives.
+AI schedule requests and responses are not saved as advisor chat conversations.
+
+Early and late options are soft preferences: starts before 10 AM and finishes after
+5 PM lower a section's score, including secondary timed meetings. They do not
+exclude those sections. The scheduler tries each cyclic ordering of the same plan,
+retaining the result with the most scheduled credits (then course count). This is
+a bounded search, not a guarantee of a globally optimal schedule. Full sections
+are excluded using both status and known open-seat count. Missing offerings and
+unselected elective slots may still require an academic advisor or manual choice.
+
+Mobile layout smoke tests cover iOS at 390×844 and Android at 412×915, including
+schedule generation and inline assistance controls. These do not replace native
+mobile testing. The iOS simulator build was verified after enabling Flutter's
+Swift Package Manager support. Native AI calls still need an HTTPS endpoint and
+authentication configuration; the existing relative URL is intended for web hosting.
+
+Both AI modes retry a provider 503 once after one second, within the same overall
+45-second provider deadline. Persistent 503 errors report provider-busy separately
+from missing server configuration. Quota and invalid model errors are not retried.
+
+Live local recovery was verified against the Spring 2027 snapshot: a 10-credit
+selection grew to a 13-credit draft by adding another eligible required course;
+CSC 435 remained explicitly deferred because its offering was missing, and the
+review notice was displayed. This is validation of a sample record, not enrollment.

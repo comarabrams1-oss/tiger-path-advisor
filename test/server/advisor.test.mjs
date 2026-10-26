@@ -5,6 +5,7 @@ const request = body => new Request('https://example.com/.netlify/functions/advi
   method: 'POST', headers: {origin: 'https://example.com'}, body: JSON.stringify(body),
 });
 const body = {messages: [{role: 'user', text: 'What classes do I need?'}], context: {
+  schedule: {term: '2026-2027 - Spring', unresolved: [{courseCode:'CSC 237',reason:'Time conflict'}]},
   classification: 'Junior', requirements: [], recommendations: [], name: 'PRIVATE NAME',
 }};
 test('advisor handles disabled, validation, success and quota without leaking secrets', async () => {
@@ -20,10 +21,30 @@ test('advisor handles disabled, validation, success and quota without leaking se
       assert(!url.includes('test-only'));
       assert(!options.body.includes('PRIVATE NAME'));
       assert(options.body.includes('Junior'));
+      assert(options.body.includes('Time conflict'));
       return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({answer:'Take eligible courses from your plan.',actions:[{type:'changeTheme',target:'goldBlack'},{type:'execute',target:'anything'},{type:'navigate',target:'admin'},{type:'customTheme',target:'custom',primaryHex:'#008080',accentHex:'#ff8800',darkMode:true},{type:'customTheme',target:'custom',primaryHex:'red',accentHex:'#FFFFFF',darkMode:true}]})}]}}]});
     };
     const result = await handler(request(body));
     assert.equal(result.status, 200); const payload = await result.json(); assert.equal(payload.answer,'Take eligible courses from your plan.'); assert.deepEqual(payload.actions,[{type:'changeTheme',target:'goldBlack'},{type:'customTheme',target:'custom',primaryHex:'#008080',accentHex:'#FF8800',darkMode:true}]);
+    globalThis.fetch = async (url, options) => {
+      const payload = JSON.parse(options.body);
+      assert(payload.systemInstruction.parts[0].text.includes('schedule builder'));
+      return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({summary:'Draft rebuilt',preferences:{preferredTime:'Morning',preferredDays:[],avoidedDays:['Friday'],maxCredits:15,avoidEarlyClasses:true,avoidLateClasses:false,minimizeGaps:true},sectionChoices:[],courseChoices:['CSC 237'],advisorReview:true})}]}}]});
+    };
+    const schedule = await handler(request({...body, mode:'schedule'}));
+    assert.equal(schedule.status,200); assert.deepEqual((await schedule.json()).courseChoices,['CSC 237']);
+    let attempts = 0;
+    globalThis.fetch = async () => {
+      attempts++;
+      return attempts === 1 ? new Response('private busy detail', {status:503}) :
+        Response.json({candidates:[{content:{parts:[{text:JSON.stringify({answer:'Recovered',actions:[]})}]}}]});
+    };
+    assert.equal((await handler(request(body))).status, 200);
+    assert.equal(attempts, 2);
+    attempts = 0;
+    globalThis.fetch = async () => { attempts++; return new Response('private busy detail', {status:503}); };
+    const busy = await handler(request(body));
+    assert.equal(busy.status,503); assert.equal((await busy.json()).code,'PROVIDER_BUSY'); assert.equal(attempts,2);
     globalThis.fetch = async () => new Response('SECRET UPSTREAM DETAIL', {status:429});
     const quota = await handler(request(body)); assert.equal(quota.status,429); assert(!(await quota.text()).includes('SECRET'));
     globalThis.fetch = async () => { throw new DOMException('test timeout','TimeoutError'); };
