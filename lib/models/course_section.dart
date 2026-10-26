@@ -159,6 +159,23 @@ class CourseSection {
     return startMinutes >= 0 && endMinutes > startMinutes;
   }
 
+  bool get hasWeeklyMeeting =>
+      (hasPrimaryMeetingTime && days.isNotEmpty) ||
+      meetings.any((meeting) => meeting.hasTime && meeting.days.isNotEmpty);
+
+  /// Online alone does not imply asynchronous; require explicit source text.
+  bool get isAsynchronous {
+    if (hasWeeklyMeeting) return false;
+    final text = [
+      deliveryMethod,
+      rawSchedule ?? '',
+      location,
+      ...meetings.map((m) => m.rawText ?? ''),
+    ].join(' ').toLowerCase();
+    return text.contains('asynchronous') ||
+        RegExp(r'\basync\b|self[ -]paced').hasMatch(text);
+  }
+
   String get startTime {
     if (!hasPrimaryMeetingTime) {
       return 'TBA';

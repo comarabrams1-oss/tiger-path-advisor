@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/info_tip.dart';
+import '../widgets/non_timetabled_courses.dart';
 import '../services/schedule_change_history_service.dart';
 
 import '../services/schedule_assistant_service.dart';
@@ -873,6 +874,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        NonTimetabledCourses(courses: schedule.scheduled),
         Text(
           'Weekly Schedule',
           style: TextStyle(
@@ -1082,7 +1084,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                 scheduled.section.courseCode,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-              subtitle: Text(scheduled.section.scheduleDisplay),
+              subtitle: Text(
+                scheduled.section.isAsynchronous
+                    ? 'Asynchronous · ${scheduled.planItem.credits.toInt()} credits · No fixed meeting time'
+                    : scheduled.section.scheduleDisplay,
+              ),
               children: [
                 _detailRow(context, 'Course', scheduled.planItem.title),
                 _detailRow(context, 'Section', scheduled.section.sectionNumber),
