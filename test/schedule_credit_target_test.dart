@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tiger_path/services/schedule_change_history_service.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:tiger_path/data/program_registry.dart';
@@ -19,6 +21,7 @@ void main() {
   testWidgets(
     'asking Gemini for 16 credits rebuilds the engineering timetable in place',
     (tester) async {
+      SharedPreferences.setMockInitialValues({});
       selectDemoStudent(engineeringStudentEmail);
       PreferencesService.useProfile('engineering-credit-target-test');
       const prefs = SchedulePreferences(
@@ -112,6 +115,29 @@ void main() {
       expect(find.byType(GeneratedScheduleScreen), findsOneWidget);
       expect(find.textContaining('16 of 16 credits'), findsOneWidget);
       expect(PreferencesService.preferences!.maxCredits, 16);
+      expect(find.text('What changed'), findsOneWidget);
+      expect(find.textContaining('Credit target: 15 → 16.'), findsOneWidget);
+      final log = await ScheduleChangeHistoryService(
+        'engineering-credit-target-test',
+      ).load();
+      expect(log.single.request, 'Get me to 16 credits');
+      expect(
+        log.single.changes.any((c) => c.startsWith('Added AA 211')),
+        isTrue,
+      );
+      expect(log.single.changes, contains('Scheduled credits: 15 → 16.'));
+      await tester.enterText(find.byType(TextField), 'Get me to 16 credits');
+      await tester.tap(find.text('Update schedule'));
+      await settle();
+      expect(
+        find.text('No schedule or preference changes were made.'),
+        findsOneWidget,
+      );
+      final repeated = await ScheduleChangeHistoryService(
+        'engineering-credit-target-test',
+      ).load();
+      expect(repeated.length, 2);
+      expect(repeated.first.changes, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );

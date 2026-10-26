@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/info_tip.dart';
+
 import '../models/schedule_preferences.dart';
 import '../services/preferences_service.dart';
 import 'semester_plan_screen.dart';
@@ -581,16 +583,10 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 3),
-                      Text(
-                        subtitle,
-                        style: TextStyle(
-                          color: colors.onSurface.withValues(alpha: 0.60),
-                        ),
-                      ),
                     ],
                   ),
                 ),
+                InfoTip(label: 'About $title', message: subtitle),
               ],
             ),
             const SizedBox(height: 18),

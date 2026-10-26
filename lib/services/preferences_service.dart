@@ -3,6 +3,7 @@ import '../models/schedule_preferences.dart';
 class PreferencesService {
   static String _profile = 'demo-cs-2024';
   static final _profiles = <String, SchedulePreferences>{};
+  static String get profileId => _profile;
   static void useProfile(String id) => _profile = id;
 
   static void savePreferences(SchedulePreferences preferences) {

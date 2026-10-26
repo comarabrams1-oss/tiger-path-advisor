@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/info_tip.dart';
+import '../services/schedule_change_history_service.dart';
+
 import '../services/schedule_assistant_service.dart';
 import '../services/course_priority_service.dart';
 import '../services/course_eligibility_service.dart';
@@ -42,6 +45,29 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   SchedulePreferences? _updatedPreferences;
   Map<String, String> _preferredSections = {};
   String? _assistantStatus;
+  late final _history = ScheduleChangeHistoryService(
+    PreferencesService.profileId,
+  );
+  List<ScheduleChangeEntry> _changes = [];
+  ScheduleChangeEntry? _latestChange;
+  String? _historyError;
+  bool _historyLoading = true;
+
+  Future<void> _loadHistory() async {
+    try {
+      final entries = await _history.load();
+      if (mounted) setState(() => _changes = entries);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _historyError = 'Saved change history could not load. New updates will not overwrite it.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _historyLoading = false);
+    }
+  }
+
   List<SemesterPlanItem> _deferred = [];
   bool _advisorReview = false;
   List<CoursePriorityResult> get _alternatives => CoursePriorityService()
@@ -95,6 +121,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   @override
   void initState() {
     super.initState();
+    _loadHistory();
 
     if (CourseSectionRepository.hasTerm(_plannedTerm)) {
       _loadSections();
@@ -188,7 +215,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               const SizedBox(height: 6),
               Text(
                 textAlign: TextAlign.center,
-                'Tiger Path Advisor selected the best available sections based on your semester plan and schedule preferences.',
+                'Spring 2027 · Planning draft for advisor review',
                 style: TextStyle(
                   fontSize: 15,
                   color: colors.onSurface.withValues(alpha: 0.65),
@@ -337,7 +364,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     SchedulePreferences preferences,
   ) async {
     final text = _request.text.trim();
-    if (_updating || text.isEmpty) return;
+    if (_updating || _historyLoading || text.isEmpty) return;
     try {
       ScheduleAssistantService.explicitCreditTarget(text);
     } on FormatException catch (error) {
@@ -408,7 +435,22 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         preferredSections: choices,
       );
       if (!mounted) return;
+      final change = ScheduleChangeEntry(
+        time: DateTime.now(),
+        term: _plannedTerm,
+        request: text,
+        changes: ScheduleChangeEntry.compare(
+          schedule,
+          rebuilt,
+          preferences,
+          update.preferences,
+        ),
+        result:
+            '${rebuilt.scheduled.length} courses · ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits · ${rebuilt.unscheduled.length} unresolved',
+      );
       setState(() {
+        _latestChange = change;
+        _changes = [change, ..._changes].take(20).toList();
         bool stillOutstanding(SemesterPlanItem previous) {
           if (plan.items.any(
             (item) =>
@@ -468,6 +510,17 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         _request.clear();
       });
       PreferencesService.savePreferences(update.preferences);
+      if (_historyError == null) {
+        try {
+          await _history.save(_changes);
+        } catch (_) {
+          if (mounted) {
+            setState(
+              () => _historyError = 'Your schedule changed, but its change log could not be saved on this device.',
+            );
+          }
+        }
+      }
     } catch (error) {
       if (mounted) {
         setState(
@@ -493,20 +546,31 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            textAlign: TextAlign.center,
-            'Build with Tiger Path',
-            style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+          Row(
+            children: [
+              const SizedBox(width: 48),
+              const Expanded(
+                child: Text(
+                  'Build with Tiger Path',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                ),
+              ),
+              const InfoTip(
+                label: 'How schedule updates work',
+                message: 'Tiger Path checks prerequisites, lab pairings, availability and time conflicts. Preferences are flexible. Updates change this draft only; registration and required approvals still need review.',
+              ),
+            ],
           ),
           const SizedBox(height: 6),
           const Text(
             textAlign: TextAlign.center,
-            'Set a credit goal or ask for a change. Tiger Path rebuilds the timetable here and checks courses, labs, availability and conflicts.',
+            'Ask for a credit goal, different times, or another section.',
           ),
           const SizedBox(height: 12),
           TextField(
             controller: _request,
-            enabled: !_updating,
+            enabled: !_updating && !_historyLoading,
             maxLength: 1000,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _updateSchedule(schedule, preferences),
@@ -517,7 +581,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             ),
           ),
           FilledButton.icon(
-            onPressed: _updating
+            onPressed: _updating || _historyLoading
                 ? null
                 : () => _updateSchedule(schedule, preferences),
             icon: _updating
@@ -530,7 +594,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             label: Text(_updating ? 'Updating…' : 'Update schedule'),
           ),
           OutlinedButton.icon(
-            onPressed: _updating
+            onPressed: _updating || _historyLoading
                 ? null
                 : () {
                     _request.text = 'Resolve time conflicts and missing offerings using other eligible remaining degree courses. Aim to fill my credit limit. Keep deferred requirements for advisor review.';
@@ -551,9 +615,51 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             '${preferences.avoidLateClasses ? "; favor finishes by 5 PM" : ""}'
             '${preferences.avoidedDays.isNotEmpty ? "; prefer to avoid ${preferences.avoidedDays.join(", ")}" : ""}.',
           ),
-          const Text(
-            'Preferences are flexible. Missing offerings and required approvals can remain unresolved.',
-            style: TextStyle(fontSize: 12),
+          if (_latestChange != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              _latestChange!.changes.isEmpty
+                  ? 'No schedule or preference changes were made.'
+                  : 'What changed',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+            for (final line in _latestChange!.highlights.take(4))
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text('• $line'),
+              ),
+            if (_latestChange!.changes.length > 4)
+              const Text('Open the change log for all changes.'),
+          ],
+          if (_historyError != null)
+            Text(
+              _historyError!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          const SizedBox(height: 8),
+          ExpansionTile(
+            initiallyExpanded: false,
+            tilePadding: EdgeInsets.zero,
+            title: Text('Change log (${_changes.length})'),
+            subtitle: const Text('Saved on this device · latest 20 updates'),
+            children: [
+              if (_changes.isEmpty)
+                const ListTile(title: Text('No schedule updates yet.')),
+              for (final entry in _changes)
+                ExpansionTile(
+                  initiallyExpanded: false,
+                  title: Text(entry.result),
+                  subtitle: Text('${_changeTime(entry.time)} · ${entry.term}'),
+                  children: [
+                    ListTile(title: Text('Request: ${entry.request}')),
+                    for (final line
+                        in entry.changes.isEmpty
+                            ? ['No schedule or preference changes were made.']
+                            : entry.changes)
+                      ListTile(dense: true, title: Text(line)),
+                  ],
+                ),
+            ],
           ),
         ],
       ),
@@ -1124,7 +1230,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                             label: const Text(
                               'Try resolving schedule conflicts',
                             ),
-                            onPressed: _updating
+                            onPressed: _updating || _historyLoading
                                 ? null
                                 : () {
                                     _request.text =
@@ -1169,39 +1275,26 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     );
   }
 
-  Widget _buildDataNotice(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    final message = _usingRealData
-        ? 'Using real Tiger Portal section data for $_plannedTerm. '
-              'Times, professors, locations, seats, and section status '
-              'come from the imported Tiger Portal dataset.'
-        : 'Imported Spring 2027 sections could not be loaded. '
-              'This schedule currently uses demonstration Spring 2027 sections. '
-              'When Spring 2027 data is imported, Tiger Path will automatically '
-              'switch to the real sections.';
-
-    return Container(
-      padding: const EdgeInsets.all(17),
-      decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.info_outline, color: colors.primary),
-          const SizedBox(width: 11),
-          Expanded(
-            child: Text(
-              message,
-              style: TextStyle(color: colors.onSurface.withValues(alpha: 0.72)),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _changeTime(DateTime time) {
+    final t = time.toLocal();
+    return '${t.month}/${t.day}/${t.year} ${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
   }
+
+  Widget _buildDataNotice(BuildContext context) => Row(
+    children: [
+      Expanded(
+        child: Text(
+          _usingRealData
+              ? 'Imported Spring 2027 snapshot · verify current seats in Tiger Portal.'
+              : 'Demo sections in use. Imported offerings could not load.',
+        ),
+      ),
+      const InfoTip(
+        label: 'About section data',
+        message: 'Times, instructors, locations, seats and status come from an imported snapshot, not a live registration feed. Confirm current availability in Tiger Portal before registering.',
+      ),
+    ],
+  );
 
   Widget _emptyState(BuildContext context, String message) {
     final colors = Theme.of(context).colorScheme;

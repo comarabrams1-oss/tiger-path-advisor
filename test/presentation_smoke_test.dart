@@ -113,6 +113,8 @@ void main() {
               )
               .first,
         );
+        await tester.ensureVisible(find.text('Find courses for my semester'));
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Find courses for my semester'));
         await tester.pumpAndSettle();
         expect(find.text('Junior semester plan'), findsOneWidget);
@@ -135,9 +137,9 @@ void main() {
         });
         await tester.pumpAndSettle();
         expect(find.text('Your Semester Schedule'), findsOneWidget);
-        expect(find.textContaining('demonstration Spring'), findsNothing);
+        expect(find.textContaining('Demo sections in use'), findsNothing);
         await tester.scrollUntilVisible(
-          find.textContaining('Using real Tiger Portal section data'),
+          find.textContaining('Imported Spring 2027 snapshot'),
           400,
           scrollable: find
               .descendant(
@@ -147,7 +149,7 @@ void main() {
               .first,
         );
         expect(
-          find.textContaining('Using real Tiger Portal section data'),
+          find.textContaining('Imported Spring 2027 snapshot'),
           findsOneWidget,
         );
         expect(tester.takeException(), isNull);
