@@ -69,6 +69,8 @@ const foundationCourseCatalog = <Course>[
   ),
   Course(
     code: 'AR 233',
+    allowsPlacementExemption: true,
+    requiresPassingPrerequisites: true,
     title: 'Intermediate Arabic',
     credits: 3,
     category: 'General Education',
@@ -78,6 +80,8 @@ const foundationCourseCatalog = <Course>[
   ),
   Course(
     code: 'FS 233',
+    allowsPlacementExemption: true,
+    requiresPassingPrerequisites: true,
     title: 'Intermediate French',
     credits: 3,
     category: 'General Education',
@@ -87,6 +91,8 @@ const foundationCourseCatalog = <Course>[
   ),
   Course(
     code: 'SP 233',
+    allowsPlacementExemption: true,
+    requiresPassingPrerequisites: true,
     title: 'Intermediate Spanish',
     credits: 3,
     category: 'General Education',

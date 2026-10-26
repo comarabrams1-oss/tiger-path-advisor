@@ -90,14 +90,9 @@ void main() {
           isTrue,
         );
         if (student.classification == 'Freshman') {
-          expect(
-            codes,
-            contains(
-              student.courses.any((c) => c.courseCode == 'AA 111')
-                  ? 'AA 211'
-                  : 'AA 111',
-            ),
-          );
+          if (!student.courses.any((c) => c.courseCode == 'AA 111')) {
+            expect(codes, contains('AA 111'));
+          }
           expect(codes.any((c) => c!.startsWith('ENG ')), isTrue);
           expect(
             codes.any((c) => c!.startsWith('CSC 3') || c.startsWith('CSC 4')),

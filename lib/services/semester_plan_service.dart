@@ -3,6 +3,8 @@ import '../models/degree_program.dart';
 import '../models/student.dart';
 import '../models/student_course.dart';
 import '../models/course_section.dart';
+import '../models/schedule_preferences.dart';
+import 'schedule_generation_service.dart';
 import 'course_eligibility_service.dart';
 import 'course_priority_service.dart';
 import 'degree_audit_service.dart';
@@ -36,12 +38,14 @@ class SemesterPlan {
   final double totalCredits;
   final int maxCredits;
   final List<SemesterPlanItem> reviewItems;
+  final String? shortfallReason;
 
   const SemesterPlan({
     required this.items,
     required this.totalCredits,
     required this.maxCredits,
     this.reviewItems = const [],
+    this.shortfallReason,
   });
 
   double get remainingCreditCapacity {
@@ -50,21 +54,15 @@ class SemesterPlan {
 }
 
 class SemesterPlanService {
-  final CoursePriorityService _priorityService = CoursePriorityService();
-
-  final DegreeAuditService _auditService = DegreeAuditService();
-
   SemesterPlan generatePlan({
     required Student student,
     required DegreeProgram program,
     required List<Course> catalog,
     required int maxCredits,
     List<CourseSection>? sections,
+    SchedulePreferences? preferences,
   }) {
-    final items = <SemesterPlanItem>[];
-    final reviewItems = <SemesterPlanItem>[];
-    var totalCredits = 0.0;
-    final audit = _auditService.auditProgram(student, program);
+    final audit = DegreeAuditService().auditProgram(student, program);
     final used = student.courses
         .where(
           (c) =>
@@ -73,38 +71,35 @@ class SemesterPlanService {
         )
         .map((c) => c.courseCode)
         .toSet();
-    final plannedPerRequirement = <String, double>{};
+    final ranked = CoursePriorityService().rankCourses(
+      student,
+      program,
+      catalog,
+    );
     final freshman = student.classification.toLowerCase() == 'freshman';
-    final ranked = _priorityService.rankCourses(student, program, catalog);
+    final generator = ScheduleGenerationService();
+    final effectivePreferences =
+        preferences ??
+        SchedulePreferences(
+          preferredTime: 'No Preference',
+          preferredDays: [],
+          avoidedDays: [],
+          preferredProfessors: [],
+          maxCredits: maxCredits,
+          avoidEarlyClasses: false,
+          avoidLateClasses: false,
+          minimizeGaps: true,
+        );
+    var states = <_PlanChoice>[const _PlanChoice([], {}, 0, 0)];
     for (final result in ranked) {
-      if (![
-        EligibilityStatus.eligible,
-        EligibilityStatus.eligibleAfterCurrentTerm,
-      ].contains(result.eligibility.status)) {
-        continue;
-      }
       final course = result.course;
       if (used.contains(course.code) ||
-          totalCredits + course.credits > maxCredits) {
+          ![
+            EligibilityStatus.eligible,
+            EligibilityStatus.eligibleAfterCurrentTerm,
+          ].contains(result.eligibility.status)) {
         continue;
       }
-      final requirements = audit
-          .where(
-            (a) =>
-                a.status == RequirementStatus.remaining &&
-                a.requirement.courseCodes.contains(course.code),
-          )
-          .toList();
-      if (requirements.isEmpty) continue;
-      final requirement = requirements.first;
-      final remaining =
-          requirement.requirement.creditsRequired -
-          requirement.completedCredits -
-          requirement.inProgressCredits -
-          (plannedPerRequirement[requirement.requirement.id] ?? 0);
-      if (remaining <= 0 || course.credits > remaining) continue;
-      // First-year planning favors the foundation sequence; eligibility is
-      // still determined by the same prerequisite service for every student.
       final level =
           int.tryParse(
             RegExp(r'\d{3}').firstMatch(course.code)?.group(0) ?? '999',
@@ -117,6 +112,19 @@ class SemesterPlanService {
           )) {
         continue;
       }
+      final requirements = audit
+          .where(
+            (a) =>
+                a.status == RequirementStatus.remaining &&
+                a.requirement.courseCodes.contains(course.code),
+          )
+          .toList();
+      if (requirements.isEmpty) continue;
+      final requirement = requirements.first;
+      final budget =
+          requirement.requirement.creditsRequired -
+          requirement.completedCredits -
+          requirement.inProgressCredits;
       final item = SemesterPlanItem(
         type: SemesterPlanItemType.course,
         title: course.title,
@@ -130,14 +138,51 @@ class SemesterPlanService {
             EligibilityStatus.eligibleAfterCurrentTerm,
         priority: result,
       );
-      items.add(item);
-      totalCredits += course.credits;
-      used.add(course.code);
-      plannedPerRequirement[requirement.requirement.id] =
-          (plannedPerRequirement[requirement.requirement.id] ?? 0) +
-          course.credits;
+      // Keep the first-year orientation seminar when it can be placed.
+      final expanded = freshman && course.code == 'AA 111'
+          ? <_PlanChoice>[]
+          : [...states];
+      for (final state in states) {
+        final allocated = state.allocations[requirement.requirement.id] ?? 0;
+        if (state.credits + course.credits > maxCredits ||
+            allocated + course.credits > budget) {
+          continue;
+        }
+        final items = [...state.items, item];
+        if (sections != null) {
+          final trial = generator.generateSchedule(
+            plan: SemesterPlan(
+              items: items,
+              totalCredits: state.credits + course.credits,
+              maxCredits: maxCredits,
+            ),
+            sections: sections,
+            instructors: [],
+            preferences: effectivePreferences,
+          );
+          if (trial.unscheduled.isNotEmpty) continue;
+        }
+        expanded.add(
+          _PlanChoice(
+            items,
+            {
+              ...state.allocations,
+              requirement.requirement.id: allocated + course.credits,
+            },
+            state.credits + course.credits,
+            state.score + result.score,
+          ),
+        );
+      }
+      if (expanded.isEmpty) expanded.addAll(states);
+      expanded.sort(_compare);
+      // Keep multiple course/time combinations, including alternatives within
+      // the same requirement. This bounded search does not promise optimality.
+      states = expanded.take(48).toList();
     }
-    // Unverified choices remain visible without consuming a semester's credits.
+    states.sort(_compare);
+    final best = states.first;
+    final reviewItems = <SemesterPlanItem>[];
     for (final item in audit.where(
       (a) =>
           a.status == RequirementStatus.remaining &&
@@ -150,8 +195,32 @@ class SemesterPlanService {
           item.requirement.creditsRequired -
           item.completedCredits -
           item.inProgressCredits -
-          (plannedPerRequirement[item.requirement.id] ?? 0);
+          (best.allocations[item.requirement.id] ?? 0);
       if (remaining <= 0) continue;
+      final explanations = <String>[];
+      for (final code in item.requirement.courseCodes.where(
+        (code) =>
+            !used.contains(code) &&
+            !best.items.any((i) => i.courseCode == code),
+      )) {
+        final matches = ranked.where((r) => r.course.code == code);
+        if (matches.isEmpty) continue;
+        final result = matches.first;
+        if (result.eligibility.missingPrerequisites.isNotEmpty) {
+          explanations.add(
+            '$code requires ${result.eligibility.missingPrerequisites.join(', ')}',
+          );
+        } else if (sections != null &&
+            !sections.any(
+              (s) => s.courseCode == code && s.isOpen && s.hasOpenSeats,
+            )) {
+          explanations.add('$code has no open imported sections');
+        } else {
+          explanations.add(
+            '$code did not fit this combination within the credit limit and meeting times',
+          );
+        }
+      }
       reviewItems.add(
         SemesterPlanItem(
           type: SemesterPlanItemType.requirementSlot,
@@ -163,15 +232,40 @@ class SemesterPlanService {
               ? item.requirement.courseCodes.first
               : null,
           credits: remaining,
-          reason: 'Still outstanding; not included in this semester. Confirm prerequisites, placement, approved options and availability with your advisor.',
+          reason:
+              '${explanations.take(3).join('. ')}${explanations.isEmpty ? '' : '. '}Still outstanding; not included in this semester. Confirm prerequisites, placement, approved options and availability with your advisor.',
         ),
       );
     }
+    final gap = maxCredits - best.credits;
     return SemesterPlan(
-      items: items,
-      totalCredits: totalCredits,
+      items: best.items,
+      totalCredits: best.credits,
       maxCredits: maxCredits,
       reviewItems: reviewItems,
+      shortfallReason: gap <= 0
+          ? null
+          : '${best.credits.toInt()} of $maxCredits credits planned. The search did not find another verified, eligible course combination within the limit${sections == null ? '' : ' and imported meeting times'}. Remaining requirements may need prerequisites, placement, unavailable sections or additional catalog mapping. Ask your advisor to review the ${gap.toInt()}-credit gap; the limit is not a guarantee.',
     );
   }
+
+  static int _compare(_PlanChoice a, _PlanChoice b) {
+    final credits = b.credits.compareTo(a.credits);
+    if (credits != 0) return credits;
+    final priority = b.score.compareTo(a.score);
+    return priority != 0
+        ? priority
+        : a.items
+              .map((i) => i.courseCode)
+              .join(',')
+              .compareTo(b.items.map((i) => i.courseCode).join(','));
+  }
+}
+
+class _PlanChoice {
+  final List<SemesterPlanItem> items;
+  final Map<String, double> allocations;
+  final double credits;
+  final int score;
+  const _PlanChoice(this.items, this.allocations, this.credits, this.score);
 }

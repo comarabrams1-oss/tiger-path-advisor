@@ -48,6 +48,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
       catalog: activeCatalog,
       maxCredits: maxCredits,
       sections: sections,
+      preferences: preferences,
     );
 
     return Scaffold(
@@ -102,7 +103,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
                   const SizedBox(height: 10),
                   Text(
                     '${plan.remainingCreditCapacity.toInt()} '
-                    'credits still available',
+                    'credits below the limit',
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -118,6 +119,11 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
           const SizedBox(height: 30),
 
+          if (plan.shortfallReason != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(plan.shortfallReason!),
+            ),
           ...plan.items.map((item) => buildPlanItem(context, item)),
 
           if (plan.reviewItems.isNotEmpty)
@@ -241,9 +247,9 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
                   if (item.projectedEligibility) ...[
                     const SizedBox(height: 8),
-                    const Text(
-                      'Projected eligibility after '
-                      'current semester',
+                    Text(
+                      item.priority?.eligibility.reason ??
+                          'Only after current prerequisites are passed',
                     ),
                   ],
 

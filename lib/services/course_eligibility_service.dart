@@ -71,6 +71,9 @@ class CourseEligibilityService {
         .where(
           (studentCourse) =>
               studentCourse.status == CourseStatus.completed &&
+              (!course.requiresPassingPrerequisites ||
+                  RegExp(r'^[ABCD][+-]?$')
+                      .hasMatch(studentCourse.grade?.toUpperCase() ?? '')) &&
               _meetsPrerequisiteGrade(
                 studentCourse.grade,
                 course.minimumPrerequisiteGrades[studentCourse.courseCode],
@@ -97,6 +100,29 @@ class CourseEligibilityService {
       );
     }
 
+    final failedElementary =
+        course.allowsPlacementExemption &&
+        student.courses.any(
+          (c) =>
+              c.status == CourseStatus.completed &&
+              c.grade?.toUpperCase() == 'F' &&
+              course.prerequisiteGroups.any((g) => g.contains(c.courseCode)),
+        );
+    if (failedElementary) {
+      return CourseEligibilityResult(
+        course: course,
+        status: EligibilityStatus.blocked,
+        reason: 'Elementary language must be passed. A failed elementary course cannot be bypassed by a placement exemption.',
+      );
+    }
+    if (course.allowsPlacementExemption &&
+        student.verifiedPlacementCourses.contains(course.code)) {
+      return CourseEligibilityResult(
+        course: course,
+        status: EligibilityStatus.eligible,
+        reason: 'Verified college placement exemption for ${course.code}.',
+      );
+    }
     final missing = <String>[];
     var dependsOnCurrentCourse = false;
 
@@ -139,7 +165,8 @@ class CourseEligibilityService {
       return CourseEligibilityResult(
         course: course,
         status: EligibilityStatus.eligibleAfterCurrentTerm,
-        reason: 'Eligible if the current prerequisite course is completed successfully.',
+        reason:
+            'For next term only: must first pass ${course.prerequisiteGroups.where((g) => !g.any(completedCodes.contains)).map((g) => g.join(' or ')).join(' and ')}${course.allowsPlacementExemption ? '. No placement exemption is recorded' : ''}.',
       );
     }
 

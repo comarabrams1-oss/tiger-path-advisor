@@ -14,6 +14,7 @@ class Student {
 
   /// Credits explicitly confirmed by an academic audit, never inferred by AI.
   final Map<String, double> confirmedRequirementCredits;
+  final Set<String> verifiedPlacementCourses;
 
   const Student({
     required this.name,
@@ -27,6 +28,7 @@ class Student {
     required this.requiredCredits,
     required this.courses,
     this.confirmedRequirementCredits = const {},
+    this.verifiedPlacementCourses = const {},
   });
 
   double get remainingCredits => requiredCredits - earnedCredits;
@@ -51,6 +53,7 @@ class Student {
       'requiredCredits': requiredCredits,
       'courses': courses.map((course) => course.toJson()).toList(),
       'confirmedRequirementCredits': confirmedRequirementCredits,
+      'verifiedPlacementCourses': verifiedPlacementCourses.toList(),
     };
   }
 }

@@ -165,8 +165,9 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
                           ),
                         if (item.eligibility.status ==
                             EligibilityStatus.eligibleAfterCurrentTerm)
-                          const Text(
-                            'After current prerequisites are completed',
+                          Text(
+                            item.eligibility.reason ??
+                                'After current prerequisites are completed',
                             style: TextStyle(fontSize: 11),
                           ),
                       ],

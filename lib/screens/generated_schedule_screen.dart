@@ -194,6 +194,14 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               ),
               const SizedBox(height: 24),
               _buildSummary(context, generatedSchedule, preferences),
+              if (generatedSchedule.scheduledCredits < preferences.maxCredits)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Text(
+                    _plan.shortfallReason ??
+                        '${generatedSchedule.scheduledCredits.toInt()} of ${preferences.maxCredits} credits scheduled. The remaining space may require different eligible courses, sections, or advisor verification; the credit limit is not a guaranteed course load.',
+                  ),
+                ),
               const SizedBox(height: 12),
               _buildAssistant(context, generatedSchedule, preferences),
               if (_deferred.isNotEmpty)
@@ -211,11 +219,25 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                         item.planItem.projectedEligibility ||
                         !item.section.hasPrimaryMeetingTime,
                   ))
-                const Card(
+                Card(
                   child: Padding(
-                    padding: EdgeInsets.all(16),
-                    child: Text(
-                      'Advisor review recommended: check deferred requirements, conditional prerequisites, and the proposed course changes before registration.',
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Advisor review recommended: check deferred requirements, conditional prerequisites, and the proposed course changes before registration.',
+                        ),
+                        for (final item in generatedSchedule.scheduled.where(
+                          (i) => i.planItem.projectedEligibility,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '${item.planItem.courseCode}: ${item.planItem.priority?.eligibility.reason ?? 'Current prerequisites must be passed first.'}',
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),
