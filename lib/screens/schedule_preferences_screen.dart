@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/schedule_preferences.dart';
 import '../services/preferences_service.dart';
 import 'semester_plan_screen.dart';
+import '../data/test_student.dart';
 
 class SchedulePreferencesScreen extends StatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -140,16 +141,20 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
             padding: const EdgeInsets.all(20),
             children: [
               Text(
-                'Build Your Preferences',
+                activeStudent.classification.toLowerCase() == 'freshman'
+                    ? 'Plan your first-year courses'
+                    : 'Plan your next semester',
                 style: TextStyle(
-                  fontSize: 28,
+                  fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: colors.onSurface,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
-                'Tell Tiger Path Advisor what your ideal semester looks like.',
+                activeStudent.classification.toLowerCase() == 'freshman'
+                    ? 'Start with introductory major courses, English, and other remaining foundations. Then choose the times that work for you.'
+                    : 'Choose your preferences for courses that fit your remaining requirements.',
                 style: TextStyle(
                   fontSize: 15,
                   color: colors.onSurface.withValues(alpha: 0.65),
@@ -392,7 +397,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 icon: const Icon(Icons.auto_awesome),
                 label: const Padding(
                   padding: EdgeInsets.symmetric(vertical: 4),
-                  child: Text('Generate Semester Plan'),
+                  child: Text('Find courses for my semester'),
                 ),
               ),
 

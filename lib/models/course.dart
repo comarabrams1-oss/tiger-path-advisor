@@ -6,6 +6,7 @@ class Course {
   final List<List<String>> prerequisiteGroups;
   final bool allowsInstructorPermission;
   final String? minimumClassStanding;
+  final Map<String, String> minimumPrerequisiteGrades;
 
   const Course({
     required this.code,
@@ -15,6 +16,7 @@ class Course {
     this.prerequisiteGroups = const [],
     this.allowsInstructorPermission = false,
     this.minimumClassStanding,
+    this.minimumPrerequisiteGrades = const {},
   });
 
   Map<String, dynamic> toJson() {

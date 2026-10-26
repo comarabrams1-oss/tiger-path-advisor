@@ -1,3 +1,5 @@
+import '../widgets/advisor_response.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -426,7 +428,15 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         await Navigator.push(
           context,
           MaterialPageRoute<void>(
-            settings: RouteSettings(name: page.runtimeType.toString()),
+            settings: RouteSettings(
+              name: switch (action.target) {
+                'transcript' => 'TranscriptScreen',
+                'degreeProgress' => 'DegreeProgressScreen',
+                'recommendations' => 'CourseRecommendationsScreen',
+                'scheduleBuilder' => 'SchedulePreferencesScreen',
+                _ => 'ThemeSettingsScreen',
+              },
+            ),
             builder: (_) => page,
           ),
         );
@@ -730,14 +740,17 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ],
             ),
             const SizedBox(height: 11),
-            SelectableText(
-              message.text,
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.6,
-                color: user ? colors.onPrimaryContainer : colors.onSurface,
+            if (!user)
+              AdvisorResponse(text: message.text)
+            else
+              SelectableText(
+                message.text,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.6,
+                  color: user ? colors.onPrimaryContainer : colors.onSurface,
+                ),
               ),
-            ),
             for (final action in message.actions.where(
               (a) => a.type == 'customTheme',
             ))

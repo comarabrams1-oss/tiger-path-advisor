@@ -64,7 +64,7 @@ void main() {
       question: 'Who teaches ${target.courseCode} and when?',
     );
     final details = context['sectionDetails'] as List;
-    expect(details.length, 45);
+    expect(details.length, 40);
     final actual = details.firstWhere(
       (d) =>
           d['courseCode'] == target.courseCode &&

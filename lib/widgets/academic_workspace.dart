@@ -45,7 +45,11 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
   void _open(BuildContext context, Widget screen) => Navigator.push(
     context,
     MaterialPageRoute(
-      settings: RouteSettings(name: screen.runtimeType.toString()),
+      settings: RouteSettings(
+        name: screen is TranscriptScreen
+            ? 'TranscriptScreen'
+            : 'CourseRecommendationsScreen',
+      ),
       builder: (_) => screen,
     ),
   );

@@ -12,6 +12,9 @@ class Student {
   final double requiredCredits;
   final List<StudentCourse> courses;
 
+  /// Credits explicitly confirmed by an academic audit, never inferred by AI.
+  final Map<String, double> confirmedRequirementCredits;
+
   const Student({
     required this.name,
     required this.institution,
@@ -23,16 +26,14 @@ class Student {
     required this.inProgressCredits,
     required this.requiredCredits,
     required this.courses,
+    this.confirmedRequirementCredits = const {},
   });
 
-  double get remainingCredits =>
-      requiredCredits - earnedCredits;
+  double get remainingCredits => requiredCredits - earnedCredits;
 
-  double get progressPercentage =>
-      (earnedCredits / requiredCredits) * 100;
+  double get progressPercentage => (earnedCredits / requiredCredits) * 100;
 
-  String get degreeLabel =>
-      major == 'Computer Science' ? 'B.S.' : '';
+  String get degreeLabel => major == 'Computer Science' ? 'B.S.' : '';
 
   Map<String, dynamic> toJson() {
     return {
@@ -46,6 +47,7 @@ class Student {
       'inProgressCredits': inProgressCredits,
       'requiredCredits': requiredCredits,
       'courses': courses.map((course) => course.toJson()).toList(),
+      'confirmedRequirementCredits': confirmedRequirementCredits,
     };
   }
 }

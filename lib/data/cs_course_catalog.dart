@@ -1,6 +1,8 @@
 import '../models/course.dart';
+import 'foundation_course_catalog.dart';
 
 const List<Course> computerScienceCourseCatalog = [
+  ...foundationCourseCatalog,
   Course(
     code: 'CSC 132',
     title: 'Introduction to Computing and Programming Logic',

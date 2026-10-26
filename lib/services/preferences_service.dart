@@ -1,19 +1,19 @@
 import '../models/schedule_preferences.dart';
 
 class PreferencesService {
-  static SchedulePreferences? _preferences;
+  static String _profile = 'demo-cs-2024';
+  static final _profiles = <String, SchedulePreferences>{};
+  static void useProfile(String id) => _profile = id;
 
-  static void savePreferences(
-    SchedulePreferences preferences,
-  ) {
-    _preferences = preferences;
+  static void savePreferences(SchedulePreferences preferences) {
+    _profiles[_profile] = preferences;
   }
 
   static SchedulePreferences? get preferences {
-    return _preferences;
+    return _profiles[_profile];
   }
 
   static bool get hasPreferences {
-    return _preferences != null;
+    return _profiles[_profile] != null;
   }
 }

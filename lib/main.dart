@@ -7,6 +7,7 @@ import 'screens/schedule_preferences_screen.dart';
 import 'screens/ai_advisor_screen.dart';
 import 'screens/theme_settings_screen.dart';
 import 'services/theme_service.dart';
+import 'services/preferences_service.dart';
 import 'services/advisor_app_actions.dart';
 import 'services/mock_auth_service.dart';
 import 'services/advisor_history_service.dart';
@@ -62,6 +63,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
       final settings = await ThemeService.load();
       final session = await _auth.restore();
       selectDemoStudent(session?.email);
+      PreferencesService.useProfile(session?.profileId ?? 'demo-cs-2024');
 
       if (!mounted) {
         return;
@@ -89,6 +91,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     if (!mounted) return;
     _navigatorKey.currentState?.popUntil((route) => route.isFirst);
     selectDemoStudent(null);
+    PreferencesService.useProfile('demo-cs-2024');
     setState(() => _session = null);
   }
 
@@ -124,7 +127,15 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     final reduceMotion = MediaQuery.disableAnimationsOf(context);
     navigator.pushAndRemoveUntil(
       PageRouteBuilder(
-        settings: RouteSettings(name: screen.runtimeType.toString()),
+        settings: RouteSettings(
+          name: switch (index) {
+            1 => 'CourseRecommendationsScreen',
+            2 => 'DegreeProgressScreen',
+            3 => 'SchedulePreferencesScreen',
+            4 => 'AiAdvisorScreen',
+            _ => 'ThemeSettingsScreen',
+          },
+        ),
         transitionDuration: Duration(milliseconds: reduceMotion ? 0 : 260),
         reverseTransitionDuration: Duration(
           milliseconds: reduceMotion ? 0 : 180,
@@ -175,6 +186,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
           ? LoginScreen(
               onSignedIn: (session) {
                 selectDemoStudent(session.email);
+                PreferencesService.useProfile(session.profileId);
                 setState(() => _session = session);
               },
             )
@@ -280,161 +292,124 @@ class HomeScreen extends StatelessWidget {
   Widget _buildHero(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final design = AppDesignTokens.of(context);
-    final compact = MediaQuery.sizeOf(context).width < 600;
-    final heading = Column(
-      crossAxisAlignment: compact
-          ? CrossAxisAlignment.center
-          : CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              padding: const EdgeInsets.all(5),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(
-                  design.design == AppDesign.sharp ? 4 : 12,
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Color.lerp(colors.surfaceContainerLow, colors.primary, .05),
+        borderRadius: BorderRadius.circular(design.radius),
+        border: Border.all(color: colors.outlineVariant.withValues(alpha: .65)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 42,
+                height: 46,
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Image.asset(
+                  'assets/images/benedict_logo.png',
+                  fit: BoxFit.contain,
+                  semanticLabel: 'Benedict College logo',
                 ),
               ),
-              child: Image.asset(
-                'assets/images/benedict_logo.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                'BENEDICT COLLEGE',
-                style: TextStyle(
-                  color: colors.onPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 2,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Benedict College',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Tiger Path Advisor',
+                      style: TextStyle(
+                        fontSize: 23,
+                        height: 1.2,
+                        fontWeight: FontWeight.w700,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ),
-            IconButton(
-              tooltip: 'Open Theme Studio',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  settings: const RouteSettings(name: 'ThemeSettingsScreen'),
-                  builder: (_) => ThemeSettingsScreen(
-                    currentPreset: currentPreset,
-                    currentCustomTheme: currentCustomTheme,
-                    onThemeChanged: onThemeChanged,
+              IconButton(
+                tooltip: 'Open Theme Studio',
+                icon: const Icon(Icons.tune),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    settings: const RouteSettings(name: 'ThemeSettingsScreen'),
+                    builder: (_) => ThemeSettingsScreen(
+                      currentPreset: currentPreset,
+                      currentCustomTheme: currentCustomTheme,
+                      onThemeChanged: onThemeChanged,
+                    ),
                   ),
                 ),
               ),
-              icon: Icon(Icons.tune, color: colors.onPrimary),
-            ),
-          ],
-        ),
-        const SizedBox(height: 24),
-        Text(
-          'Tiger Path Advisor',
-          textAlign: compact ? TextAlign.center : TextAlign.start,
-          style: TextStyle(
-            color: colors.onPrimary,
-            fontSize: 34,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1,
+            ],
           ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Fall 2026 overview · Spring 2027 planning',
-          textAlign: compact ? TextAlign.center : TextAlign.start,
-          style: TextStyle(
-            color: colors.onPrimary.withValues(alpha: .8),
-            fontSize: 15,
-          ),
-        ),
-        const SizedBox(height: 22),
-        Wrap(
-          alignment: compact ? WrapAlignment.center : WrapAlignment.start,
-          spacing: 8,
-          runSpacing: 8,
-          children: [
-            _heroBadge(
-              context,
-              Icons.school_outlined,
-              '${activeStudent.major} B.S.',
-            ),
-            _heroBadge(
-              context,
-              Icons.badge_outlined,
-              activeStudent.classification,
-            ),
-            _heroBadge(
-              context,
-              Icons.menu_book_outlined,
-              'Catalog ${activeStudent.catalogYear}',
-            ),
-          ],
-        ),
-        const SizedBox(height: 22),
-        FilledButton.icon(
-          style: FilledButton.styleFrom(
-            backgroundColor: colors.secondary,
-            foregroundColor: colors.onSecondary,
-          ),
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              settings: const RouteSettings(name: 'SchedulePreferencesScreen'),
-              builder: (_) => const SchedulePreferencesScreen(),
-            ),
-          ),
-          icon: const Icon(Icons.calendar_month_outlined, size: 18),
-          label: const Text('Plan Spring 2027'),
-        ),
-      ],
-    );
-    return Container(
-      padding: EdgeInsets.all(design.design == AppDesign.soft ? 32 : 26),
-      decoration: BoxDecoration(
-        color: colors.primary,
-        borderRadius: BorderRadius.circular(design.radius + 8),
-        border: design.design == AppDesign.sharp
-            ? Border.all(color: colors.onSurface, width: 1.5)
-            : null,
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withValues(alpha: .15),
-            blurRadius: design.design == AppDesign.sharp ? 0 : 28,
-            offset: Offset(
-              design.design == AppDesign.sharp ? 5 : 0,
-              design.design == AppDesign.sharp ? 5 : 10,
-            ),
-          ),
-        ],
-      ),
-      child: heading,
-    );
-  }
-
-  Widget _heroBadge(BuildContext context, IconData icon, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(30),
-      ),
-      child: Wrap(
-        spacing: 6,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Icon(icon, size: 16, color: Theme.of(context).colorScheme.onPrimary),
-          Text(
-            label,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontWeight: FontWeight.w600,
-              fontSize: 13,
-            ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final details = Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${activeStudent.major} B.S. · ${activeStudent.classification}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    'Fall 2026 overview · Spring 2027 planning',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              );
+              final button = FilledButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    settings: const RouteSettings(
+                      name: 'SchedulePreferencesScreen',
+                    ),
+                    builder: (_) => const SchedulePreferencesScreen(),
+                  ),
+                ),
+                icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                label: const Text('Plan Spring 2027'),
+              );
+              if (constraints.maxWidth < 580) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [details, const SizedBox(height: 14), button],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: details),
+                  const SizedBox(width: 20),
+                  button,
+                ],
+              );
+            },
           ),
         ],
       ),

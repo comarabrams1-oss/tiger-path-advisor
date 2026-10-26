@@ -53,6 +53,15 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       )
       .where(
         (item) =>
+            (activeStudent.classification.toLowerCase() != 'freshman' ||
+                (int.tryParse(
+                          RegExp(r'\d{3}')
+                                  .firstMatch(item.course.code)
+                                  ?.group(0) ??
+                              '999',
+                        ) ??
+                        999) <
+                    300) &&
             [
               EligibilityStatus.eligible,
               EligibilityStatus.eligibleAfterCurrentTerm,
@@ -201,7 +210,12 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                     ),
                   ),
                 ),
-              if (_advisorReview)
+              if (_advisorReview ||
+                  generatedSchedule.scheduled.any(
+                    (item) =>
+                        item.planItem.projectedEligibility ||
+                        !item.section.hasPrimaryMeetingTime,
+                  ))
                 const Card(
                   child: Padding(
                     padding: EdgeInsets.all(16),

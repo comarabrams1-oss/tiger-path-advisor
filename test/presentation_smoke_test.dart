@@ -104,7 +104,7 @@ void main() {
           );
         }
         await tester.scrollUntilVisible(
-          find.text('Generate Semester Plan'),
+          find.text('Find courses for my semester'),
           400,
           scrollable: find
               .descendant(
@@ -113,9 +113,9 @@ void main() {
               )
               .first,
         );
-        await tester.tap(find.text('Generate Semester Plan'));
+        await tester.tap(find.text('Find courses for my semester'));
         await tester.pumpAndSettle();
-        expect(find.text('Recommended Semester Plan'), findsOneWidget);
+        expect(find.text('Junior semester plan'), findsOneWidget);
         await tester.scrollUntilVisible(
           find.text('Generate Class Schedule'),
           400,

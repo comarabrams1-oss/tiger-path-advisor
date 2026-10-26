@@ -45,6 +45,17 @@ class ScheduleRecoveryService {
       );
       if (matches.isEmpty || codes.contains(code)) continue;
       final candidate = matches.first;
+      final requirementId = candidate.requirementId;
+      if (requirementId != null &&
+          candidate.requirementCreditsRemaining != null) {
+        final allocated = items
+            .where((i) => i.priority?.requirementId == requirementId)
+            .fold<double>(0, (sum, i) => sum + i.credits);
+        if (allocated + candidate.course.credits >
+            candidate.requirementCreditsRemaining!) {
+          continue;
+        }
+      }
       if (credits + candidate.course.credits > preferences.maxCredits) continue;
       final item = SemesterPlanItem(
         type: SemesterPlanItemType.course,
@@ -83,6 +94,7 @@ class ScheduleRecoveryService {
         items: items,
         totalCredits: credits,
         maxCredits: preferences.maxCredits,
+        reviewItems: plan.reviewItems,
       ),
       initial.unscheduled
           .where(

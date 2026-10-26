@@ -2,6 +2,7 @@ import '../models/course.dart';
 import '../models/degree_program.dart';
 import '../models/student.dart';
 import '../models/student_course.dart';
+import 'degree_audit_service.dart';
 
 enum EligibilityStatus {
   eligible,
@@ -30,25 +31,26 @@ class CourseEligibilityService {
     DegreeProgram program,
     List<Course> catalog,
   ) {
-    final requiredCourseCodes = program.requirements
+    final requiredCourseCodes = DegreeAuditService()
+        .auditProgram(student, program)
+        .where((item) => item.status == RequirementStatus.remaining)
         .where(
-          (requirement) =>
-              requirement.type == RequirementType.requiredCourse,
+          (item) => [
+            RequirementType.requiredCourse,
+            RequirementType.creditHours,
+            RequirementType.oneOfCourses,
+          ].contains(item.requirement.type),
         )
-        .expand((requirement) => requirement.courseCodes)
+        .expand((item) => item.requirement.courseCodes)
         .toSet();
 
     final completedCodes = student.courses
-        .where(
-          (course) => course.status == CourseStatus.completed,
-        )
+        .where((course) => course.status == CourseStatus.completed)
         .map((course) => course.courseCode)
         .toSet();
 
     final inProgressCodes = student.courses
-        .where(
-          (course) => course.status == CourseStatus.inProgress,
-        )
+        .where((course) => course.status == CourseStatus.inProgress)
         .map((course) => course.courseCode)
         .toSet();
 
@@ -60,31 +62,26 @@ class CourseEligibilityService {
     );
 
     return remainingCourses
-        .map(
-          (course) => checkCourse(
-            student,
-            course,
-          ),
-        )
+        .map((course) => checkCourse(student, course))
         .toList();
   }
 
-  CourseEligibilityResult checkCourse(
-    Student student,
-    Course course,
-  ) {
+  CourseEligibilityResult checkCourse(Student student, Course course) {
     final completedCodes = student.courses
         .where(
           (studentCourse) =>
-              studentCourse.status == CourseStatus.completed,
+              studentCourse.status == CourseStatus.completed &&
+              _meetsPrerequisiteGrade(
+                studentCourse.grade,
+                course.minimumPrerequisiteGrades[studentCourse.courseCode],
+              ),
         )
         .map((studentCourse) => studentCourse.courseCode)
         .toSet();
 
     final inProgressCodes = student.courses
         .where(
-          (studentCourse) =>
-              studentCourse.status == CourseStatus.inProgress,
+          (studentCourse) => studentCourse.status == CourseStatus.inProgress,
         )
         .map((studentCourse) => studentCourse.courseCode)
         .toSet();
@@ -104,17 +101,13 @@ class CourseEligibilityService {
     var dependsOnCurrentCourse = false;
 
     for (final group in course.prerequisiteGroups) {
-      final completedRequirement = group.any(
-        completedCodes.contains,
-      );
+      final completedRequirement = group.any(completedCodes.contains);
 
       if (completedRequirement) {
         continue;
       }
 
-      final inProgressRequirement = group.any(
-        inProgressCodes.contains,
-      );
+      final inProgressRequirement = group.any(inProgressCodes.contains);
 
       if (inProgressRequirement) {
         dependsOnCurrentCourse = true;
@@ -130,8 +123,7 @@ class CourseEligibilityService {
           course: course,
           status: EligibilityStatus.requiresPermission,
           missingPrerequisites: missing,
-          reason:
-              'Missing prerequisite requirements, but instructor permission may be allowed.',
+          reason: 'Missing prerequisite requirements, but instructor permission may be allowed.',
         );
       }
 
@@ -147,8 +139,7 @@ class CourseEligibilityService {
       return CourseEligibilityResult(
         course: course,
         status: EligibilityStatus.eligibleAfterCurrentTerm,
-        reason:
-            'Eligible if the current prerequisite course is completed successfully.',
+        reason: 'Eligible if the current prerequisite course is completed successfully.',
       );
     }
 
@@ -159,20 +150,34 @@ class CourseEligibilityService {
     );
   }
 
-  bool _meetsClassStanding(
-    String currentStanding,
-    String? requiredStanding,
-  ) {
+  bool _meetsPrerequisiteGrade(String? grade, String? minimum) {
+    if (minimum == null) return true;
+    const values = {
+      'A+': 12,
+      'A': 11,
+      'A-': 10,
+      'B+': 9,
+      'B': 8,
+      'B-': 7,
+      'C+': 6,
+      'C': 5,
+      'C-': 4,
+      'D+': 3,
+      'D': 2,
+      'D-': 1,
+      'F': 0,
+    };
+    final actual = values[grade?.toUpperCase()];
+    final required = values[minimum.toUpperCase()];
+    return actual != null && required != null && actual >= required;
+  }
+
+  bool _meetsClassStanding(String currentStanding, String? requiredStanding) {
     if (requiredStanding == null) {
       return true;
     }
 
-    final standings = {
-      'Freshman': 1,
-      'Sophomore': 2,
-      'Junior': 3,
-      'Senior': 4,
-    };
+    final standings = {'Freshman': 1, 'Sophomore': 2, 'Junior': 3, 'Senior': 4};
 
     final current = standings[currentStanding];
     final required = standings[requiredStanding];

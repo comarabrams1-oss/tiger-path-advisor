@@ -56,7 +56,7 @@ class AdvisorContextService {
       final order = relevance(a).compareTo(relevance(b));
       return order != 0 ? order : a.fullCourseCode.compareTo(b.fullCourseCode);
     });
-    final details = termSections.take(45).toList();
+    final details = termSections.take(40).toList();
     return {
       'program': program.name,
       'catalogYear': program.catalogYear,
@@ -120,7 +120,7 @@ class AdvisorContextService {
       'sectionCoverage': {
         'included': details.length,
         'total': termSections.length,
-        'notice': 'Details are limited to 45 sections, prioritizing course codes and instructor names in the latest question, then degree recommendations. Missing details do not mean a course is unavailable. Ask for a specific course code for more details. Empty instructors or null times/seats mean unknown, not confirmed availability.',
+        'notice': 'Details are limited to 40 sections, prioritizing course codes and instructor names in the latest question, then degree recommendations. Missing details do not mean a course is unavailable. Ask for a specific course code for more details. Empty instructors or null times/seats mean unknown, not confirmed availability.',
       },
       'dataNotice':
           'Imported offerings are a snapshot. In-progress prerequisites '

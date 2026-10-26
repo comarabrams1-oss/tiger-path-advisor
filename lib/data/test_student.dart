@@ -11,6 +11,7 @@ const Student testStudent = Student(
   earnedCredits: 73,
   inProgressCredits: 16,
   requiredCredits: 120,
+  confirmedRequirementCredits: {'FREE_ELECTIVES': 6},
   courses: [
     StudentCourse(
       courseCode: 'AA 111',

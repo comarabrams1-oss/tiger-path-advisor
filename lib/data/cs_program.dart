@@ -316,7 +316,7 @@ final benedictComputerScience2024 = DegreeProgram(
       type: RequirementType.elective,
       creditsRequired: 6,
       note:
-          'Your current audit shows this requirement as already met.',
+          'Elective credit must be confirmed in the individual student audit.',
     ),
 
     DegreeRequirement(
