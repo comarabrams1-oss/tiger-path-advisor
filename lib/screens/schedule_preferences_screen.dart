@@ -4,6 +4,7 @@ import '../models/schedule_preferences.dart';
 import '../services/preferences_service.dart';
 import 'semester_plan_screen.dart';
 import '../data/test_student.dart';
+import '../data/program_registry.dart';
 
 class SchedulePreferencesScreen extends StatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -162,6 +163,11 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
               ),
               const SizedBox(height: 24),
 
+              if (activeStudent.major == 'Computer Engineering')
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Text(engineeringPreviewNotice),
+                ),
               _buildOverviewCard(context),
 
               const SizedBox(height: 20),

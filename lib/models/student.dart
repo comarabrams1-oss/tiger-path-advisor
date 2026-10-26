@@ -33,7 +33,10 @@ class Student {
 
   double get progressPercentage => (earnedCredits / requiredCredits) * 100;
 
-  String get degreeLabel => major == 'Computer Science' ? 'B.S.' : '';
+  String get degreeLabel =>
+      ['Computer Science', 'Computer Engineering'].contains(major)
+      ? 'B.S.'
+      : '';
 
   Map<String, dynamic> toJson() {
     return {

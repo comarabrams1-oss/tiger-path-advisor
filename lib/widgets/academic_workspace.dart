@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../data/test_student.dart';
-import '../data/cs_program.dart';
-import '../data/cs_course_catalog.dart';
+import '../data/program_registry.dart';
 import '../models/student_course.dart';
 import '../models/course_section.dart';
 import '../services/course_section_repository.dart';
@@ -60,11 +59,7 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
         .where((course) => course.status == CourseStatus.inProgress)
         .toList();
     final recommended = CoursePriorityService()
-        .rankCourses(
-          activeStudent,
-          benedictComputerScience2024,
-          computerScienceCourseCatalog,
-        )
+        .rankCourses(activeStudent, activeProgram, activeCatalog)
         .where(
           (item) => [
             EligibilityStatus.eligible,

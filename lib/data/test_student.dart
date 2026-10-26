@@ -242,6 +242,59 @@ const fictionalStudent = Student(
   ],
 );
 
+const engineeringStudentEmail = 'demo.engineering@my.benedict.edu';
+const engineeringStudent = Student(
+  name: 'Alex Morgan (Engineering Demo)',
+  institution: 'Benedict College',
+  major: 'Computer Engineering',
+  catalogYear: '2025–2026',
+  classification: 'Freshman',
+  gpa: 3.25,
+  earnedCredits: 10,
+  inProgressCredits: 7,
+  requiredCredits: 125,
+  courses: [
+    StudentCourse(
+      courseCode: 'ENG 131',
+      grade: 'B',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'HIST 130',
+      grade: 'A',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'MATH 138',
+      grade: 'B',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'AA 111',
+      grade: 'A',
+      term: 'Spring 2026',
+      status: CourseStatus.completed,
+    ),
+    StudentCourse(
+      courseCode: 'CSC 132',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+    StudentCourse(
+      courseCode: 'MATH 143',
+      term: 'Fall 2026',
+      status: CourseStatus.inProgress,
+    ),
+  ],
+);
+
 void selectDemoStudent(String? email) {
-  activeStudent = email == mockStudentEmail ? fictionalStudent : testStudent;
+  activeStudent = switch (email) {
+    mockStudentEmail => fictionalStudent,
+    engineeringStudentEmail => engineeringStudent,
+    _ => testStudent,
+  };
 }

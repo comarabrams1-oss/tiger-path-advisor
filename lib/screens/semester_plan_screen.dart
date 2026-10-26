@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/cs_course_catalog.dart';
-import '../data/cs_program.dart';
+import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../services/preferences_service.dart';
 import '../services/semester_plan_service.dart';
@@ -45,8 +44,8 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
     final plan = SemesterPlanService().generatePlan(
       student: activeStudent,
-      program: benedictComputerScience2024,
-      catalog: computerScienceCourseCatalog,
+      program: activeProgram,
+      catalog: activeCatalog,
       maxCredits: maxCredits,
       sections: sections,
     );
@@ -64,6 +63,11 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
           const Text(
             'A draft of specific courses for Spring 2027. Current prerequisites must be completed successfully. Meeting times are checked in the next step.',
           ),
+          if (activeStudent.major == 'Computer Engineering')
+            const Padding(
+              padding: EdgeInsets.only(top: 12),
+              child: Text(engineeringPreviewNotice),
+            ),
           if (failed)
             const Padding(
               padding: EdgeInsets.only(top: 12),

@@ -5,8 +5,7 @@ import '../services/course_priority_service.dart';
 import '../services/course_eligibility_service.dart';
 import '../services/schedule_recovery_service.dart';
 import '../data/test_student.dart';
-import '../data/cs_program.dart';
-import '../data/cs_course_catalog.dart';
+import '../data/program_registry.dart';
 
 import '../data/test_course_sections.dart';
 import '../data/test_instructors.dart';
@@ -46,11 +45,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   List<SemesterPlanItem> _deferred = [];
   bool _advisorReview = false;
   List<CoursePriorityResult> get _alternatives => CoursePriorityService()
-      .rankCourses(
-        activeStudent,
-        benedictComputerScience2024,
-        computerScienceCourseCatalog,
-      )
+      .rankCourses(activeStudent, activeProgram, activeCatalog)
       .where(
         (item) =>
             (activeStudent.classification.toLowerCase() != 'freshman' ||
@@ -250,6 +245,8 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     GeneratedSchedule schedule,
     SchedulePreferences preferences,
   ) => {
+    'program': activeProgram.name,
+    'classification': activeStudent.classification,
     'term': _plannedTerm,
     'source': _usingRealData ? 'Imported snapshot' : 'Demo sections',
     'preferences': preferences.toJson()..remove('preferredProfessors'),
@@ -345,8 +342,8 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ? _plan
           : SemesterPlanService().generatePlan(
               student: activeStudent,
-              program: benedictComputerScience2024,
-              catalog: computerScienceCourseCatalog,
+              program: activeProgram,
+              catalog: activeCatalog,
               maxCredits: update.preferences.maxCredits,
             );
       final choices = Map<String, String>.from(_preferredSections)

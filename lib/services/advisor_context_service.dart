@@ -125,7 +125,8 @@ class AdvisorContextService {
       'dataNotice':
           'Imported offerings are a snapshot. In-progress prerequisites '
           'are conditional on successful completion. The AI explains the '
-          'computed results and cannot change eligibility or degree rules.',
+          'computed results and cannot change eligibility or degree rules.'
+          '${program.name == 'Computer Engineering' ? ' Engineering test preview: only courses with verified prerequisites can be scheduled. Labs, corequisite pairings, placement and unmapped support courses require advisor review.' : ''}',
     };
   }
 }

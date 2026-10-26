@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../data/cs_course_catalog.dart';
-import '../data/cs_program.dart';
+import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../models/degree_program.dart';
 import '../services/course_eligibility_service.dart';
@@ -39,20 +38,20 @@ class _CourseRecommendationsScreenState
     final eligibilityResults =
         eligibilityService.checkProgramCourses(
       activeStudent,
-      benedictComputerScience2024,
-      computerScienceCourseCatalog,
+      activeProgram,
+      activeCatalog,
     );
 
     final priorityResults =
         priorityService.rankCourses(
       activeStudent,
-      benedictComputerScience2024,
-      computerScienceCourseCatalog,
+      activeProgram,
+      activeCatalog,
     );
 
     final audit = auditService.auditProgram(
       activeStudent,
-      benedictComputerScience2024,
+      activeProgram,
     );
 
     final remainingRequirements = audit

@@ -3,8 +3,7 @@ import '../widgets/advisor_response.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-import '../data/cs_course_catalog.dart';
-import '../data/cs_program.dart';
+import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../models/student.dart';
 import '../services/advisor_context_service.dart';
@@ -70,8 +69,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     final sections = await CourseSectionRepository.loadForTerm(term);
     final context = AdvisorContextService().build(
       student: widget.student,
-      program: benedictComputerScience2024,
-      catalog: computerScienceCourseCatalog,
+      program: programFor(widget.student),
+      catalog: catalogFor(widget.student),
       sections: sections,
       term: term,
       question: question,
@@ -604,7 +603,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ),
               const SizedBox(height: 5),
               Text(
-                '${widget.student.classification} · Computer Science · Spring 2027',
+                '${widget.student.classification} · ${widget.student.major} · Spring 2027',
                 style: TextStyle(
                   fontSize: 12,
                   color: colors.onPrimaryContainer,
@@ -974,7 +973,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${student.classification} · B.S. Computer Science',
+            '${student.classification} · ${student.degreeLabel} ${student.major}',
             style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
           ),
           const SizedBox(height: 28),

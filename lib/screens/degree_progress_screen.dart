@@ -2,7 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../data/cs_program.dart';
+import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../models/degree_program.dart';
 import '../services/degree_audit_service.dart';
@@ -31,7 +31,7 @@ class _DegreeProgressScreenState
     final auditService = DegreeAuditService();
     final audit = auditService.auditProgram(
       activeStudent,
-      benedictComputerScience2024,
+      activeProgram,
     );
 
     final completedCredits = activeStudent.earnedCredits;
@@ -139,7 +139,7 @@ class _DegreeProgressScreenState
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Computer Science - B.S.',
+          '${activeStudent.major} - ${activeStudent.degreeLabel}',
           style: TextStyle(
             fontSize: 30,
             fontWeight: FontWeight.bold,
@@ -154,6 +154,11 @@ class _DegreeProgressScreenState
             color: colors.onSurfaceVariant,
           ),
         ),
+        if (activeStudent.major == 'Computer Engineering')
+          const Padding(
+            padding: EdgeInsets.only(top: 12),
+            child: Text(engineeringPreviewNotice),
+          ),
       ],
     );
   }
