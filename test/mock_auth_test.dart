@@ -84,7 +84,13 @@ void main() {
     await tester.tap(find.text('Continue to Tiger Path'));
     await settle(tester);
     expect(find.text('demo.student@my.benedict.edu'), findsOneWidget);
-    expect(find.text('Academic Tools'), findsOneWidget);
+    expect(find.text('Tiger Path Advisor'), findsOneWidget);
+    await tester.tap(find.text('Plan'));
+    await settle(tester);
+    expect(find.text('Schedule Builder'), findsOneWidget);
+    await tester.pageBack();
+    await settle(tester);
+    expect(find.text('Tiger Path Advisor'), findsOneWidget);
     await tester.tap(find.text('Sign out'));
     await settle(tester);
     expect(find.text('Sign in'), findsOneWidget);

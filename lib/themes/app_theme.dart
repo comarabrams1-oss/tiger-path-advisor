@@ -54,24 +54,63 @@ extension AppThemePresetInfo on AppThemePreset {
   }
 }
 
+enum AppDesign { classic, soft, sharp }
+
+extension AppDesignInfo on AppDesign {
+  String get label => switch (this) {
+    AppDesign.classic => 'Classic',
+    AppDesign.soft => 'Soft',
+    AppDesign.sharp => 'Sharp',
+  };
+  String get description => switch (this) {
+    AppDesign.classic => 'Top navigation and a side-by-side overview',
+    AppDesign.soft => 'Sidebar navigation and a planning-first workspace',
+    AppDesign.sharp => 'Navigation rail and a compact, tabbed workspace',
+  };
+  double get radius => switch (this) {
+    AppDesign.classic => 18,
+    AppDesign.soft => 30,
+    AppDesign.sharp => 6,
+  };
+}
+
+class AppDesignTokens extends ThemeExtension<AppDesignTokens> {
+  final AppDesign design;
+  const AppDesignTokens(this.design);
+  double get radius => design.radius;
+  static AppDesignTokens of(BuildContext context) =>
+      Theme.of(context).extension<AppDesignTokens>() ??
+      const AppDesignTokens(AppDesign.classic);
+  @override
+  AppDesignTokens copyWith({AppDesign? design}) =>
+      AppDesignTokens(design ?? this.design);
+  @override
+  AppDesignTokens lerp(covariant AppDesignTokens? other, double t) =>
+      t < .5 ? this : other ?? this;
+}
+
 class CustomThemeSettings {
   final bool darkMode;
+  final AppDesign design;
   final Color primaryColor;
   final Color accentColor;
 
   const CustomThemeSettings({
     this.darkMode = false,
+    this.design = AppDesign.classic,
     this.primaryColor = benedictPurple,
     this.accentColor = benedictGold,
   });
 
   CustomThemeSettings copyWith({
     bool? darkMode,
+    AppDesign? design,
     Color? primaryColor,
     Color? accentColor,
   }) {
     return CustomThemeSettings(
       darkMode: darkMode ?? this.darkMode,
+      design: design ?? this.design,
       primaryColor: primaryColor ?? this.primaryColor,
       accentColor: accentColor ?? this.accentColor,
     );
@@ -83,6 +122,77 @@ class AppThemes {
     AppThemePreset preset, {
     CustomThemeSettings custom = const CustomThemeSettings(),
   }) {
+    final base = _palette(preset, custom);
+    final design = custom.design;
+    if (design == AppDesign.classic) {
+      return base.copyWith(extensions: [AppDesignTokens(design)]);
+    }
+    final radius = BorderRadius.circular(design.radius);
+    final sharp = design == AppDesign.sharp;
+    final shape = RoundedRectangleBorder(
+      borderRadius: radius,
+      side: BorderSide(
+        color: base.colorScheme.outline.withValues(alpha: sharp ? .55 : .13),
+        width: sharp ? 1.3 : 1,
+      ),
+    );
+    final labels = base.textTheme.labelLarge?.copyWith(
+      letterSpacing: sharp ? 1.1 : .15,
+      fontWeight: FontWeight.w700,
+    );
+    return base.copyWith(
+      extensions: [AppDesignTokens(design)],
+      cardTheme: base.cardTheme.copyWith(
+        shape: shape,
+        elevation: 0,
+        margin: EdgeInsets.zero,
+      ),
+      textTheme: base.textTheme.copyWith(
+        labelLarge: labels,
+        titleLarge: base.textTheme.titleLarge?.copyWith(
+          fontWeight: sharp ? FontWeight.w900 : FontWeight.w600,
+          letterSpacing: sharp ? -.6 : .1,
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: (base.filledButtonTheme.style ?? const ButtonStyle()).copyWith(
+          shape: WidgetStatePropertyAll(shape),
+          padding: WidgetStatePropertyAll(
+            EdgeInsets.symmetric(
+              horizontal: sharp ? 18 : 24,
+              vertical: sharp ? 14 : 18,
+            ),
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: (base.outlinedButtonTheme.style ?? const ButtonStyle()).copyWith(
+          shape: WidgetStatePropertyAll(shape),
+        ),
+      ),
+      inputDecorationTheme: base.inputDecorationTheme.copyWith(
+        border: OutlineInputBorder(borderRadius: radius),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(
+            color: base.colorScheme.outline.withValues(alpha: .5),
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: BorderSide(color: base.colorScheme.primary, width: 2),
+        ),
+      ),
+      chipTheme: base.chipTheme.copyWith(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(sharp ? 4 : 20),
+        ),
+      ),
+      dividerTheme: base.dividerTheme.copyWith(thickness: sharp ? 1.3 : .7),
+    );
+  }
+
+  static ThemeData _palette(AppThemePreset preset, CustomThemeSettings custom) {
     switch (preset) {
       case AppThemePreset.benedict:
         return _benedictTheme();
@@ -476,8 +586,6 @@ class AppThemes {
   }
 
   static Color _foregroundFor(Color background) {
-    return ThemeData.estimateBrightnessForColor(background) == Brightness.dark
-        ? Colors.white
-        : Colors.black;
+    return background.computeLuminance() > 0.179 ? Colors.black : Colors.white;
   }
 }

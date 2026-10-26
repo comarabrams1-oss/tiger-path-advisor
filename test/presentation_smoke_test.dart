@@ -85,6 +85,18 @@ void main() {
             await Future<void>.delayed(const Duration(milliseconds: 50));
           });
           await tester.pumpAndSettle();
+          if (screen is HomeScreen) {
+            await tester.scrollUntilVisible(
+              find.text('Your academic workspace'),
+              400,
+              scrollable: find
+                  .descendant(
+                    of: find.byType(ListView).first,
+                    matching: find.byType(Scrollable),
+                  )
+                  .first,
+            );
+          }
           expect(
             tester.takeException(),
             isNull,

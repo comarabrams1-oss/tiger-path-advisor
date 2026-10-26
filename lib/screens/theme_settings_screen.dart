@@ -53,6 +53,163 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
     customTheme = widget.currentCustomTheme;
   }
 
+  Future<void> _applyDesign(AppDesign design) async {
+    final saved = await ThemeService.load();
+    final updated = saved.customTheme.copyWith(design: design);
+    await ThemeService.save(preset: selectedPreset, customTheme: updated);
+    if (!mounted) return;
+    setState(() => customTheme = customTheme.copyWith(design: design));
+    widget.onThemeChanged(
+      ThemeSettings(preset: selectedPreset, customTheme: updated),
+    );
+  }
+
+  Widget _buildDesignChoices(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text('Interface design', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 6),
+      const Text(
+        'Navigation, layout, shapes, and typography — independent of your colors.',
+      ),
+      const SizedBox(height: 14),
+      LayoutBuilder(
+        builder: (context, constraints) => Wrap(
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            for (final design in AppDesign.values)
+              SizedBox(
+                width: constraints.maxWidth > 700
+                    ? (constraints.maxWidth - 24) / 3
+                    : constraints.maxWidth,
+                child: Theme(
+                  data: AppThemes.build(
+                    selectedPreset,
+                    custom: customTheme.copyWith(design: design),
+                  ),
+                  child: Builder(
+                    builder: (context) {
+                      final colors = Theme.of(context).colorScheme;
+                      final selected = customTheme.design == design;
+                      return Card(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(design.radius),
+                          onTap: () => _applyDesign(design),
+                          child: Padding(
+                            padding: const EdgeInsets.all(18),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        design.label,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleLarge,
+                                      ),
+                                    ),
+                                    if (selected)
+                                      Icon(
+                                        Icons.check_circle,
+                                        color: colors.primary,
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                Text(design.description),
+                                const SizedBox(height: 16),
+                                _layoutSketch(context, design),
+                                const SizedBox(height: 12),
+                                Text(
+                                  selected ? 'Applied' : 'Apply design',
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    ],
+  );
+
+  Widget _layoutSketch(BuildContext context, AppDesign design) {
+    final colors = Theme.of(context).colorScheme;
+    Widget block(Color color, {double? height, double? width}) => Container(
+      height: height,
+      width: width,
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(design == AppDesign.sharp ? 2 : 5),
+      ),
+    );
+    final content = Column(
+      children: [
+        block(colors.primaryContainer, height: 22),
+        const SizedBox(height: 6),
+        Expanded(
+          child: Row(
+            children: [
+              Expanded(child: block(colors.surfaceContainerHighest)),
+              const SizedBox(width: 6),
+              Expanded(child: block(colors.secondaryContainer)),
+            ],
+          ),
+        ),
+      ],
+    );
+    return SizedBox(
+      height: 82,
+      child: design == AppDesign.classic
+          ? Column(
+              children: [
+                block(colors.primary, height: 10),
+                const SizedBox(height: 6),
+                Expanded(child: content),
+              ],
+            )
+          : Row(
+              children: [
+                block(
+                  colors.primary,
+                  width: design == AppDesign.soft ? 32 : 12,
+                ),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: design == AppDesign.soft
+                      ? content
+                      : Column(
+                          children: [
+                            Row(
+                              children: [
+                                block(colors.secondary, height: 9, width: 36),
+                                const SizedBox(width: 5),
+                                block(
+                                  colors.surfaceContainerHighest,
+                                  height: 9,
+                                  width: 36,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Expanded(child: block(colors.primaryContainer)),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+    );
+  }
+
   Future<void> _applyPreset(AppThemePreset preset) async {
     setState(() {
       selectedPreset = preset;
@@ -108,12 +265,14 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
               ),
               const SizedBox(height: 6),
               Text(
-                'Choose a preset theme or create a custom color combination for Tiger Path Advisor.',
+                'Combine an interface design with your favorite colors. Your choices apply throughout Tiger Path.',
                 style: TextStyle(
                   color: colors.onSurface.withValues(alpha: 0.65),
                   fontSize: 15,
                 ),
               ),
+              const SizedBox(height: 28),
+              _buildDesignChoices(context),
               const SizedBox(height: 28),
               Text(
                 'Preset Themes',

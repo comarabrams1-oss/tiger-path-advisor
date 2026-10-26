@@ -164,3 +164,20 @@ Live local recovery was verified against the Spring 2027 snapshot: a 10-credit
 selection grew to a 13-credit draft by adding another eligible required course;
 CSC 435 remained explicitly deferred because its offering was missing, and the
 review notice was displayed. This is validation of a sample record, not enrollment.
+
+## Workspace interface designs
+
+Theme Studio stores `interface_design` separately from color choices. Classic
+uses top navigation and an overview with current and next-term panels; Soft uses
+sidebar navigation and a planning-first arrangement; Sharp uses a navigation rail,
+a compact header, and current/next-term tabs. Phones use persistent bottom
+navigation, with a floating treatment for Soft. Navigation stays available across
+tools, and hides while the phone keyboard is open to preserve composer space.
+
+Home shows one compact credit summary instead of repeated progress cards and a
+duplicate directory of tools. Current coursework and the next-term shortlist use
+the existing sample profile and deterministic eligibility engine. The shortlist
+filters by open sections in the imported Spring snapshot when available; it does
+not claim live seat availability or replace schedule conflict checks. No degree
+requirements, prerequisite rules, or student academic records are changed by a
+layout selection. Layout choices persist across color changes and AI color actions.

@@ -380,7 +380,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ? AppThemePreset.custom
             : AppThemePreset.values.firstWhere((p) => p.name == action.target);
         final custom = action.type == 'customTheme'
-            ? CustomThemeSettings(
+            ? current.customTheme.copyWith(
                 primaryColor: Color(
                   int.parse('FF${action.primaryHex!.substring(1)}', radix: 16),
                 ),
@@ -423,7 +423,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         if (!mounted) return;
         await Navigator.push(
           context,
-          MaterialPageRoute<void>(builder: (_) => page),
+          MaterialPageRoute<void>(
+            settings: RouteSettings(name: page.runtimeType.toString()),
+            builder: (_) => page,
+          ),
         );
         if (mounted) await _refreshContext();
       }
