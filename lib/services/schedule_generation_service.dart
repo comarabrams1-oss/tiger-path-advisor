@@ -200,6 +200,34 @@ class ScheduleGenerationService {
       (a, b) => _earliestStart(a.section).compareTo(_earliestStart(b.section)),
     );
 
+    // A lecture may have failed to fit even when it was in the academic plan.
+    // Remove dependent labs instead of presenting orphaned co-enrollment.
+    var removed = true;
+    while (removed) {
+      removed = false;
+      final scheduledCodes = scheduled
+          .map((i) => i.planItem.courseCode)
+          .toSet();
+      final orphans = scheduled
+          .where(
+            (i) =>
+                (i.planItem.priority?.eligibility.requiredCompanions ??
+                        const <String>[])
+                    .any((code) => !scheduledCodes.contains(code)),
+          )
+          .toList();
+      for (final item in orphans) {
+        scheduled.remove(item);
+        unscheduled.add(
+          UnscheduledPlanItem(
+            planItem: item.planItem,
+            reason:
+                'Required lecture/co-enrollment could not be scheduled: ${item.planItem.priority!.eligibility.requiredCompanions.join(', ')}.',
+          ),
+        );
+        removed = true;
+      }
+    }
     return GeneratedSchedule(scheduled: scheduled, unscheduled: unscheduled);
   }
 

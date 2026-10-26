@@ -34,7 +34,23 @@ class ScheduleRecoveryService {
     final items = initial.scheduled.map((item) => item.planItem).toList();
     final codes = items.map((item) => item.courseCode).toSet();
     var credits = items.fold<double>(0, (sum, item) => sum + item.credits);
-    for (final code in requestedCourses.toSet()) {
+    final orderedRequests = <String>[];
+    final seenRequests = <String>{};
+    void order(String code) {
+      if (!seenRequests.add(code)) return;
+      final matches = candidates.where((r) => r.course.code == code);
+      if (matches.isNotEmpty) {
+        for (final companion in matches.first.eligibility.requiredCompanions) {
+          order(companion);
+        }
+      }
+      orderedRequests.add(code);
+    }
+
+    for (final code in requestedCourses) {
+      order(code);
+    }
+    for (final code in orderedRequests) {
       final matches = candidates.where(
         (candidate) =>
             candidate.course.code == code &&

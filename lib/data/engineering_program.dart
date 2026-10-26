@@ -13,8 +13,19 @@ final computerEngineeringProgram = DegreeProgram(
   majorCreditsRequired: 77,
   requirements: [
     ...benedictComputerScience2024.requirements.where(
-      (r) => r.category == 'General Education' && r.id != 'GENED_SCIENCE',
+      (r) =>
+          r.category == 'General Education' &&
+          r.id != 'GENED_SCIENCE' &&
+          r.id != 'GENED_MATH',
     ),
+    requiredCourse(
+      'MATH 143',
+      'Calculus I',
+      4,
+      'General Education',
+      minimumGrade: 'C',
+    ),
+    requiredCourse('MATH 144', 'Calculus II', 4, 'General Education'),
     for (final row in _major)
       requiredCourse(
         row.$1,
@@ -93,55 +104,264 @@ const _support = <(String, String, double)>[
   ('PHYS 234', 'Principles of Physics II', 3),
 ];
 
-/// Scheduling coverage is deliberately limited to verified prerequisite rules.
-/// Labs are kept in the audit/review list until corequisite pairing is supported.
+/// Rules from catalogue pp. 273, 279–280 and 287–291. The p. 292
+/// program remains the authority for which courses satisfy this degree.
+/// Preserve the unresolved MATH 139/140 discrepancy instead of inventing an alias.
 final computerEngineeringCatalog = <Course>[
-  ...computerScienceCourseCatalog.where(
-    (c) => computerEngineeringProgram.requirements.any(
-      (r) => r.courseCodes.contains(c.code),
-    ),
+  ...computerScienceCourseCatalog
+      .where(
+        (c) => computerEngineeringProgram.requirements.any(
+          (r) => r.courseCodes.contains(c.code),
+        ),
+      )
+      .map(
+        (c) => Course(
+          code: c.code,
+          title: c.title,
+          credits: c.credits,
+          category: c.category,
+          prerequisiteGroups: c.prerequisiteGroups,
+          allowsInstructorPermission: c.allowsInstructorPermission,
+          minimumClassStanding: c.minimumClassStanding,
+          minimumPrerequisiteGrades: c.minimumPrerequisiteGrades,
+          allowsPlacementExemption: c.allowsPlacementExemption,
+          requiresPassingPrerequisites: true,
+          corequisiteCodes: c.corequisiteCodes,
+          requiresAdvisorApproval: c.requiresAdvisorApproval,
+        ),
+      ),
+  _ce(
+    'HIST 130',
+    'Introduction to African American History',
+    3,
+    category: 'General Education',
   ),
-  const Course(
-    code: 'ENGR 130',
-    title: 'Introduction to Engineering',
-    credits: 3,
-    category: 'Major',
+  _ce('ENGR 130', 'Introduction to Engineering', 3),
+  _ce(
+    'ENGR 321',
+    'Engineering Professional Development',
+    2,
+    prerequisites: [
+      ['STEM 221'],
+    ],
+    permission: true,
   ),
-  const Course(
-    code: 'CE 231',
-    title: 'Digital Circuits',
-    credits: 3,
-    category: 'Major',
-    prerequisiteGroups: [
+  _ce('ENGR 331', 'Engineering Economics', 3, standing: 'Junior'),
+  _ce(
+    'CE 231',
+    'Digital Circuits',
+    3,
+    prerequisites: [
       ['MATH 138'],
     ],
   ),
-  const Course(
-    code: 'EE 231',
-    title: 'Circuits I',
-    credits: 3,
-    category: 'Major',
-    prerequisiteGroups: [
+  _ce('CE 211L', 'Digital Circuits Lab', 1, corequisites: ['CE 231']),
+  _ce(
+    'EE 231',
+    'Circuits I',
+    3,
+    prerequisites: [
       ['MATH 143'],
     ],
   ),
-  const Course(
-    code: 'EE 232',
-    title: 'Circuits II',
-    credits: 3,
-    category: 'Major',
-    prerequisiteGroups: [
+  _ce('EE 211L', 'Circuits I Lab', 1, corequisites: ['EE 231']),
+  _ce(
+    'EE 232',
+    'Circuits II',
+    3,
+    prerequisites: [
       ['EE 231'],
     ],
   ),
-  const Course(
-    code: 'EE 233',
-    title: 'Electronics I',
-    credits: 3,
-    category: 'Major',
-    prerequisiteGroups: [
+  _ce('EE 212L', 'Circuits II Lab', 1, corequisites: ['EE 232']),
+  _ce(
+    'EE 233',
+    'Electronics I',
+    3,
+    prerequisites: [
       ['MATH 143'],
       ['EE 231'],
     ],
+  ),
+  _ce('EE 213L', 'Electronics I Lab', 1, corequisites: ['EE 233']),
+  _ce(
+    'EE 330',
+    'Systems and Signals',
+    3,
+    prerequisites: [
+      ['MATH 144'],
+      ['EE 232'],
+    ],
+  ),
+  _ce(
+    'EE 332',
+    'Digital Signal Processing',
+    3,
+    prerequisites: [
+      ['EE 330'],
+    ],
+  ),
+  _ce(
+    'EE 334',
+    'Electronics II',
+    3,
+    prerequisites: [
+      ['EE 233'],
+    ],
+  ),
+  _ce('EE 314L', 'Electronics II Lab', 1, corequisites: ['EE 334']),
+  _ce(
+    'EE 431',
+    'Communication Systems',
+    3,
+    prerequisites: [
+      ['EE 330'],
+    ],
+  ),
+  _ce(
+    'EE 435',
+    'Applied Electromagnetics',
+    3,
+    prerequisites: [
+      ['EE 333'],
+    ],
+  ),
+  _ce(
+    'EE 436',
+    'Programmable Logic Controllers',
+    3,
+    prerequisites: [
+      ['CE 231'],
+    ],
+  ),
+  _ce(
+    'CE 332',
+    'Embedded Systems',
+    3,
+    prerequisites: [
+      ['EE 330'],
+    ],
+  ),
+  _ce(
+    'CE 427',
+    'Senior Design Project I',
+    2,
+    standing: 'Senior',
+    clearance: true,
+  ),
+  _ce(
+    'CE 428',
+    'Senior Design Project II',
+    2,
+    prerequisites: [
+      ['CE 427'],
+    ],
+  ),
+  _ce(
+    'CE 436',
+    'VLSI System Design',
+    3,
+    prerequisites: [
+      ['EE 233'],
+      ['CSC 337'],
+    ],
+  ),
+  _ce(
+    'CE 437',
+    'Computer Network Hardware',
+    3,
+    prerequisites: [
+      ['CSC 337'],
+    ],
+  ),
+  _ce(
+    'MATH 230',
+    'Linear Algebra',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['MATH 144'],
+    ],
+  ),
+  _ce(
+    'MATH 236',
+    'Probability and Statistics',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['MATH 138'],
+    ],
+  ),
+  _ce(
+    'MATH 237',
+    'Differential Equations I',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['MATH 144'],
+    ],
+  ),
+  _ce(
+    'MATH 336',
+    'Discrete Mathematics',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['MATH 144'],
+    ],
+  ),
+  _ce(
+    'PHYS 233',
+    'Principles of Physics I',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['MATH 143'],
+    ],
+  ),
+  _ce(
+    'PHYS 213L',
+    'Principles of Physics I Lab',
+    1,
+    category: 'Support',
+    corequisites: ['PHYS 233'],
+  ),
+  _ce(
+    'PHYS 234',
+    'Principles of Physics II',
+    3,
+    category: 'Support',
+    prerequisites: [
+      ['PHYS 233'],
+    ],
+  ),
+  _ce(
+    'PHYS 214L',
+    'Principles of Physics II Lab',
+    1,
+    category: 'Support',
+    corequisites: ['PHYS 234'],
   ),
 ];
+Course _ce(
+  String code,
+  String title,
+  double credits, {
+  String category = 'Major',
+  List<List<String>> prerequisites = const [],
+  List<String> corequisites = const [],
+  String? standing,
+  bool permission = false,
+  bool clearance = false,
+}) => Course(
+  code: code,
+  title: title,
+  credits: credits,
+  category: category,
+  prerequisiteGroups: prerequisites,
+  corequisiteCodes: corequisites,
+  minimumClassStanding: standing,
+  allowsInstructorPermission: permission,
+  requiresPassingPrerequisites: true,
+  requiresAdvisorApproval: clearance,
+);

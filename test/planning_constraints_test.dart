@@ -182,7 +182,10 @@ void main() {
       if (profile.major == 'Computer Science') expect(plan.totalCredits, 18);
       if (profile.major == 'Computer Engineering') {
         expect(
-          plan.reviewItems.where((i) => i.title == 'Mathematics').single.reason,
+          plan.reviewItems
+              .where((i) => i.courseCode == 'MATH 143')
+              .single
+              .reason,
           contains('MATH 140'),
         );
       }

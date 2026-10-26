@@ -19,4 +19,4 @@ List<Course> catalogFor(Student student) => switch (student.major) {
 DegreeProgram get activeProgram => programFor(activeStudent);
 List<Course> get activeCatalog => catalogFor(activeStudent);
 const engineeringPreviewNotice =
-    'Engineering test preview: the 125-credit program is mapped, but scheduling covers only courses with verified prerequisite rules. Labs, corequisite pairings, placement and unmapped support courses require advisor review.';
+    'Computer Engineering uses the 125-credit catalogue program, including support courses and lecture/lab corequisites. Confirm placement, the MATH 139/140 discrepancy, required permissions and graduating-senior design clearance with your advisor.';

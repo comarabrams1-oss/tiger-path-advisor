@@ -27,6 +27,23 @@ class ScheduleAssistantService {
     : _client = client ?? http.Client(),
       endpoint = endpoint ?? Uri.base.resolve('/.netlify/functions/advisor');
 
+  /// Preserve one unambiguous numeric credit request even if the model
+  /// accidentally echoes the old limit. Complex/range requests stay with Gemini.
+  static int? explicitCreditTarget(String question) {
+    final matches = RegExp(
+      r'\b(\d+(?:\.\d+)?)\s*(?:credit(?:s| hours?)?|hours?|hrs?)\b',
+      caseSensitive: false,
+    ).allMatches(question).toList();
+    if (matches.length != 1) return null;
+    final value = double.parse(matches.single[1]!);
+    if (value != value.roundToDouble() || value < 12 || value > 18) {
+      throw const FormatException(
+        'Choose a whole-credit target between 12 and 18.',
+      );
+    }
+    return value.toInt();
+  }
+
   Future<ScheduleUpdate> update(
     String question,
     Map<String, Object?> context,
@@ -34,6 +51,7 @@ class ScheduleAssistantService {
     List<CourseSection> available, {
     List<String> eligibleCourses = const [],
   }) async {
+    final requestedCredits = explicitCreditTarget(question);
     final response = await _client
         .post(
           endpoint,
@@ -43,7 +61,9 @@ class ScheduleAssistantService {
             'messages': [
               {'role': 'user', 'text': question},
             ],
-            'context': {'schedule': context},
+            'context': {
+              'schedule': {...context, 'requestedCredits': requestedCredits},
+            },
           }),
         )
         .timeout(const Duration(seconds: 50));
@@ -124,7 +144,7 @@ class ScheduleAssistantService {
         preferredDays: dayList('preferredDays'),
         avoidedDays: dayList('avoidedDays'),
         preferredProfessors: current.preferredProfessors,
-        maxCredits: p['maxCredits'] as int,
+        maxCredits: requestedCredits ?? p['maxCredits'] as int,
         avoidEarlyClasses: p['avoidEarlyClasses'] as bool,
         avoidLateClasses: p['avoidLateClasses'] as bool,
         minimizeGaps: p['minimizeGaps'] as bool,

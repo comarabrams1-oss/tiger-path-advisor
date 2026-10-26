@@ -84,6 +84,10 @@ class AdvisorContextService {
             'eligibility': result.eligibility.status.name,
             'missingPrerequisites': result.eligibility.missingPrerequisites,
             'eligibilityReason': result.eligibility.reason,
+            if (result.course.corequisiteCodes.isNotEmpty)
+              'corequisites': result.course.corequisiteCodes,
+            if (result.eligibility.requiredCompanions.isNotEmpty)
+              'requiredCompanions': result.eligibility.requiredCompanions,
             'reasons': result.reasons,
             'unlocks': result.unlocks,
             'openSections': sections
@@ -126,7 +130,7 @@ class AdvisorContextService {
           'Imported offerings are a snapshot. In-progress prerequisites '
           'are conditional on successful completion. The AI explains the '
           'computed results and cannot change eligibility or degree rules.'
-          '${program.name == 'Computer Engineering' ? ' Engineering test preview: only courses with verified prerequisites can be scheduled. Labs, corequisite pairings, placement and unmapped support courses require advisor review.' : ''}',
+          '${program.name == 'Computer Engineering' ? ' Computer Engineering courses, support requirements and lab corequisites are mapped from the supplied catalogue. A lab must be scheduled with its required lecture unless that lecture was passed or will be passed this term. MATH 139/140 equivalency, graduating-senior design clearance and explicit permissions still require verification.' : ''}',
     };
   }
 }

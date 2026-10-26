@@ -84,4 +84,43 @@ void main() {
       throwsFormatException,
     );
   });
+  test('explicit requested credits override a stale model target without changing other preferences', () async {
+    final service = ScheduleAssistantService(
+      client: MockClient((request) async {
+        final payload = jsonDecode(request.body);
+        expect(payload['context']['schedule']['requestedCredits'], 16);
+        return http.Response(jsonEncode(reply('01')), 200);
+      }),
+    );
+    addTearDown(service.dispose);
+    final update = await service.update('Get me to 16 credits', {}, prefs, [
+      section,
+    ]);
+    expect(update.preferences.maxCredits, 16);
+    expect(update.preferences.avoidEarlyClasses, isTrue);
+    expect(update.preferences.minimizeGaps, isTrue);
+  });
+  test('unsupported credit requests are rejected before an API call', () async {
+    var called = false;
+    final service = ScheduleAssistantService(
+      client: MockClient((_) async {
+        called = true;
+        return http.Response('{}', 200);
+      }),
+    );
+    addTearDown(service.dispose);
+    await expectLater(
+      service.update('I want 21 credits', {}, prefs, [section]),
+      throwsFormatException,
+    );
+    expect(called, isFalse);
+    expect(
+      ScheduleAssistantService.explicitCreditTarget('15 to 18 credits'),
+      18,
+    );
+    expect(
+      ScheduleAssistantService.explicitCreditTarget('16 credits or 18 credits'),
+      isNull,
+    );
+  });
 }

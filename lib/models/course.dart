@@ -9,6 +9,8 @@ class Course {
   final Map<String, String> minimumPrerequisiteGrades;
   final bool allowsPlacementExemption;
   final bool requiresPassingPrerequisites;
+  final List<String> corequisiteCodes;
+  final bool requiresAdvisorApproval;
 
   const Course({
     required this.code,
@@ -21,6 +23,8 @@ class Course {
     this.minimumPrerequisiteGrades = const {},
     this.allowsPlacementExemption = false,
     this.requiresPassingPrerequisites = false,
+    this.corequisiteCodes = const [],
+    this.requiresAdvisorApproval = false,
   });
 
   Map<String, dynamic> toJson() {
@@ -35,6 +39,8 @@ class Course {
       'minimumPrerequisiteGrades': minimumPrerequisiteGrades,
       'allowsPlacementExemption': allowsPlacementExemption,
       'requiresPassingPrerequisites': requiresPassingPrerequisites,
+      'corequisiteCodes': corequisiteCodes,
+      'requiresAdvisorApproval': requiresAdvisorApproval,
     };
   }
 }

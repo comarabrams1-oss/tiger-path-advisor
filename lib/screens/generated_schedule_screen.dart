@@ -271,6 +271,8 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     'classification': activeStudent.classification,
     'term': _plannedTerm,
     'source': _usingRealData ? 'Imported snapshot' : 'Demo sections',
+    'scheduledCredits': schedule.scheduledCredits,
+    'creditGap': preferences.maxCredits - schedule.scheduledCredits,
     'preferences': preferences.toJson()..remove('preferredProfessors'),
     'selected': [
       for (final item in schedule.scheduled)
@@ -286,6 +288,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           'credits': item.course.credits,
           'eligibility': item.eligibility.status.name,
           'reason': item.reasons,
+          'requiredCompanions': item.eligibility.requiredCompanions,
         },
     ],
     'unresolved': [
@@ -333,6 +336,14 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   ) async {
     final text = _request.text.trim();
     if (_updating || text.isEmpty) return;
+    try {
+      ScheduleAssistantService.explicitCreditTarget(text);
+    } on FormatException catch (error) {
+      setState(
+        () => _assistantStatus = '${error.message} Your schedule is unchanged.',
+      );
+      return;
+    }
     setState(() {
       _updating = true;
       _assistantStatus = 'Updating your schedule…';
@@ -359,17 +370,20 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ..._plan.items.map((item) => item.courseCode).whereType<String>(),
         }.toList(),
       );
-      // Only the deterministic planner chooses eligible courses and credit totals.
-      var plan = update.preferences.maxCredits == preferences.maxCredits
-          ? _plan
-          : SemesterPlanService().generatePlan(
-              student: activeStudent,
-              program: activeProgram,
-              catalog: activeCatalog,
-              maxCredits: update.preferences.maxCredits,
-            );
+      // Gemini proposes a target/preferences/candidate order; the same planner
+      // validates and searches all academic options again in this tab.
       final choices = Map<String, String>.from(_preferredSections)
         ..addAll(update.sectionChoices);
+      var plan = SemesterPlanService().generatePlan(
+        student: activeStudent,
+        program: activeProgram,
+        catalog: activeCatalog,
+        maxCredits: update.preferences.maxCredits,
+        sections: _sections,
+        preferences: update.preferences,
+        preferredSections: choices,
+        preferredCourses: update.courseChoices,
+      );
 
       final recovery = ScheduleRecoveryService().recover(
         plan: plan,
@@ -393,15 +407,35 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       );
       if (!mounted) return;
       setState(() {
-        _deferred = [..._deferred, ...recovery.deferred]
-            .where(
-              (item) => !plan.items.any(
-                (active) =>
-                    active.courseCode != null &&
-                    active.courseCode == item.courseCode,
-              ),
-            )
-            .toList();
+        bool stillOutstanding(SemesterPlanItem previous) {
+          if (plan.items.any(
+            (item) =>
+                item.courseCode == previous.courseCode &&
+                previous.courseCode != null,
+          )) {
+            return false;
+          }
+          final requirement = previous.priority?.requirementId;
+          final budget = previous.priority?.requirementCreditsRemaining;
+          if (requirement != null &&
+              budget != null &&
+              plan.items
+                      .where((i) => i.priority?.requirementId == requirement)
+                      .fold<double>(0, (sum, i) => sum + i.credits) >=
+                  budget) {
+            return false;
+          }
+          return true;
+        }
+
+        _deferred = {
+          for (final item in [
+            ..._deferred,
+            ...recovery.deferred,
+            ..._plan.items.where(stillOutstanding),
+          ])
+            (item.courseCode ?? item.title): item,
+        }.values.where(stillOutstanding).toList();
         _advisorReview =
             update.advisorReview ||
             _deferred.isNotEmpty ||
@@ -463,7 +497,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Tell me what to change. Your schedule updates here after availability and conflict checks.',
+            'Set a credit goal or ask for a change. Tiger Path rebuilds the timetable here and checks courses, labs, availability and conflicts.',
           ),
           const SizedBox(height: 12),
           TextField(
@@ -474,8 +508,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             onSubmitted: (_) => _updateSchedule(schedule, preferences),
             decoration: const InputDecoration(
               labelText: 'Change my schedule',
-              hintText:
-                  'Try mornings, avoid Friday, or use a different section…',
+              hintText: 'Get me to 16 credits, try mornings, or avoid Friday…',
               border: OutlineInputBorder(),
             ),
           ),

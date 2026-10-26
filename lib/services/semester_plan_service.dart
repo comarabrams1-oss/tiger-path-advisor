@@ -61,6 +61,8 @@ class SemesterPlanService {
     required int maxCredits,
     List<CourseSection>? sections,
     SchedulePreferences? preferences,
+    Map<String, String> preferredSections = const {},
+    List<String> preferredCourses = const [],
   }) {
     final audit = DegreeAuditService().auditProgram(student, program);
     final used = student.courses
@@ -112,67 +114,119 @@ class SemesterPlanService {
           )) {
         continue;
       }
-      final requirements = audit
-          .where(
-            (a) =>
-                a.status == RequirementStatus.remaining &&
-                a.requirement.courseCodes.contains(course.code),
-          )
-          .toList();
-      if (requirements.isEmpty) continue;
-      final requirement = requirements.first;
-      final budget =
-          requirement.requirement.creditsRequired -
-          requirement.completedCredits -
-          requirement.inProgressCredits;
-      final item = SemesterPlanItem(
-        type: SemesterPlanItemType.course,
-        title: course.title,
-        category: course.category,
-        courseCode: course.code,
-        credits: course.credits,
-        reason:
-            '${result.reasons.join('. ')}. Counts toward ${requirement.requirement.title}.',
-        projectedEligibility:
-            result.eligibility.status ==
-            EligibilityStatus.eligibleAfterCurrentTerm,
-        priority: result,
-      );
-      // Keep the first-year orientation seminar when it can be placed.
+      // An added lab brings any unsatisfied lecture companion with it.
+      // Validate the whole bundle before it can consume credits or a slot.
       final expanded = freshman && course.code == 'AA 111'
           ? <_PlanChoice>[]
           : [...states];
       for (final state in states) {
-        final allocated = state.allocations[requirement.requirement.id] ?? 0;
-        if (state.credits + course.credits > maxCredits ||
-            allocated + course.credits > budget) {
-          continue;
+        if (state.items.any((i) => i.courseCode == course.code)) continue;
+        final pending = <CoursePriorityResult>[];
+        final visiting = <String>{};
+        final included = state.items.map((i) => i.courseCode).toSet();
+        bool collect(CoursePriorityResult candidate) {
+          final code = candidate.course.code;
+          if (included.contains(code) ||
+              pending.any((r) => r.course.code == code)) {
+            return true;
+          }
+          if (!visiting.add(code) ||
+              used.contains(code) ||
+              ![
+                EligibilityStatus.eligible,
+                EligibilityStatus.eligibleAfterCurrentTerm,
+              ].contains(candidate.eligibility.status)) {
+            return false;
+          }
+          final candidateLevel =
+              int.tryParse(
+                RegExp(r'\d{3}').firstMatch(code)?.group(0) ?? '999',
+              ) ??
+              999;
+          if (freshman && candidateLevel >= 300) return false;
+          if (sections != null &&
+              !sections.any(
+                (s) => s.courseCode == code && s.isOpen && s.hasOpenSeats,
+              )) {
+            return false;
+          }
+          for (final companion in candidate.eligibility.requiredCompanions) {
+            final matches = ranked.where((r) => r.course.code == companion);
+            if (matches.isEmpty || !collect(matches.first)) return false;
+          }
+          pending.add(candidate);
+          visiting.remove(code);
+          return true;
         }
-        final items = [...state.items, item];
+
+        if (!collect(result)) continue;
+        final items = [...state.items];
+        final allocations = {...state.allocations};
+        var credits = state.credits;
+        var score = state.score;
+        var valid = true;
+        for (final addition in pending) {
+          final matches = audit.where(
+            (a) =>
+                a.status == RequirementStatus.remaining &&
+                a.requirement.courseCodes.contains(addition.course.code),
+          );
+          if (matches.isEmpty) {
+            valid = false;
+            break;
+          }
+          final requirement = matches.first;
+          final allocated = allocations[requirement.requirement.id] ?? 0;
+          final budget =
+              requirement.requirement.creditsRequired -
+              requirement.completedCredits -
+              requirement.inProgressCredits;
+          if (credits + addition.course.credits > maxCredits ||
+              allocated + addition.course.credits > budget) {
+            valid = false;
+            break;
+          }
+          items.add(
+            SemesterPlanItem(
+              type: SemesterPlanItemType.course,
+              title: addition.course.title,
+              category: addition.course.category,
+              courseCode: addition.course.code,
+              credits: addition.course.credits,
+              reason:
+                  '${addition.reasons.join('. ')}. Counts toward ${requirement.requirement.title}.',
+              projectedEligibility:
+                  addition.eligibility.status ==
+                  EligibilityStatus.eligibleAfterCurrentTerm,
+              priority: addition,
+            ),
+          );
+          credits += addition.course.credits;
+          final preferenceIndex = preferredCourses.indexOf(
+            addition.course.code,
+          );
+          score +=
+              addition.score +
+              (preferenceIndex < 0 ? 0 : 500 - preferenceIndex);
+          allocations[requirement.requirement.id] =
+              allocated + addition.course.credits;
+        }
+        if (!valid) continue;
         if (sections != null) {
           final trial = generator.generateSchedule(
             plan: SemesterPlan(
               items: items,
-              totalCredits: state.credits + course.credits,
+              totalCredits: credits,
               maxCredits: maxCredits,
             ),
             sections: sections,
             instructors: [],
             preferences: effectivePreferences,
+            preferredSections: preferredSections,
           );
           if (trial.unscheduled.isNotEmpty) continue;
         }
-        expanded.add(
-          _PlanChoice(
-            items,
-            {
-              ...state.allocations,
-              requirement.requirement.id: allocated + course.credits,
-            },
-            state.credits + course.credits,
-            state.score + result.score,
-          ),
-        );
+        expanded.add(_PlanChoice(items, allocations, credits, score));
       }
       if (expanded.isEmpty) expanded.addAll(states);
       expanded.sort(_compare);

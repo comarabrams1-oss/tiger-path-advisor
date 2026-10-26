@@ -106,8 +106,39 @@ void main() {
         term: '2026-2027 - Spring',
       );
       expect(context['program'], 'Computer Engineering');
-      expect(context['dataNotice'].toString(), contains('Labs, corequisite'));
+      expect(
+        context['dataNotice'].toString(),
+        contains('lab corequisites are mapped'),
+      );
       expect(utf8.encode(jsonEncode(context)).length, lessThan(55000));
     },
   );
+  test('catalog-mapped support courses let engineering reach 16 credits', () {
+    final plan = SemesterPlanService().generatePlan(
+      student: engineeringStudent,
+      program: computerEngineeringProgram,
+      catalog: catalogFor(engineeringStudent),
+      maxCredits: 18,
+      sections: sections,
+    );
+    expect(plan.totalCredits, 16);
+    expect(plan.items.any((i) => i.courseCode == 'MATH 236'), isTrue);
+    final scheduled = ScheduleGenerationService().generateSchedule(
+      plan: plan,
+      sections: sections,
+      instructors: [],
+      preferences: const SchedulePreferences(
+        preferredTime: 'No Preference',
+        preferredDays: [],
+        avoidedDays: [],
+        preferredProfessors: [],
+        maxCredits: 18,
+        avoidEarlyClasses: false,
+        avoidLateClasses: false,
+        minimizeGaps: true,
+      ),
+    );
+    expect(scheduled.scheduledCredits, 16);
+    expect(scheduled.unscheduled, isEmpty);
+  });
 }

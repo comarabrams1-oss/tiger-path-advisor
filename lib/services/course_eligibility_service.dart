@@ -16,12 +16,14 @@ class CourseEligibilityResult {
   final EligibilityStatus status;
   final List<String> missingPrerequisites;
   final String? reason;
+  final List<String> requiredCompanions;
 
   const CourseEligibilityResult({
     required this.course,
     required this.status,
     this.missingPrerequisites = const [],
     this.reason,
+    this.requiredCompanions = const [],
   });
 }
 
@@ -100,6 +102,28 @@ class CourseEligibilityService {
       );
     }
 
+    if (course.requiresAdvisorApproval) {
+      return CourseEligibilityResult(
+        course: course,
+        status: EligibilityStatus.requiresPermission,
+        reason: 'Graduating-senior/design clearance must be verified by your advisor before this course is planned.',
+      );
+    }
+    final requiredCompanions = course.corequisiteCodes
+        .where(
+          (code) =>
+              !completedCodes.contains(code) && !inProgressCodes.contains(code),
+        )
+        .toList();
+    final currentCorequisites = course.corequisiteCodes
+        .where(
+          (code) =>
+              !completedCodes.contains(code) && inProgressCodes.contains(code),
+        )
+        .toList();
+    final companionNote = requiredCompanions.isEmpty
+        ? ''
+        : ' Must take together with ${requiredCompanions.join(', ')}.';
     final failedElementary =
         course.allowsPlacementExemption &&
         student.courses.any(
@@ -124,7 +148,7 @@ class CourseEligibilityService {
       );
     }
     final missing = <String>[];
-    var dependsOnCurrentCourse = false;
+    var dependsOnCurrentCourse = currentCorequisites.isNotEmpty;
 
     for (final group in course.prerequisiteGroups) {
       final completedRequirement = group.any(completedCodes.contains);
@@ -166,14 +190,16 @@ class CourseEligibilityService {
         course: course,
         status: EligibilityStatus.eligibleAfterCurrentTerm,
         reason:
-            'For next term only: must first pass ${course.prerequisiteGroups.where((g) => !g.any(completedCodes.contains)).map((g) => g.join(' or ')).join(' and ')}${course.allowsPlacementExemption ? '. No placement exemption is recorded' : ''}.',
+            'For next term only: must first pass ${[...course.prerequisiteGroups.where((g) => !g.any(completedCodes.contains)).map((g) => g.join(' or ')), ...currentCorequisites].join(' and ')}${course.allowsPlacementExemption ? '. No placement exemption is recorded' : ''}.$companionNote',
+        requiredCompanions: requiredCompanions,
       );
     }
 
     return CourseEligibilityResult(
       course: course,
       status: EligibilityStatus.eligible,
-      reason: 'Prerequisites completed.',
+      reason: 'Prerequisites completed.$companionNote',
+      requiredCompanions: requiredCompanions,
     );
   }
 
