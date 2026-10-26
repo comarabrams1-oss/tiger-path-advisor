@@ -49,3 +49,11 @@ app.*.map.json
 
 # Private Tiger Portal captures
 private_data/
+
+# Local Netlify folder
+.netlify
+
+# Local AI secrets
+.env
+.env.*
+!.env.example

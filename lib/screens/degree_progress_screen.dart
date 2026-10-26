@@ -569,9 +569,9 @@ class _DegreeProgressScreenState
                   value: progress,
                   minHeight: 5,
                   backgroundColor:
-                      colors.primary.withValues(alpha: 0.14),
+                      colors.secondary.withValues(alpha: 0.14),
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    colors.primary,
+                    colors.secondary,
                   ),
                 ),
               ),
@@ -713,7 +713,7 @@ class _DegreeProgressScreenState
                 if (requirement.courseCodes.isNotEmpty) ...[
                   const SizedBox(height: 8),
                   Text(
-                    requirement.courseCodes.join(' / '),
+                    _displayCourseCodes(item),
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       color: colors.onSurface,
@@ -755,6 +755,16 @@ class _DegreeProgressScreenState
     );
   }
 
+  String _displayCourseCodes(DegreeAuditItem item) {
+    final requirement = item.requirement;
+    if (requirement.type == RequirementType.oneOfCourses && item.status != RequirementStatus.remaining) {
+      final matches = testStudent.courses.where((course) =>
+        requirement.courseCodes.contains(course.courseCode) && course.status.name == item.status.name);
+      if (matches.isNotEmpty) return matches.first.courseCode;
+    }
+    return requirement.courseCodes.join(' / ');
+  }
+
   String _creditLabel(DegreeAuditItem item) {
     final requirement = item.requirement;
 
@@ -778,20 +788,6 @@ class _DegreeProgressScreenState
     DegreeAuditItem item,
   ) {
     final requirement = item.requirement;
-
-    if (requirement.title ==
-        'Global & Intercultural Learning') {
-      final remaining = math.max(
-        0,
-        requirement.creditsRequired -
-            item.completedCredits -
-            item.inProgressCredits,
-      );
-
-      return '${item.completedCredits.toInt()} of '
-          '${requirement.creditsRequired.toInt()} credits completed • '
-          '${remaining.toInt()} additional approved credits required';
-    }
 
     if (requirement.title == 'Free Electives') {
       return 'Requirement met according to your degree audit.';

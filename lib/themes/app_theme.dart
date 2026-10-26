@@ -283,6 +283,21 @@ class AppThemes {
     );
   }
 
+  // Keep requested hues readable for links, icons and text on the active surface.
+  static Color _readableColor(Color color, Color surface) {
+    final target = surface.computeLuminance() < 0.5
+        ? Colors.white
+        : Colors.black;
+    for (var step = 0; step <= 20; step++) {
+      final candidate = Color.lerp(color, target, step / 20)!;
+      final a = candidate.computeLuminance();
+      final b = surface.computeLuminance();
+      final ratio = ((a > b ? a : b) + 0.05) / ((a < b ? a : b) + 0.05);
+      if (ratio >= 4.5) return candidate;
+    }
+    return target;
+  }
+
   static ThemeData _customTheme(CustomThemeSettings settings) {
     final brightness = settings.darkMode ? Brightness.dark : Brightness.light;
 
@@ -294,18 +309,25 @@ class AppThemes {
 
     final card = dark ? const Color(0xFF232329) : Colors.white;
 
+    final primary = _readableColor(settings.primaryColor, surface);
+    final accent = _readableColor(settings.accentColor, surface);
+    final accentPalette = ColorScheme.fromSeed(
+      seedColor: settings.accentColor,
+      brightness: brightness,
+    );
     final scheme =
         ColorScheme.fromSeed(
           seedColor: settings.primaryColor,
           brightness: brightness,
         ).copyWith(
-          primary: settings.primaryColor,
-          onPrimary: _foregroundFor(settings.primaryColor),
-          secondary: settings.accentColor,
+          primary: primary,
+          onPrimary: _foregroundFor(primary),
+          secondary: accent,
+          secondaryContainer: accentPalette.primaryContainer,
+          onSecondaryContainer: accentPalette.onPrimaryContainer,
           surface: surface,
           onSecondary:
-              ThemeData.estimateBrightnessForColor(settings.accentColor) ==
-                  Brightness.dark
+              ThemeData.estimateBrightnessForColor(accent) == Brightness.dark
               ? Colors.white
               : Colors.black,
         );
@@ -378,9 +400,30 @@ class AppThemes {
           borderSide: BorderSide(color: scheme.primary, width: 2),
         ),
       ),
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: scheme.secondary,
+        linearTrackColor: scheme.secondary.withValues(alpha: 0.16),
+      ),
+      sliderTheme: SliderThemeData(
+        activeTrackColor: scheme.secondary,
+        thumbColor: scheme.secondary,
+        inactiveTrackColor: scheme.secondary.withValues(alpha: 0.18),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.disabled)
+              ? null
+              : states.contains(WidgetState.selected)
+              ? scheme.secondary
+              : null,
+        ),
+        checkColor: WidgetStatePropertyAll(scheme.onSecondary),
+      ),
       chipTheme: ChipThemeData(
         backgroundColor: scheme.primary.withValues(alpha: 0.08),
-        selectedColor: scheme.primary.withValues(alpha: 0.20),
+        selectedColor: scheme.secondaryContainer,
+        checkmarkColor: scheme.onSecondaryContainer,
+        secondaryLabelStyle: TextStyle(color: scheme.onSecondaryContainer),
         side: BorderSide(color: scheme.primary.withValues(alpha: 0.25)),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
       ),
@@ -414,7 +457,7 @@ class AppThemes {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: navigationColor,
-        indicatorColor: scheme.primary.withValues(alpha: 0.18),
+        indicatorColor: scheme.secondaryContainer,
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: cardColor,

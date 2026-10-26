@@ -5,8 +5,13 @@ import 'screens/course_recommendations_screen.dart';
 import 'screens/degree_progress_screen.dart';
 import 'screens/schedule_preferences_screen.dart';
 import 'screens/transcript_screen.dart';
+import 'screens/ai_advisor_screen.dart';
 import 'screens/theme_settings_screen.dart';
 import 'services/theme_service.dart';
+import 'services/advisor_app_actions.dart';
+import 'services/mock_auth_service.dart';
+import 'services/advisor_history_service.dart';
+import 'screens/login_screen.dart';
 import 'themes/app_theme.dart';
 
 void main() {
@@ -23,6 +28,9 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
   AppThemePreset _themePreset = AppThemePreset.benedict;
   CustomThemeSettings _customTheme = const CustomThemeSettings();
   bool _loadingTheme = true;
+  final _auth = MockAuthService();
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  MockStudentSession? _session;
 
   @override
   void initState() {
@@ -33,12 +41,14 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
   Future<void> _loadTheme() async {
     try {
       final settings = await ThemeService.load();
+      final session = await _auth.restore();
 
       if (!mounted) {
         return;
       }
 
       setState(() {
+        _session = session;
         _themePreset = settings.preset;
         _customTheme = settings.customTheme;
         _loadingTheme = false;
@@ -52,6 +62,13 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
         _loadingTheme = false;
       });
     }
+  }
+
+  Future<void> _signOut() async {
+    await _auth.signOut();
+    if (!mounted) return;
+    _navigatorKey.currentState?.popUntil((route) => route.isFirst);
+    setState(() => _session = null);
   }
 
   void _applyTheme(ThemeSettings settings) {
@@ -68,10 +85,21 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Tiger Path Advisor',
+      navigatorKey: _navigatorKey,
+      builder: (context, child) => MockSessionScope(
+        session: _session,
+        onSignOut: _signOut,
+        child: AdvisorAppActions(onThemeChanged: _applyTheme, child: child!),
+      ),
       theme: theme,
       home: _loadingTheme
           ? const _ThemeLoadingScreen()
+          : _session == null
+          ? LoginScreen(
+              onSignedIn: (session) => setState(() => _session = session),
+            )
           : HomeScreen(
+              key: ValueKey(_session!.email),
               currentPreset: _themePreset,
               currentCustomTheme: _customTheme,
               onThemeChanged: _applyTheme,
@@ -116,6 +144,42 @@ class HomeScreen extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
             children: [
+              if (MockSessionScope.maybeOf(context)?.session != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.account_circle_outlined, size: 20),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          MockSessionScope.maybeOf(context)!.session!.email,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: () async {
+                          try {
+                            await MockSessionScope.maybeOf(context)!
+                                .onSignOut();
+                          } catch (_) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Could not sign out. Please retry.',
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        child: const Text('Sign out'),
+                      ),
+                    ],
+                  ),
+                ),
               _buildHero(context),
               const SizedBox(height: 22),
               _buildAcademicSnapshot(
@@ -230,7 +294,7 @@ class HomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Plan smarter. Stay on track.',
+                  'Academic planning',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary
@@ -468,14 +532,14 @@ class HomeScreen extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 9,
-                backgroundColor: colors.primary.withValues(alpha: 0.12),
-                valueColor: AlwaysStoppedAnimation<Color>(colors.primary),
+                backgroundColor: colors.secondary.withValues(alpha: 0.16),
+                valueColor: AlwaysStoppedAnimation<Color>(colors.secondary),
               ),
             ),
             const SizedBox(height: 13),
             Row(
               children: [
-                Icon(Icons.trending_up, size: 18, color: colors.primary),
+                Icon(Icons.trending_up, size: 18, color: colors.secondary),
                 const SizedBox(width: 7),
                 Expanded(
                   child: Text(
@@ -540,6 +604,28 @@ class HomeScreen extends StatelessWidget {
           spacing: 16,
           runSpacing: 16,
           children: [
+            SizedBox(
+              width: width,
+              child: AdvisorToolCard(
+                icon: Icons.chat_bubble_outline,
+                title: 'Ask Tiger Path',
+                subtitle: 'Understand what classes you need and what you can take next.',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => AiAdvisorScreen(
+                      history: AdvisorHistoryService(
+                        profileId:
+                            MockSessionScope.maybeOf(context)
+                                ?.session
+                                ?.profileId ??
+                            'demo-cs-2024',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
             SizedBox(
               width: width,
               child: AdvisorToolCard(

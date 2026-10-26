@@ -22,7 +22,7 @@ class GeneratedScheduleScreen extends StatefulWidget {
 }
 
 class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
-  static const String _plannedTerm = '2026-2027 - Spring - Full Semester';
+  static const String _plannedTerm = CourseSectionRepository.spring2027Term;
 
   ScheduleView selectedView = ScheduleView.weekly;
   List<CourseSection> _sections = testCourseSections;
@@ -747,7 +747,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         ? 'Using real Tiger Portal section data for $_plannedTerm. '
               'Times, professors, locations, seats, and section status '
               'come from the imported Tiger Portal dataset.'
-        : 'Spring 2027 course sections are not available in Tiger Portal yet. '
+        : 'Imported Spring 2027 sections could not be loaded. '
               'This schedule currently uses demonstration Spring 2027 sections. '
               'When Spring 2027 data is imported, Tiger Path will automatically '
               'switch to the real sections.';

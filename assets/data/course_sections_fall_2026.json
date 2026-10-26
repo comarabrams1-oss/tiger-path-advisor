@@ -1331,8 +1331,8 @@
     ]
   },
   {
-    "courseCode": "AR 130 99",
-    "sectionNumber": "B1",
+    "courseCode": "AR 130",
+    "sectionNumber": "99 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -1363,8 +1363,8 @@
     ]
   },
   {
-    "courseCode": "AR 233 99",
-    "sectionNumber": "B2",
+    "courseCode": "AR 233",
+    "sectionNumber": "99 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -1396,39 +1396,7 @@
   },
   {
     "courseCode": "ART 130",
-    "sectionNumber": "IS",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [],
-    "startMinutes": 0,
-    "endMinutes": 0,
-    "location": "Henry Ponder Fine Arts/Humanities Center, Painting Lab",
-    "deliveryMethod": "In Person",
-    "courseName": "FOUND:ART APPRE",
-    "instructorName": "Brown, Wendell George",
-    "instructorNames": [
-      "Brown, Wendell George"
-    ],
-    "openSeats": 0,
-    "capacity": 1,
-    "status": "Full",
-    "credits": 3.0,
-    "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "BY ARRANGEMENT; Henry Ponder Fine Arts/Humanities Center, Painting Lab",
-    "meetings": [
-      {
-        "days": [],
-        "startMinutes": null,
-        "endMinutes": null,
-        "location": "Henry Ponder Fine Arts/Humanities Center, Painting Lab",
-        "rawText": "BY ARRANGEMENT; Henry Ponder Fine Arts/Humanities Center, Painting Lab"
-      }
-    ]
-  },
-  {
-    "courseCode": "ART 130 02",
-    "sectionNumber": "H",
+    "sectionNumber": "02 H",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -1461,6 +1429,38 @@
         "endMinutes": 855,
         "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 104",
         "rawText": "TR 1:00 PM-2:15 PM; Henry Ponder Fine Arts/Humanities Center, Classroom 104"
+      }
+    ]
+  },
+  {
+    "courseCode": "ART 130",
+    "sectionNumber": "IS",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [],
+    "startMinutes": 0,
+    "endMinutes": 0,
+    "location": "Henry Ponder Fine Arts/Humanities Center, Painting Lab",
+    "deliveryMethod": "In Person",
+    "courseName": "FOUND:ART APPRE",
+    "instructorName": "Brown, Wendell George",
+    "instructorNames": [
+      "Brown, Wendell George"
+    ],
+    "openSeats": 0,
+    "capacity": 1,
+    "status": "Full",
+    "credits": 3.0,
+    "beginDate": "8/17/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "BY ARRANGEMENT; Henry Ponder Fine Arts/Humanities Center, Painting Lab",
+    "meetings": [
+      {
+        "days": [],
+        "startMinutes": null,
+        "endMinutes": null,
+        "location": "Henry Ponder Fine Arts/Humanities Center, Painting Lab",
+        "rawText": "BY ARRANGEMENT; Henry Ponder Fine Arts/Humanities Center, Painting Lab"
       }
     ]
   },
@@ -1949,8 +1949,8 @@
     ]
   },
   {
-    "courseCode": "ART 439 01",
-    "sectionNumber": "B2",
+    "courseCode": "ART 439",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -5382,8 +5382,8 @@
     ]
   },
   {
-    "courseCode": "CJA 430 99",
-    "sectionNumber": "B2",
+    "courseCode": "CJA 430",
+    "sectionNumber": "99 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -8411,6 +8411,46 @@
   },
   {
     "courseCode": "ENG 132",
+    "sectionNumber": "02 H",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [
+      "Monday",
+      "Wednesday",
+      "Friday"
+    ],
+    "startMinutes": 780,
+    "endMinutes": 830,
+    "location": "Henry Ponder Fine Arts/Humanities Center, Conference Room",
+    "deliveryMethod": "In Person",
+    "courseName": "INFO, LIT, RSRC",
+    "instructorName": "Hart, George Arthur",
+    "instructorNames": [
+      "Hart, George Arthur"
+    ],
+    "openSeats": 0,
+    "capacity": 20,
+    "status": "Full",
+    "credits": 3.0,
+    "beginDate": "8/17/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "MWF 1:00 PM-1:50 PM; Henry Ponder Fine Arts/Humanities Center, Conference Room",
+    "meetings": [
+      {
+        "days": [
+          "Monday",
+          "Wednesday",
+          "Friday"
+        ],
+        "startMinutes": 780,
+        "endMinutes": 830,
+        "location": "Henry Ponder Fine Arts/Humanities Center, Conference Room",
+        "rawText": "MWF 1:00 PM-1:50 PM; Henry Ponder Fine Arts/Humanities Center, Conference Room"
+      }
+    ]
+  },
+  {
+    "courseCode": "ENG 132",
     "sectionNumber": "03",
     "instructorId": "",
     "term": "2026-2027 - Fall",
@@ -8486,46 +8526,6 @@
         "endMinutes": 590,
         "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 104",
         "rawText": "MWF 9:00 AM-9:50 AM; Henry Ponder Fine Arts/Humanities Center, Classroom 104"
-      }
-    ]
-  },
-  {
-    "courseCode": "ENG 132 02",
-    "sectionNumber": "H",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [
-      "Monday",
-      "Wednesday",
-      "Friday"
-    ],
-    "startMinutes": 780,
-    "endMinutes": 830,
-    "location": "Henry Ponder Fine Arts/Humanities Center, Conference Room",
-    "deliveryMethod": "In Person",
-    "courseName": "INFO, LIT, RSRC",
-    "instructorName": "Hart, George Arthur",
-    "instructorNames": [
-      "Hart, George Arthur"
-    ],
-    "openSeats": 0,
-    "capacity": 20,
-    "status": "Full",
-    "credits": 3.0,
-    "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "MWF 1:00 PM-1:50 PM; Henry Ponder Fine Arts/Humanities Center, Conference Room",
-    "meetings": [
-      {
-        "days": [
-          "Monday",
-          "Wednesday",
-          "Friday"
-        ],
-        "startMinutes": 780,
-        "endMinutes": 830,
-        "location": "Henry Ponder Fine Arts/Humanities Center, Conference Room",
-        "rawText": "MWF 1:00 PM-1:50 PM; Henry Ponder Fine Arts/Humanities Center, Conference Room"
       }
     ]
   },
@@ -8640,6 +8640,46 @@
         "endMinutes": 645,
         "location": "Duckett Hall, Classroom 314",
         "rawText": "TR 9:30 AM-10:45 AM; Duckett Hall, Classroom 314"
+      }
+    ]
+  },
+  {
+    "courseCode": "ENG 237",
+    "sectionNumber": "01 H",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [
+      "Monday",
+      "Wednesday",
+      "Friday"
+    ],
+    "startMinutes": 600,
+    "endMinutes": 650,
+    "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 208",
+    "deliveryMethod": "In Person",
+    "courseName": "ORAL COMMUNICAT",
+    "instructorName": "Davis, Emmie Janell",
+    "instructorNames": [
+      "Davis, Emmie Janell"
+    ],
+    "openSeats": 1,
+    "capacity": 35,
+    "status": "Open",
+    "credits": 3.0,
+    "beginDate": "8/17/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "MWF 10:00 AM-10:50 AM; Henry Ponder Fine Arts/Humanities Center, Classroom 208",
+    "meetings": [
+      {
+        "days": [
+          "Monday",
+          "Wednesday",
+          "Friday"
+        ],
+        "startMinutes": 600,
+        "endMinutes": 650,
+        "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 208",
+        "rawText": "MWF 10:00 AM-10:50 AM; Henry Ponder Fine Arts/Humanities Center, Classroom 208"
       }
     ]
   },
@@ -8762,48 +8802,8 @@
     ]
   },
   {
-    "courseCode": "ENG 237 01",
-    "sectionNumber": "H",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [
-      "Monday",
-      "Wednesday",
-      "Friday"
-    ],
-    "startMinutes": 600,
-    "endMinutes": 650,
-    "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 208",
-    "deliveryMethod": "In Person",
-    "courseName": "ORAL COMMUNICAT",
-    "instructorName": "Davis, Emmie Janell",
-    "instructorNames": [
-      "Davis, Emmie Janell"
-    ],
-    "openSeats": 1,
-    "capacity": 35,
-    "status": "Open",
-    "credits": 3.0,
-    "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "MWF 10:00 AM-10:50 AM; Henry Ponder Fine Arts/Humanities Center, Classroom 208",
-    "meetings": [
-      {
-        "days": [
-          "Monday",
-          "Wednesday",
-          "Friday"
-        ],
-        "startMinutes": 600,
-        "endMinutes": 650,
-        "location": "Henry Ponder Fine Arts/Humanities Center, Classroom 208",
-        "rawText": "MWF 10:00 AM-10:50 AM; Henry Ponder Fine Arts/Humanities Center, Classroom 208"
-      }
-    ]
-  },
-  {
-    "courseCode": "ENG 237 SB",
-    "sectionNumber": "B2",
+    "courseCode": "ENG 237",
+    "sectionNumber": "SB B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -10212,8 +10212,8 @@
     ]
   },
   {
-    "courseCode": "HE 220 01",
-    "sectionNumber": "B2",
+    "courseCode": "HE 220",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10250,8 +10250,8 @@
     ]
   },
   {
-    "courseCode": "HE 230 01",
-    "sectionNumber": "B1",
+    "courseCode": "HE 230",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10290,8 +10290,8 @@
     ]
   },
   {
-    "courseCode": "HE 230 SB",
-    "sectionNumber": "B2",
+    "courseCode": "HE 230",
+    "sectionNumber": "SB B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10834,8 +10834,8 @@
     ]
   },
   {
-    "courseCode": "IDS 339 SK",
-    "sectionNumber": "B2",
+    "courseCode": "IDS 339",
+    "sectionNumber": "SK B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10870,8 +10870,8 @@
     ]
   },
   {
-    "courseCode": "INTD 331 99",
-    "sectionNumber": "B2",
+    "courseCode": "INTD 331",
+    "sectionNumber": "99 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -10904,8 +10904,8 @@
     ]
   },
   {
-    "courseCode": "INTD 333 01",
-    "sectionNumber": "B1",
+    "courseCode": "INTD 333",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10944,8 +10944,8 @@
     ]
   },
   {
-    "courseCode": "INTD 337 01",
-    "sectionNumber": "B2",
+    "courseCode": "INTD 337",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -10983,8 +10983,8 @@
     ]
   },
   {
-    "courseCode": "INTD 432 SK",
-    "sectionNumber": "B2",
+    "courseCode": "INTD 432",
+    "sectionNumber": "SK B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -11019,8 +11019,8 @@
     ]
   },
   {
-    "courseCode": "INTD 433 99",
-    "sectionNumber": "B1",
+    "courseCode": "INTD 433",
+    "sectionNumber": "99 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -11051,8 +11051,8 @@
     ]
   },
   {
-    "courseCode": "INTD 434 01",
-    "sectionNumber": "B2",
+    "courseCode": "INTD 434",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -11089,8 +11089,8 @@
     ]
   },
   {
-    "courseCode": "INTD 437 01",
-    "sectionNumber": "B2",
+    "courseCode": "INTD 437",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -14373,6 +14373,38 @@
   },
   {
     "courseCode": "MUS 019V",
+    "sectionNumber": "01 B2",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [],
+    "startMinutes": 0,
+    "endMinutes": 0,
+    "location": "TBA",
+    "deliveryMethod": "In Person",
+    "courseName": "APPLIED VOICE",
+    "instructorName": "To Be Announced",
+    "instructorNames": [
+      "To Be Announced"
+    ],
+    "openSeats": 5,
+    "capacity": 10,
+    "status": "Open",
+    "credits": 1.0,
+    "beginDate": "10/15/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "BY ARRANGEMENT;",
+    "meetings": [
+      {
+        "days": [],
+        "startMinutes": null,
+        "endMinutes": null,
+        "location": null,
+        "rawText": "BY ARRANGEMENT;"
+      }
+    ]
+  },
+  {
+    "courseCode": "MUS 019V",
     "sectionNumber": "02",
     "instructorId": "",
     "term": "2026-2027 - Fall",
@@ -14391,38 +14423,6 @@
     "status": "Open",
     "credits": 1.0,
     "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "BY ARRANGEMENT;",
-    "meetings": [
-      {
-        "days": [],
-        "startMinutes": null,
-        "endMinutes": null,
-        "location": null,
-        "rawText": "BY ARRANGEMENT;"
-      }
-    ]
-  },
-  {
-    "courseCode": "MUS 019V 01",
-    "sectionNumber": "B2",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [],
-    "startMinutes": 0,
-    "endMinutes": 0,
-    "location": "TBA",
-    "deliveryMethod": "In Person",
-    "courseName": "APPLIED VOICE",
-    "instructorName": "To Be Announced",
-    "instructorNames": [
-      "To Be Announced"
-    ],
-    "openSeats": 5,
-    "capacity": 10,
-    "status": "Open",
-    "credits": 1.0,
-    "beginDate": "10/15/2026",
     "endDate": "12/11/2026",
     "rawSchedule": "BY ARRANGEMENT;",
     "meetings": [
@@ -15498,8 +15498,8 @@
     ]
   },
   {
-    "courseCode": "PE 121 01",
-    "sectionNumber": "B1",
+    "courseCode": "PE 121",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -15541,8 +15541,8 @@
     ]
   },
   {
-    "courseCode": "PE 122 01",
-    "sectionNumber": "B1",
+    "courseCode": "PE 122",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -15579,8 +15579,8 @@
     ]
   },
   {
-    "courseCode": "PE 122 02",
-    "sectionNumber": "B2",
+    "courseCode": "PE 122",
+    "sectionNumber": "02 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -15617,8 +15617,8 @@
     ]
   },
   {
-    "courseCode": "PE 320 01",
-    "sectionNumber": "B1",
+    "courseCode": "PE 320",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -15971,8 +15971,8 @@
     ]
   },
   {
-    "courseCode": "PHE 460 01",
-    "sectionNumber": "B1",
+    "courseCode": "PHE 460",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -16007,8 +16007,8 @@
     ]
   },
   {
-    "courseCode": "PHE 461 01",
-    "sectionNumber": "B2",
+    "courseCode": "PHE 461",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -17036,8 +17036,8 @@
     ]
   },
   {
-    "courseCode": "PSY 331 SK",
-    "sectionNumber": "B2",
+    "courseCode": "PSY 331",
+    "sectionNumber": "SK B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -17265,6 +17265,46 @@
     ]
   },
   {
+    "courseCode": "PSY 439A",
+    "sectionNumber": "01",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [
+      "Tuesday",
+      "Thursday"
+    ],
+    "startMinutes": 870,
+    "endMinutes": 945,
+    "location": "Alumni Hall, Classroom 210",
+    "deliveryMethod": "In Person",
+    "courseName": "SR RSRCH PRJ I",
+    "instructorName": "Corujo, Shaneen",
+    "instructorNames": [
+      "Corujo, Shaneen",
+      "Bygrave, Desiree",
+      "Rogers, Eric"
+    ],
+    "openSeats": 5,
+    "capacity": 30,
+    "status": "Open",
+    "credits": 3.0,
+    "beginDate": "8/17/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "TR 2:30 PM-3:45 PM; Alumni Hall, Classroom 210",
+    "meetings": [
+      {
+        "days": [
+          "Tuesday",
+          "Thursday"
+        ],
+        "startMinutes": 870,
+        "endMinutes": 945,
+        "location": "Alumni Hall, Classroom 210",
+        "rawText": "TR 2:30 PM-3:45 PM; Alumni Hall, Classroom 210"
+      }
+    ]
+  },
+  {
     "courseCode": "PSY 439",
     "sectionNumber": "01",
     "instructorId": "",
@@ -17378,46 +17418,6 @@
     ]
   },
   {
-    "courseCode": "PSY 439A",
-    "sectionNumber": "01",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [
-      "Tuesday",
-      "Thursday"
-    ],
-    "startMinutes": 870,
-    "endMinutes": 945,
-    "location": "Alumni Hall, Classroom 210",
-    "deliveryMethod": "In Person",
-    "courseName": "SR RSRCH PRJ I",
-    "instructorName": "Corujo, Shaneen",
-    "instructorNames": [
-      "Corujo, Shaneen",
-      "Bygrave, Desiree",
-      "Rogers, Eric"
-    ],
-    "openSeats": 5,
-    "capacity": 30,
-    "status": "Open",
-    "credits": 3.0,
-    "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "TR 2:30 PM-3:45 PM; Alumni Hall, Classroom 210",
-    "meetings": [
-      {
-        "days": [
-          "Tuesday",
-          "Thursday"
-        ],
-        "startMinutes": 870,
-        "endMinutes": 945,
-        "location": "Alumni Hall, Classroom 210",
-        "rawText": "TR 2:30 PM-3:45 PM; Alumni Hall, Classroom 210"
-      }
-    ]
-  },
-  {
     "courseCode": "PSY 440",
     "sectionNumber": "01",
     "instructorId": "",
@@ -17456,8 +17456,8 @@
     ]
   },
   {
-    "courseCode": "REL 130 99",
-    "sectionNumber": "B1",
+    "courseCode": "REL 130",
+    "sectionNumber": "99 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -18264,8 +18264,8 @@
     ]
   },
   {
-    "courseCode": "SM 460 01",
-    "sectionNumber": "B1",
+    "courseCode": "SM 460",
+    "sectionNumber": "01 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -18300,8 +18300,8 @@
     ]
   },
   {
-    "courseCode": "SM 461 01",
-    "sectionNumber": "B2",
+    "courseCode": "SM 461",
+    "sectionNumber": "01 B2",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [
@@ -18690,8 +18690,8 @@
     ]
   },
   {
-    "courseCode": "SS 232 99",
-    "sectionNumber": "B1",
+    "courseCode": "SS 232",
+    "sectionNumber": "99 B1",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
@@ -19537,38 +19537,6 @@
     ]
   },
   {
-    "courseCode": "SW 490",
-    "sectionNumber": "01",
-    "instructorId": "",
-    "term": "2026-2027 - Fall",
-    "days": [],
-    "startMinutes": 0,
-    "endMinutes": 0,
-    "location": "To Be Announce, To Be Announced",
-    "deliveryMethod": "In Person",
-    "courseName": "FIELD INSTRUCTI",
-    "instructorName": "Freeman, Christina Cobb",
-    "instructorNames": [
-      "Freeman, Christina Cobb"
-    ],
-    "openSeats": 35,
-    "capacity": 35,
-    "status": "Open",
-    "credits": 10.0,
-    "beginDate": "8/17/2026",
-    "endDate": "12/11/2026",
-    "rawSchedule": "TO BE ANNOUNCED; To Be Announce, To Be Announced",
-    "meetings": [
-      {
-        "days": [],
-        "startMinutes": null,
-        "endMinutes": null,
-        "location": "To Be Announce, To Be Announced",
-        "rawText": "TO BE ANNOUNCED; To Be Announce, To Be Announced"
-      }
-    ]
-  },
-  {
     "courseCode": "SW 490A",
     "sectionNumber": "01",
     "instructorId": "",
@@ -19633,6 +19601,38 @@
         "endMinutes": 650,
         "location": "Duckett Hall, Classroom 113",
         "rawText": "M 10:00 AM-10:50 AM; Duckett Hall, Classroom 113"
+      }
+    ]
+  },
+  {
+    "courseCode": "SW 490",
+    "sectionNumber": "01",
+    "instructorId": "",
+    "term": "2026-2027 - Fall",
+    "days": [],
+    "startMinutes": 0,
+    "endMinutes": 0,
+    "location": "To Be Announce, To Be Announced",
+    "deliveryMethod": "In Person",
+    "courseName": "FIELD INSTRUCTI",
+    "instructorName": "Freeman, Christina Cobb",
+    "instructorNames": [
+      "Freeman, Christina Cobb"
+    ],
+    "openSeats": 35,
+    "capacity": 35,
+    "status": "Open",
+    "credits": 10.0,
+    "beginDate": "8/17/2026",
+    "endDate": "12/11/2026",
+    "rawSchedule": "TO BE ANNOUNCED; To Be Announce, To Be Announced",
+    "meetings": [
+      {
+        "days": [],
+        "startMinutes": null,
+        "endMinutes": null,
+        "location": "To Be Announce, To Be Announced",
+        "rawText": "TO BE ANNOUNCED; To Be Announce, To Be Announced"
       }
     ]
   },
@@ -19713,8 +19713,8 @@
     ]
   },
   {
-    "courseCode": "THE 230 99",
-    "sectionNumber": "H",
+    "courseCode": "THE 230",
+    "sectionNumber": "99 H",
     "instructorId": "",
     "term": "2026-2027 - Fall",
     "days": [],
