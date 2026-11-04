@@ -159,7 +159,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 textAlign: TextAlign.center,
                 activeStudent.classification.toLowerCase() == 'freshman'
                     ? 'Start with introductory major courses, English, and other remaining foundations. Then choose the times that work for you.'
-                    : 'Choose your preferences for courses that fit your remaining requirements.',
+                    : 'Set your schedule preferences.',
                 style: TextStyle(
                   fontSize: 15,
                   color: colors.onSurface.withValues(alpha: 0.65),
@@ -422,7 +422,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
               const SizedBox(height: 20),
 
               Text(
-                'Course availability and section information will be considered when current course-section data is available.',
+                'Spring 2027 · imported course offerings',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 12,

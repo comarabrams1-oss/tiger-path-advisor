@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:tiger_path/screens/generated_schedule_screen.dart';
 import 'package:tiger_path/services/schedule_assistant_service.dart';
 import 'package:tiger_path/services/semester_plan_service.dart';
+import 'package:tiger_path/services/schedule_draft_service.dart';
 
 void main() {
   testWidgets(
@@ -93,9 +94,12 @@ void main() {
       await settle();
       expect(find.byType(GeneratedScheduleScreen), findsOneWidget);
       expect(find.textContaining('Draft rebuilt:'), findsOneWidget);
-      expect(find.textContaining('favor starts from 10 AM'), findsOneWidget);
       expect(
-        find.textContaining('Advisor review recommended:'),
+        ScheduleDraftService.current!.preferences.avoidEarlyClasses,
+        isTrue,
+      );
+      expect(
+        find.textContaining('Advisor review needed before registration.'),
         findsOneWidget,
       );
       invalid = true;
@@ -103,7 +107,10 @@ void main() {
       await tester.tap(find.text('Update schedule'));
       await settle();
       expect(find.textContaining('Your schedule is unchanged'), findsOneWidget);
-      expect(find.textContaining('favor starts from 10 AM'), findsOneWidget);
+      expect(
+        ScheduleDraftService.current!.preferences.avoidEarlyClasses,
+        isTrue,
+      );
       expect(tester.takeException(), isNull);
     },
   );

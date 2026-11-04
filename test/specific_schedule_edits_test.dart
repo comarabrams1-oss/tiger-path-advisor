@@ -19,6 +19,7 @@ import 'package:tiger_path/services/schedule_edit_context_service.dart';
 import 'package:tiger_path/services/schedule_generation_service.dart';
 import 'package:tiger_path/services/semester_plan_service.dart';
 import 'package:tiger_path/services/preferences_service.dart';
+import 'package:tiger_path/widgets/manual_schedule_editor.dart';
 
 void main() {
   final sections =
@@ -38,6 +39,34 @@ void main() {
     avoidLateClasses: false,
     minimizeGaps: true,
   );
+  testWidgets('manual class picker fits a phone with the keyboard open', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: ManualScheduleEditor(
+            schedule: const GeneratedSchedule(scheduled: [], unscheduled: []),
+            sections: sections
+                .where((s) => s.courseCode == 'PHYS 234')
+                .toList(),
+          ),
+        ),
+      ),
+    );
+    await tester.enterText(find.byType(TextField), 'Pandit');
+    await tester.pumpAndSettle();
+    expect(find.text('PHYS 234 · 01'), findsOneWidget);
+    expect(find.text('PHYS 234 · 02'), findsNothing);
+    expect(find.text('Add'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   test('requested instructor survives choice truncation and selected times are sent', () {
     final chosen = sections.firstWhere((s) => s.courseCode == 'CSC 338');
     final plan = SemesterPlan(
@@ -154,8 +183,10 @@ void main() {
         '02',
       );
       var step = 0;
+      var apiCalls = 0;
       final assistant = ScheduleAssistantService(
         client: MockClient((request) async {
+          apiCalls++;
           final context = jsonDecode(request.body)['context']['schedule'];
           final teachers = step == 0 ? <String>[] : ['Pandit, Rishi'];
           if (step == 0) {
@@ -284,6 +315,8 @@ void main() {
       );
       expect(changed.preferences.preferredProfessors, ['Pandit, Rishi']);
       expect(changed.schedule.unscheduled, isEmpty);
+      await tester.tap(find.text('View section results'));
+      await tester.pumpAndSettle();
       expect(
         find.textContaining('PHYS 234 section 01 selected with Pandit, Rishi.'),
         findsOneWidget,
@@ -307,6 +340,63 @@ void main() {
             .toList(),
         codes,
       );
+      final callsBeforeManual = apiCalls;
+      Future<void> openEditor() async {
+        await tester.ensureVisible(find.text('Add or edit classes'));
+        await tester.tap(find.text('Add or edit classes'));
+        await tester.pumpAndSettle();
+      }
+
+      await openEditor();
+      await tester.tap(find.byTooltip('Remove PHYS 234'));
+      await settle();
+      expect(
+        ScheduleDraftService.current!.schedule.scheduled.any(
+          (s) => s.section.courseCode == 'PHYS 234',
+        ),
+        isFalse,
+      );
+      expect(
+        ScheduleDraftService.current!.excludedCourses,
+        contains('PHYS 234'),
+      );
+      await openEditor();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search course, instructor, or time'),
+        'PHYS 234',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add').first);
+      await settle();
+      expect(
+        ScheduleDraftService.current!.schedule.scheduled.any(
+          (s) =>
+              s.section.courseCode == 'PHYS 234' &&
+              s.section.sectionNumber == '01',
+        ),
+        isTrue,
+      );
+      await openEditor();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search course, instructor, or time'),
+        'PHYS 234',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Switch'));
+      await settle();
+      expect(
+        ScheduleDraftService.current!.schedule.scheduled
+            .singleWhere((s) => s.section.courseCode == 'PHYS 234')
+            .section
+            .sectionNumber,
+        '02',
+      );
+      expect(
+        apiCalls,
+        callsBeforeManual,
+        reason: 'Manual edits must work without Gemini',
+      );
+      expect(ScheduleDraftService.current!.schedule.unscheduled, isEmpty);
       expect(tester.takeException(), isNull);
     },
   );

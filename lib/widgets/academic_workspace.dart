@@ -214,7 +214,7 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
           width: double.infinity,
           child: Text(
             textAlign: TextAlign.center,
-            'Current coursework, next steps, and the requirements behind your plan.',
+            'This semester and what comes next.',
             style: TextStyle(color: colors.onSurfaceVariant),
           ),
         ),

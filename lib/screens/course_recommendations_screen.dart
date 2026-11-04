@@ -592,7 +592,10 @@ class _CourseRecommendationsScreenState
                     : _RecommendationStatus
                         .warning,
               ),
-              body: Column(
+              body: ExpansionTile(
+                initiallyExpanded: false,
+                title: const Text('Why this course'),
+                children: [Column(
                 crossAxisAlignment:
                     CrossAxisAlignment.start,
                 children: [
@@ -639,6 +642,7 @@ class _CourseRecommendationsScreenState
                     ),
                   ),
                 ],
+                )],
               ),
             );
           },

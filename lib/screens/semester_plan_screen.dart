@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/info_tip.dart';
+
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../services/preferences_service.dart';
@@ -64,7 +66,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
           const SizedBox(height: 8),
           const Text(
             textAlign: TextAlign.center,
-            'A draft of specific courses for Spring 2027. Current prerequisites must be completed successfully. Meeting times are checked in the next step.',
+            'Spring 2027 · Check meeting times in the next step.',
           ),
           if (activeStudent.major == 'Computer Engineering')
             const Padding(
@@ -108,12 +110,6 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
                     'credits below the limit',
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    preferences == null
-                        ? 'Using default maximum: 15 credits'
-                        : 'Using your saved maximum: '
-                              '${preferences.maxCredits} credits',
-                  ),
                 ],
               ),
             ),
@@ -179,10 +175,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'This is an academic plan, not a final registered '
-                'schedule. Generate a class schedule to check imported '
-                'Tiger Portal offerings, meeting times, seat snapshots, '
-                'and time conflicts. Confirm registration with your advisor.',
+                'Planning draft · confirm registration with your advisor.',
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -238,15 +231,6 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
                   const SizedBox(height: 8),
 
-                  Text(
-                    isCourse
-                        ? 'Recommended course'
-                        : item.courseCode != null
-                        ? 'Required course'
-                        : 'Requirement slot',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-
                   if (item.projectedEligibility) ...[
                     const SizedBox(height: 8),
                     Text(
@@ -257,9 +241,9 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
                   const SizedBox(height: 8),
 
-                  Text(
-                    item.reason,
-                    style: Theme.of(context).textTheme.bodySmall,
+                  InfoTip(
+                    label: 'Why ${item.courseCode ?? item.title} is suggested',
+                    message: item.reason,
                   ),
                 ],
               ),

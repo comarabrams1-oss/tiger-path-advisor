@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../widgets/info_tip.dart';
+import '../widgets/manual_schedule_editor.dart';
 import '../widgets/non_timetabled_courses.dart';
 import '../services/schedule_change_history_service.dart';
 
@@ -289,19 +290,35 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               if (generatedSchedule.scheduledCredits < preferences.maxCredits)
                 Padding(
                   padding: const EdgeInsets.only(top: 12),
-                  child: Text(
-                    _plan.shortfallReason ??
-                        '${generatedSchedule.scheduledCredits.toInt()} of ${preferences.maxCredits} credits scheduled. The remaining space may require different eligible courses, sections, or advisor verification; the credit limit is not a guaranteed course load.',
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${generatedSchedule.scheduledCredits.toInt()} of ${preferences.maxCredits} credits scheduled · advisor review needed',
+                        ),
+                      ),
+                      InfoTip(
+                        label: 'About the credit gap',
+                        message: _plan.shortfallReason ?? 'No verified combination filled the remaining credits under the current constraints.',
+                      ),
+                    ],
                   ),
                 ),
               const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: _updating || _historyLoading
+                    ? null
+                    : () => _editClasses(generatedSchedule, preferences),
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: const Text('Add or edit classes'),
+              ),
               _buildAssistant(context, generatedSchedule, preferences),
               if (_deferred.isNotEmpty)
                 Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Text(
-                      'Deferred from this term: ${_deferred.map((item) => item.courseCode ?? item.title).toSet().join(", ")}. These requirements remain outstanding; alternative courses do not replace them in your degree.',
+                      'Deferred from this term: ${_deferred.map((item) => item.courseCode ?? item.title).toSet().join(", ")}. Still required for your degree.',
                     ),
                   ),
                 ),
@@ -318,7 +335,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Advisor review recommended: check deferred requirements, conditional prerequisites, and the proposed course changes before registration.',
+                          'Advisor review needed before registration.',
                         ),
                         for (final item in generatedSchedule.scheduled.where(
                           (i) => i.planItem.projectedEligibility,
@@ -379,11 +396,68 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     sectionPreferences: _preferredSections,
   );
 
-  Future<void> _updateSchedule(
+  Future<void> _editClasses(
     GeneratedSchedule schedule,
     SchedulePreferences preferences,
   ) async {
-    final text = _request.text.trim();
+    final eligible = _alternatives.map((a) => a.course.code).toSet();
+    final choice = await showModalBottomSheet<ManualScheduleChoice>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      builder: (context) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .85,
+        child: ManualScheduleEditor(
+          schedule: schedule,
+          sections: _sections
+              .where(
+                (s) =>
+                    eligible.contains(s.courseCode) &&
+                    s.isOpen &&
+                    s.hasOpenSeats,
+              )
+              .toList(),
+        ),
+      ),
+    );
+    if (choice == null || !mounted) return;
+    final s = choice.section;
+    final pins = Map<String, String>.of(_preferredSections)
+      ..remove(s.courseCode);
+    final excluded = Set<String>.of(_excludedCourses);
+    if (choice.remove) {
+      excluded.add(s.courseCode);
+    } else {
+      excluded.remove(s.courseCode);
+      pins[s.courseCode] = s.sectionNumber;
+    }
+    await _updateSchedule(
+      schedule,
+      preferences,
+      manualRequest: choice.remove
+          ? 'Manual: remove ${s.courseCode}'
+          : 'Manual: select ${s.courseCode} section ${s.sectionNumber}',
+      manualUpdate: ScheduleUpdate(
+        'Manual class edit',
+        preferences,
+        pins,
+        choice.remove ? [] : [s.courseCode],
+        true,
+        excludedCourses: excluded.toList(),
+        excludedSections: _excludedSections
+            .where((key) => key != '${s.courseCode}|${s.sectionNumber}')
+            .toList(),
+      ),
+    );
+  }
+
+  Future<void> _updateSchedule(
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences, {
+    ScheduleUpdate? manualUpdate,
+    String? manualRequest,
+  }) async {
+    final text = manualRequest ?? _request.text.trim();
     if (_updating || _historyLoading || text.isEmpty) return;
     try {
       ScheduleAssistantService.explicitCreditTarget(text);
@@ -409,16 +483,18 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                 ),
           )
           .toList();
-      final update = await _assistant.update(
-        text,
-        _scheduleContext(schedule, preferences, text),
-        preferences,
-        available,
-        eligibleCourses: {
-          ..._alternatives.map((item) => item.course.code),
-          ..._plan.items.map((item) => item.courseCode).whereType<String>(),
-        }.toList(),
-      );
+      final update =
+          manualUpdate ??
+          await _assistant.update(
+            text,
+            _scheduleContext(schedule, preferences, text),
+            preferences,
+            available,
+            eligibleCourses: {
+              ..._alternatives.map((item) => item.course.code),
+              ..._plan.items.map((item) => item.courseCode).whereType<String>(),
+            }.toList(),
+          );
       if (update.needsClarification) {
         if (mounted) {
           setState(
@@ -680,15 +756,22 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           if (_assistantStatus != null)
             Padding(
               padding: const EdgeInsets.only(top: 10),
-              child: Text(_assistantStatus!),
+              child: _assistantStatus!.startsWith('Draft rebuilt:')
+                  ? ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      initiallyExpanded: false,
+                      title: Text(_assistantStatus!.split('. Review').first),
+                      subtitle: const Text('View section results'),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Text(_assistantStatus!),
+                        ),
+                      ],
+                    )
+                  : Text(_assistantStatus!),
             ),
           const SizedBox(height: 8),
-          Text(
-            'Current preferences: ${preferences.preferredTime}; max ${preferences.maxCredits} credits'
-            '${preferences.avoidEarlyClasses ? "; favor starts from 10 AM" : ""}'
-            '${preferences.avoidLateClasses ? "; favor finishes by 5 PM" : ""}'
-            '${preferences.avoidedDays.isNotEmpty ? "; prefer to avoid ${preferences.avoidedDays.join(", ")}" : ""}.',
-          ),
           if (_latestChange != null) ...[
             const SizedBox(height: 12),
             Text(
@@ -702,8 +785,6 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Text('• $line'),
               ),
-            if (_latestChange!.changes.length > 4)
-              const Text('Open the change log for all changes.'),
           ],
           if (_historyError != null)
             Text(
