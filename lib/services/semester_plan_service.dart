@@ -63,6 +63,7 @@ class SemesterPlanService {
     SchedulePreferences? preferences,
     Map<String, String> preferredSections = const {},
     List<String> preferredCourses = const [],
+    List<String> priorityCourseCodes = const [],
   }) {
     final audit = DegreeAuditService().auditProgram(student, program);
     final used = student.courses
@@ -78,6 +79,20 @@ class SemesterPlanService {
       program,
       catalog,
     );
+    if (priorityCourseCodes.isNotEmpty) {
+      final order = {
+        for (var i = 0; i < ranked.length; i++) ranked[i].course.code: i,
+      };
+      ranked.sort((a, b) {
+        final ap = priorityCourseCodes.contains(a.course.code),
+            bp = priorityCourseCodes.contains(b.course.code);
+        return ap == bp
+            ? order[a.course.code]!.compareTo(order[b.course.code]!)
+            : ap
+            ? -1
+            : 1;
+      });
+    }
     final freshman = student.classification.toLowerCase() == 'freshman';
     final generator = ScheduleGenerationService();
     final effectivePreferences =
@@ -92,6 +107,17 @@ class SemesterPlanService {
           avoidLateClasses: false,
           minimizeGaps: true,
         );
+    int compareChoices(_PlanChoice a, _PlanChoice b) {
+      final aRequests = a.items
+          .where((i) => priorityCourseCodes.contains(i.courseCode))
+          .length;
+      final bRequests = b.items
+          .where((i) => priorityCourseCodes.contains(i.courseCode))
+          .length;
+      final requested = bRequests.compareTo(aRequests);
+      return requested != 0 ? requested : _compare(a, b);
+    }
+
     var states = <_PlanChoice>[const _PlanChoice([], {}, 0, 0)];
     for (final result in ranked) {
       final course = result.course;
@@ -229,12 +255,12 @@ class SemesterPlanService {
         expanded.add(_PlanChoice(items, allocations, credits, score));
       }
       if (expanded.isEmpty) expanded.addAll(states);
-      expanded.sort(_compare);
+      expanded.sort(compareChoices);
       // Keep multiple course/time combinations, including alternatives within
       // the same requirement. This bounded search does not promise optimality.
       states = expanded.take(48).toList();
     }
-    states.sort(_compare);
+    states.sort(compareChoices);
     final best = states.first;
     final reviewItems = <SemesterPlanItem>[];
     for (final item in audit.where(

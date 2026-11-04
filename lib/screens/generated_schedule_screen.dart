@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../widgets/info_tip.dart';
@@ -5,6 +7,8 @@ import '../widgets/non_timetabled_courses.dart';
 import '../services/schedule_change_history_service.dart';
 
 import '../services/schedule_assistant_service.dart';
+import '../services/schedule_draft_service.dart';
+import '../services/schedule_edit_context_service.dart';
 import '../services/course_priority_service.dart';
 import '../services/course_eligibility_service.dart';
 import '../services/schedule_recovery_service.dart';
@@ -23,6 +27,8 @@ import '../services/semester_plan_service.dart';
 enum ScheduleView { weekly, list }
 
 class GeneratedScheduleScreen extends StatefulWidget {
+  final ScheduleDraft? draft;
+  final String? initialRequest;
   final SemesterPlan plan;
   final ScheduleAssistantService? assistant;
 
@@ -30,6 +36,8 @@ class GeneratedScheduleScreen extends StatefulWidget {
     super.key,
     required this.plan,
     this.assistant,
+    this.draft,
+    this.initialRequest,
   });
 
   @override
@@ -45,6 +53,33 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   SemesterPlan? _updatedPlan;
   SchedulePreferences? _updatedPreferences;
   Map<String, String> _preferredSections = {};
+  List<String> _excludedCourses = [];
+  List<String> _excludedSections = [];
+  bool _initialRequestSent = false;
+  List<CourseSection> _permittedSections({
+    List<String>? courses,
+    List<String>? excludedSections,
+    Map<String, String>? selections,
+  }) {
+    final avoided = courses ?? _excludedCourses,
+        avoidedSections = excludedSections ?? _excludedSections;
+    final pins = selections ?? _preferredSections;
+    return _sections
+        .where(
+          (s) =>
+              !avoided.contains(s.courseCode) &&
+              !avoidedSections.contains(
+                ScheduleEditContextService.sectionKey(
+                  s.courseCode,
+                  s.sectionNumber,
+                ),
+              ) &&
+              (!pins.containsKey(s.courseCode) ||
+                  pins[s.courseCode] == s.sectionNumber),
+        )
+        .toList();
+  }
+
   String? _assistantStatus;
   late final _history = ScheduleChangeHistoryService(
     PreferencesService.profileId,
@@ -122,6 +157,13 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.draft case final draft?) {
+      _updatedPlan = draft.plan;
+      _updatedPreferences = draft.preferences;
+      _preferredSections = Map.of(draft.sectionPreferences);
+      _excludedCourses = List.of(draft.excludedCourses);
+      _excludedSections = List.of(draft.excludedSections);
+    }
     _loadHistory();
 
     if (CourseSectionRepository.hasTerm(_plannedTerm)) {
@@ -188,12 +230,32 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
 
     final generatedSchedule = ScheduleGenerationService().generateSchedule(
       plan: _plan,
-      sections: _sections,
+      sections: _permittedSections(),
       instructors: testInstructors,
       preferences: preferences,
       preferredSections: _preferredSections,
     );
 
+    ScheduleDraftService.save(
+      ScheduleDraft(
+        plan: _plan,
+        schedule: generatedSchedule,
+        preferences: preferences,
+        sectionPreferences: Map.of(_preferredSections),
+        excludedCourses: List.of(_excludedCourses),
+        excludedSections: List.of(_excludedSections),
+      ),
+    );
+    if (!_initialRequestSent &&
+        !_historyLoading &&
+        widget.initialRequest != null) {
+      _initialRequestSent = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        _request.text = widget.initialRequest!;
+        _updateSchedule(generatedSchedule, preferences);
+      });
+    }
     final colors = Theme.of(context).colorScheme;
 
     return Scaffold(
@@ -296,69 +358,26 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   Map<String, Object?> _scheduleContext(
     GeneratedSchedule schedule,
     SchedulePreferences preferences,
-  ) => {
-    'program': activeProgram.name,
-    'classification': activeStudent.classification,
-    'term': _plannedTerm,
-    'source': _usingRealData ? 'Imported snapshot' : 'Demo sections',
-    'scheduledCredits': schedule.scheduledCredits,
-    'creditGap': preferences.maxCredits - schedule.scheduledCredits,
-    'preferences': preferences.toJson()..remove('preferredProfessors'),
-    'selected': [
-      for (final item in schedule.scheduled)
-        {
-          'courseCode': item.section.courseCode,
-          'section': item.section.sectionNumber,
-        },
-    ],
-    'alternatives': [
-      for (final item in _alternatives)
-        {
-          'courseCode': item.course.code,
-          'credits': item.course.credits,
-          'eligibility': item.eligibility.status.name,
-          'reason': item.reasons,
-          'requiredCompanions': item.eligibility.requiredCompanions,
-        },
-    ],
-    'unresolved': [
-      for (final item in schedule.unscheduled)
-        {
-          'courseCode': item.planItem.courseCode,
-          'requirement': item.planItem.title,
-          'reason': item.reason,
-        },
-    ],
-    'choices': [
-      for (final section
-          in _sections
-              .where(
-                (section) =>
-                    _plan.items.any(
-                      (item) => item.courseCode == section.courseCode,
-                    ) ||
-                    _alternatives.any(
-                      (item) => item.course.code == section.courseCode,
-                    ),
-              )
-              .take(100))
-        {
-          'courseCode': section.courseCode,
-          'section': section.sectionNumber,
-          'instructors': section.allInstructorNames,
-          'location': section.location,
-          'delivery': section.deliveryMethod,
-          'openSeats': section.openSeats,
-          'days': section.days,
-          'start': section.startTime,
-          'end': section.endTime,
-          'meetings': [
-            for (final meeting in section.meetings) meeting.displayText,
-          ],
-          'open': section.isOpen && section.hasOpenSeats,
-        },
-    ],
-  };
+    String question,
+  ) => ScheduleEditContextService.build(
+    program: activeProgram.name,
+    classification: activeStudent.classification,
+    term: _plannedTerm,
+    schedule: schedule,
+    preferences: preferences,
+    candidates: _alternatives,
+    available: _sections
+        .where(
+          (s) =>
+              _plan.items.any((i) => i.courseCode == s.courseCode) ||
+              _alternatives.any((i) => i.course.code == s.courseCode),
+        )
+        .toList(),
+    question: question,
+    excludedCourses: _excludedCourses,
+    excludedSections: _excludedSections,
+    sectionPreferences: _preferredSections,
+  );
 
   Future<void> _updateSchedule(
     GeneratedSchedule schedule,
@@ -392,7 +411,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           .toList();
       final update = await _assistant.update(
         text,
-        _scheduleContext(schedule, preferences),
+        _scheduleContext(schedule, preferences, text),
         preferences,
         available,
         eligibleCourses: {
@@ -400,52 +419,114 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ..._plan.items.map((item) => item.courseCode).whereType<String>(),
         }.toList(),
       );
-      // Gemini proposes a target/preferences/candidate order; the same planner
-      // validates and searches all academic options again in this tab.
-      final choices = Map<String, String>.from(_preferredSections)
-        ..addAll(update.sectionChoices);
+      if (update.needsClarification) {
+        if (mounted) {
+          setState(
+            () => _assistantStatus =
+                '${update.summary} Your schedule is unchanged.',
+          );
+        }
+        return;
+      }
+      final choices = Map<String, String>.from(update.sectionChoices);
+      final workingSections = _permittedSections(
+        courses: update.excludedCourses,
+        excludedSections: update.excludedSections,
+        selections: choices,
+      );
+      final targets = {...update.courseChoices, ...choices.keys}.toList();
       var plan = SemesterPlanService().generatePlan(
         student: activeStudent,
         program: activeProgram,
         catalog: activeCatalog,
         maxCredits: update.preferences.maxCredits,
-        sections: _sections,
+        sections: workingSections,
         preferences: update.preferences,
         preferredSections: choices,
-        preferredCourses: update.courseChoices,
+        preferredCourses: [
+          ...targets,
+          ...schedule.scheduled.map((s) => s.section.courseCode),
+        ],
+        priorityCourseCodes: targets,
       );
 
       final recovery = ScheduleRecoveryService().recover(
         plan: plan,
         candidates: _alternatives,
         requestedCourses: update.courseChoices,
-        sections: _sections,
+        sections: workingSections,
         instructors: testInstructors,
         preferences: update.preferences,
         preferredSections: choices,
       );
       plan = recovery.plan;
-      choices.removeWhere(
-        (course, _) => !plan.items.any((item) => item.courseCode == course),
-      );
       final rebuilt = ScheduleGenerationService().generateSchedule(
         plan: plan,
-        sections: _sections,
+        sections: workingSections,
         instructors: testInstructors,
         preferences: update.preferences,
         preferredSections: choices,
       );
       if (!mounted) return;
+      final actualNotes = <String>[];
+      for (final choice in choices.entries) {
+        final matching = available.where(
+          (s) => s.courseCode == choice.key && s.sectionNumber == choice.value,
+        );
+        final teacher = matching.isEmpty
+            ? ''
+            : matching.first.instructorDisplay;
+        final applied = rebuilt.scheduled.any(
+          (i) =>
+              i.section.courseCode == choice.key &&
+              i.section.sectionNumber == choice.value,
+        );
+        actualNotes.add(
+          applied
+              ? '${choice.key} section ${choice.value} selected${teacher.isEmpty ? '' : ' with $teacher'}.'
+              : 'Could not fit ${choice.key} section ${choice.value}${teacher.isEmpty ? '' : ' with $teacher'} into a verified timetable under these constraints. Advisor review recommended.',
+        );
+      }
+      for (final professor in update.preferences.preferredProfessors) {
+        final matching = rebuilt.scheduled
+            .where((s) => s.section.allInstructorNames.contains(professor))
+            .toList();
+        if (matching.isEmpty) {
+          actualNotes.add(
+            'No selected class matches $professor. That instructor request was not fulfilled in this draft; ask for another section or advisor review.',
+          );
+        }
+      }
+      for (final code in update.excludedCourses) {
+        actualNotes.add(
+          '$code left out of this draft; its degree requirement remains outstanding.',
+        );
+      }
+      final constraintChanges = <String>[];
+      if (jsonEncode(_excludedCourses) != jsonEncode(update.excludedCourses)) {
+        constraintChanges.add(
+          'Courses to avoid: ${_excludedCourses.isEmpty ? 'None' : _excludedCourses.join(', ')} → ${update.excludedCourses.isEmpty ? 'None' : update.excludedCourses.join(', ')}.',
+        );
+      }
+      if (jsonEncode(_excludedSections) !=
+          jsonEncode(update.excludedSections)) {
+        constraintChanges.add(
+          'Sections to avoid: ${_excludedSections.isEmpty ? 'None' : _excludedSections.join(', ')} → ${update.excludedSections.isEmpty ? 'None' : update.excludedSections.join(', ')}.',
+        );
+      }
       final change = ScheduleChangeEntry(
         time: DateTime.now(),
         term: _plannedTerm,
         request: text,
-        changes: ScheduleChangeEntry.compare(
-          schedule,
-          rebuilt,
-          preferences,
-          update.preferences,
-        ),
+        changes: [
+          ...ScheduleChangeEntry.compare(
+            schedule,
+            rebuilt,
+            preferences,
+            update.preferences,
+          ),
+          ...constraintChanges,
+        ],
         result:
             '${rebuilt.scheduled.length} courses · ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits · ${rebuilt.unscheduled.length} unresolved',
       );
@@ -495,19 +576,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         _updatedPlan = plan;
         _updatedPreferences = update.preferences;
         _preferredSections = choices;
-        final remaining = rebuilt.unscheduled.length;
-        final missed = choices.entries
-            .where(
-              (choice) => !rebuilt.scheduled.any(
-                (item) =>
-                    item.section.courseCode == choice.key &&
-                    item.section.sectionNumber == choice.value,
-              ),
-            )
-            .length;
+        _excludedCourses = update.excludedCourses;
+        _excludedSections = update.excludedSections;
         _assistantStatus =
-            'Draft rebuilt: ${rebuilt.scheduled.length} courses, ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits, $remaining unresolved. Review before registration.'
-            '${missed > 0 ? " Some requested sections could not fit without conflicts." : ""}';
+            'Draft rebuilt: ${rebuilt.scheduled.length} courses, ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits, ${rebuilt.unscheduled.length} unresolved. Review before registration.'
+            '${actualNotes.isEmpty ? '' : ' ${actualNotes.join(' ')}'}';
         _request.clear();
       });
       PreferencesService.savePreferences(update.preferences);

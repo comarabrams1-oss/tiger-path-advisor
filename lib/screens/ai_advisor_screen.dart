@@ -19,14 +19,19 @@ import 'course_recommendations_screen.dart';
 import 'schedule_preferences_screen.dart';
 import 'theme_settings_screen.dart';
 import 'program_library_screen.dart';
+import 'generated_schedule_screen.dart';
+import '../services/schedule_draft_service.dart';
+import '../services/schedule_assistant_service.dart';
 
 class AiAdvisorScreen extends StatefulWidget {
   final AiAdvisorService? service;
+  final ScheduleAssistantService? scheduleAssistant;
   final Student student;
   final AdvisorHistoryService history;
   AiAdvisorScreen({
     super.key,
     this.service,
+    this.scheduleAssistant,
     Student? student,
     this.history = const AdvisorHistoryService(),
   }) : student = student ?? activeStudent;
@@ -77,6 +82,9 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       question: question,
     );
     final theme = await ThemeService.load();
+    if (ScheduleDraftService.current case final draft?) {
+      context['schedule'] = draft.explanationContext;
+    }
     context['currentTheme'] = theme.preset.name;
     context['themeSettings'] = {
       'design': theme.customTheme.design.name,
@@ -219,7 +227,27 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ),
           )
           .toList();
-      final answer = await _service.respond(recent, fresh);
+      final AdvisorReply answer;
+      if (ScheduleDraftService.isEditRequest(text)) {
+        if (text.length > 1000) {
+          answer = const AdvisorReply(
+            'Please keep a schedule change request under 1,000 characters.',
+            [],
+          );
+        } else if (ScheduleDraftService.current != null) {
+          answer = AdvisorReply(
+            'I can apply this to your current draft. Tap below to open the timetable and run this request with prerequisite, availability and conflict checks.',
+            [AdvisorAction('reviseSchedule', 'currentSchedule', request: text)],
+          );
+        } else {
+          answer = const AdvisorReply(
+            'Generate a schedule first, then I can apply changes to that draft. Open the builder below; I cannot change a timetable that has not been generated in this session.',
+            [AdvisorAction('navigate', 'scheduleBuilder')],
+          );
+        }
+      } else {
+        answer = await _service.respond(recent, fresh);
+      }
       if (!mounted) return;
       setState(() {
         _messages.add(AdvisorMessage('assistant', answer.text, answer.actions));
@@ -357,6 +385,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   String _actionLabel(AdvisorAction action) {
+    if (action.type == 'reviseSchedule') return 'Update current schedule';
     if (action.type == 'customTheme') return 'Apply custom colors';
     if (action.type == 'changeDesign') return 'Apply ${action.target} layout';
     if (action.type == 'changeTheme') {
@@ -374,6 +403,24 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   Future<void> _perform(AdvisorAction action) async {
     try {
+      if (action.type == 'reviseSchedule') {
+        final draft = ScheduleDraftService.current;
+        if (draft == null) throw StateError('Generate a current draft first.');
+        await Navigator.push(
+          context,
+          MaterialPageRoute<void>(
+            settings: const RouteSettings(name: 'GeneratedScheduleScreen'),
+            builder: (_) => GeneratedScheduleScreen(
+              plan: draft.plan,
+              draft: draft,
+              initialRequest: action.request,
+              assistant: widget.scheduleAssistant,
+            ),
+          ),
+        );
+        if (mounted) await _refreshContext();
+        return;
+      }
       if (action.type == 'changeTheme' ||
           action.type == 'customTheme' ||
           action.type == 'changeDesign') {

@@ -6,6 +6,9 @@ import '../models/course_section.dart';
 import '../models/schedule_preferences.dart';
 
 class ScheduleUpdate {
+  final List<String> excludedCourses;
+  final List<String> excludedSections;
+  final bool needsClarification;
   final String summary;
   final List<String> courseChoices;
   final bool advisorReview;
@@ -16,8 +19,11 @@ class ScheduleUpdate {
     this.preferences,
     this.sectionChoices,
     this.courseChoices,
-    this.advisorReview,
-  );
+    this.advisorReview, {
+    this.excludedCourses = const [],
+    this.excludedSections = const [],
+    this.needsClarification = false,
+  });
 }
 
 class ScheduleAssistantService {
@@ -147,13 +153,56 @@ class ScheduleAssistantService {
       }
       selections[choice['courseCode'] as String] = choice['section'] as String;
     }
+    final instructors = {
+      ...current.preferredProfessors,
+      ...available.expand((s) => s.allInstructorNames),
+    };
+    final requestedProfessors = p['preferredProfessors'];
+    if (requestedProfessors != null &&
+        (requestedProfessors is! List ||
+            requestedProfessors.length > 5 ||
+            requestedProfessors.any(
+              (n) => n is! String || !instructors.contains(n),
+            ))) {
+      throw const FormatException('Unverified instructor preference');
+    }
+    List<String> exclusions(String key, Set<String> allowed) {
+      final values = data[key] ?? context[key] ?? <String>[];
+      if (values is! List ||
+          values.length > 30 ||
+          values.any((v) => v is! String || !allowed.contains(v))) {
+        throw const FormatException('Unverified excluded course or section');
+      }
+      return values.cast<String>().toSet().toList();
+    }
+
+    final excludedCourses = exclusions(
+      'excludedCourses',
+      available.map((s) => s.courseCode).toSet(),
+    );
+    final excludedSections = exclusions(
+      'excludedSections',
+      available.map((s) => '${s.courseCode}|${s.sectionNumber}').toSet(),
+    );
+    if (selections.entries.any(
+          (e) =>
+              excludedCourses.contains(e.key) ||
+              excludedSections.contains('${e.key}|${e.value}'),
+        ) ||
+        courses.any(excludedCourses.contains) ||
+        (data['needsClarification'] != null &&
+            data['needsClarification'] is! bool)) {
+      throw const FormatException('Contradictory schedule changes');
+    }
     return ScheduleUpdate(
       data['summary'] as String,
       SchedulePreferences(
         preferredTime: p['preferredTime'] as String,
         preferredDays: dayList('preferredDays'),
         avoidedDays: dayList('avoidedDays'),
-        preferredProfessors: current.preferredProfessors,
+        preferredProfessors: requestedProfessors == null
+            ? current.preferredProfessors
+            : requestedProfessors.cast<String>(),
         maxCredits: requestedCredits ?? p['maxCredits'] as int,
         avoidEarlyClasses: p['avoidEarlyClasses'] as bool,
         avoidLateClasses: p['avoidLateClasses'] as bool,
@@ -162,6 +211,9 @@ class ScheduleAssistantService {
       selections,
       courses.cast<String>(),
       data['advisorReview'] as bool,
+      excludedCourses: excludedCourses,
+      excludedSections: excludedSections,
+      needsClarification: data['needsClarification'] == true,
     );
   }
 

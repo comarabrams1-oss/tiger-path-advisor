@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class AdvisorAction {
+  final String? request;
   final String type;
   final String target;
   final String? primaryHex;
@@ -15,6 +16,7 @@ class AdvisorAction {
     this.primaryHex,
     this.accentHex,
     this.darkMode,
+    this.request,
   });
   static const themes = [
     'benedict',
@@ -38,6 +40,17 @@ class AdvisorAction {
     if (value is! Map) return null;
     final type = value['type'];
     final target = value['target'];
+    if (type == 'reviseSchedule' &&
+        target == 'currentSchedule' &&
+        value['request'] is String &&
+        (value['request'] as String).trim().isNotEmpty &&
+        (value['request'] as String).length <= 1000) {
+      return AdvisorAction(
+        'reviseSchedule',
+        'currentSchedule',
+        request: value['request'] as String,
+      );
+    }
     if (type == 'customTheme' &&
         target == 'custom' &&
         value['primaryHex'] is String &&
@@ -66,6 +79,7 @@ class AdvisorAction {
   Map<String, Object?> toJson() => {
     'type': type,
     'target': target,
+    if (type == 'reviseSchedule') 'request': request,
     if (type == 'customTheme') ...{
       'primaryHex': primaryHex,
       'accentHex': accentHex,

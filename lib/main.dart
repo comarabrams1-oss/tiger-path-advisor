@@ -41,6 +41,8 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
       'TranscriptScreen': 1,
       'DegreeProgressScreen': 2,
       'SchedulePreferencesScreen': 3,
+      'GeneratedScheduleScreen': 3,
+      'SemesterPlanScreen': 3,
       'AiAdvisorScreen': 4,
       'ThemeSettingsScreen': 5,
     };
