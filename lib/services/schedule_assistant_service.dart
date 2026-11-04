@@ -67,18 +67,28 @@ class ScheduleAssistantService {
           }),
         )
         .timeout(const Duration(seconds: 50));
+    dynamic data;
+    try {
+      data = jsonDecode(response.body);
+    } on FormatException {
+      data = null;
+    }
     if (response.statusCode != 200) {
-      final body = jsonDecode(response.body);
-      final code = body is Map ? body['code'] : null;
+      final code = data is Map ? data['code'] : null;
       throw StateError(switch (code) {
         'PROVIDER_BUSY' => 'Gemini is busy. Please retry shortly.',
         'QUOTA' => 'Gemini quota reached. Please wait and retry.',
         'NOT_CONFIGURED' => 'Schedule assistance needs server configuration.',
         'TIMEOUT' => 'Gemini took too long. Please retry.',
-        _ => 'Schedule assistance is unavailable. Please retry.',
+        'MODEL_UNAVAILABLE' => 'The configured AI model is unavailable. The server setting needs updating.',
+        'PROVIDER_ACCESS' =>
+          'AI server access needs attention. Your schedule is unchanged.',
+        _ =>
+          response.statusCode == 429
+              ? 'AI request limit reached. Please wait before retrying.'
+              : 'Schedule assistance is unavailable. Please retry.',
       });
     }
-    final data = jsonDecode(response.body);
     if (data is! Map ||
         data['preferences'] is! Map ||
         data['summary'] is! String ||

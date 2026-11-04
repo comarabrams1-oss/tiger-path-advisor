@@ -55,3 +55,24 @@ test('advisor handles disabled, validation, success and quota without leaking se
     assert.equal((await (await handler(request(body))).json()).code,'INVALID_RESPONSE');
   } finally { globalThis.fetch = originalFetch; process.env = old; }
 });
+
+test('program review context and allowlisted layout/library actions reach the app', async () => {
+  const originalFetch=globalThis.fetch,old={...process.env};
+  try {
+    process.env.AI_ENABLED='true';process.env.GEMINI_API_KEY='test-only';process.env.GEMINI_MODEL='test-model';
+    globalThis.fetch=async(_url,options)=>{
+      const payload=JSON.parse(options.body);
+      assert(payload.contents[0].parts[0].text.includes('Review PHYS 244'));
+      assert(payload.contents[0].parts[0].text.includes('Open source pages'));
+      assert(!payload.contents[0].parts[0].text.includes('PRIVATE NAME'));
+      assert(payload.generationConfig.responseJsonSchema.properties.actions.items.properties.type.enum.includes('changeDesign'));
+      return Response.json({candidates:[{content:{parts:[{text:JSON.stringify({answer:'Tap to open the program or change the layout.',actions:[
+        {type:'changeDesign',target:'sharp'}, {type:'navigate',target:'programLibrary'},
+        {type:'changeDesign',target:'admin'}, {type:'navigate',target:'sharp'}
+      ]})}]}}]});
+    };
+    const result=await handler(request({...body,context:{...body.context,programMappingReview:['Review PHYS 244'],programLibrary:'Open source pages'}}));
+    assert.equal(result.status,200);
+    assert.deepEqual((await result.json()).actions,[{type:'changeDesign',target:'sharp'},{type:'navigate',target:'programLibrary'}]);
+  } finally {globalThis.fetch=originalFetch;process.env=old;}
+});

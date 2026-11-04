@@ -6,6 +6,25 @@ import 'package:http/testing.dart';
 import 'package:tiger_path/services/ai_advisor_service.dart';
 
 void main() {
+  test('app actions accept only known layouts and the program library', () {
+    expect(
+      AdvisorAction.parse({'type': 'changeDesign', 'target': 'sharp'})?.target,
+      'sharp',
+    );
+    expect(
+      AdvisorAction.parse({'type': 'changeDesign', 'target': 'invented'}),
+      isNull,
+    );
+    expect(
+      AdvisorAction.parse({'type': 'navigate', 'target': 'programLibrary'})
+          ?.target,
+      'programLibrary',
+    );
+    expect(
+      AdvisorAction.parse({'type': 'navigate', 'target': 'admin'}),
+      isNull,
+    );
+  });
   test('advisor sends context to proxy and parses answer', () async {
     final service = AiAdvisorService(
       endpoint: Uri.parse('https://example.com/advisor'),

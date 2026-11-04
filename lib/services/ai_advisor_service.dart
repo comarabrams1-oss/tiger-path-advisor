@@ -31,7 +31,9 @@ class AdvisorAction {
     'recommendations',
     'scheduleBuilder',
     'themeStudio',
+    'programLibrary',
   ];
+  static const designs = ['classic', 'soft', 'sharp'];
   static AdvisorAction? parse(dynamic value) {
     if (value is! Map) return null;
     final type = value['type'];
@@ -50,6 +52,9 @@ class AdvisorAction {
         accentHex: (value['accentHex'] as String).toUpperCase(),
         darkMode: value['darkMode'] as bool,
       );
+    }
+    if (type == 'changeDesign' && designs.contains(target)) {
+      return AdvisorAction(type as String, target as String);
     }
     if (type == 'changeTheme' && themes.contains(target) ||
         type == 'navigate' && pages.contains(target)) {

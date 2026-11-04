@@ -18,6 +18,7 @@ import 'degree_progress_screen.dart';
 import 'course_recommendations_screen.dart';
 import 'schedule_preferences_screen.dart';
 import 'theme_settings_screen.dart';
+import 'program_library_screen.dart';
 
 class AiAdvisorScreen extends StatefulWidget {
   final AiAdvisorService? service;
@@ -78,6 +79,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     final theme = await ThemeService.load();
     context['currentTheme'] = theme.preset.name;
     context['themeSettings'] = {
+      'design': theme.customTheme.design.name,
       'darkMode': theme.preset == AppThemePreset.custom
           ? theme.customTheme.darkMode
           : [
@@ -356,6 +358,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   String _actionLabel(AdvisorAction action) {
     if (action.type == 'customTheme') return 'Apply custom colors';
+    if (action.type == 'changeDesign') return 'Apply ${action.target} layout';
     if (action.type == 'changeTheme') {
       return 'Apply ${AppThemePreset.values.firstWhere((p) => p.name == action.target).displayName}';
     }
@@ -364,13 +367,16 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       'degreeProgress' => 'View Degree Progress',
       'recommendations' => 'View Needed Classes',
       'scheduleBuilder' => 'Open Schedule Builder',
+      'programLibrary' => 'Open Programs of Study',
       _ => 'Open Theme Studio',
     };
   }
 
   Future<void> _perform(AdvisorAction action) async {
     try {
-      if (action.type == 'changeTheme' || action.type == 'customTheme') {
+      if (action.type == 'changeTheme' ||
+          action.type == 'customTheme' ||
+          action.type == 'changeDesign') {
         final scope = AdvisorAppActions.maybeOf(context);
         if (scope == null) {
           setState(
@@ -379,10 +385,18 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           return;
         }
         final current = await ThemeService.load();
-        final preset = action.type == 'customTheme'
+        final preset = action.type == 'changeDesign'
+            ? current.preset
+            : action.type == 'customTheme'
             ? AppThemePreset.custom
             : AppThemePreset.values.firstWhere((p) => p.name == action.target);
-        final custom = action.type == 'customTheme'
+        final custom = action.type == 'changeDesign'
+            ? current.customTheme.copyWith(
+                design: AppDesign.values.firstWhere(
+                  (d) => d.name == action.target,
+                ),
+              )
+            : action.type == 'customTheme'
             ? current.customTheme.copyWith(
                 primaryColor: Color(
                   int.parse('FF${action.primaryHex!.substring(1)}', radix: 16),
@@ -399,7 +413,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           ThemeSettings(preset: preset, customTheme: custom),
         );
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${preset.displayName} applied')),
+          SnackBar(
+            content: Text(
+              action.type == 'changeDesign'
+                  ? '${action.target} layout applied'
+                  : '${preset.displayName} applied',
+            ),
+          ),
         );
         await _refreshContext();
       } else {
@@ -413,6 +433,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             page = const CourseRecommendationsScreen();
           case 'scheduleBuilder':
             page = const SchedulePreferencesScreen();
+          case 'programLibrary':
+            page = const ProgramLibraryScreen();
           default:
             final settings = await ThemeService.load();
             if (!mounted) return;
@@ -433,6 +455,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 'degreeProgress' => 'DegreeProgressScreen',
                 'recommendations' => 'CourseRecommendationsScreen',
                 'scheduleBuilder' => 'SchedulePreferencesScreen',
+                'programLibrary' => 'ProgramLibraryScreen',
                 _ => 'ThemeSettingsScreen',
               },
             ),

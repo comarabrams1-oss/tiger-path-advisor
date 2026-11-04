@@ -121,6 +121,7 @@ class AdvisorContextService {
             'schedule': section.scheduleDisplay,
             'location': section.location,
             'delivery': section.deliveryMethod,
+            'asynchronous': section.isAsynchronous,
             'credits': section.credits,
             'openSeats': section.openSeats,
             'capacity': section.capacity,

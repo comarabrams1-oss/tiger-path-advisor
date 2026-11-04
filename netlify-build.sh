@@ -16,4 +16,5 @@ flutter --version
 flutter pub get
 flutter analyze
 flutter test
+node --test test/server/*.test.mjs
 flutter build web --release

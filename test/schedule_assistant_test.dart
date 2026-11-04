@@ -8,6 +8,41 @@ import 'package:tiger_path/models/schedule_preferences.dart';
 import 'package:tiger_path/services/schedule_assistant_service.dart';
 
 void main() {
+  test(
+    'non-JSON host errors are not mistaken for an unverified schedule choice',
+    () async {
+      final service = ScheduleAssistantService(
+        client: MockClient(
+          (_) async => http.Response('<html>Rate limited</html>', 429),
+        ),
+      );
+      addTearDown(service.dispose);
+      await expectLater(
+        service.update(
+          'Try mornings',
+          {},
+          const SchedulePreferences(
+            preferredTime: 'No Preference',
+            preferredDays: [],
+            avoidedDays: [],
+            preferredProfessors: [],
+            maxCredits: 15,
+            avoidEarlyClasses: false,
+            avoidLateClasses: false,
+            minimizeGaps: true,
+          ),
+          [],
+        ),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('request limit'),
+          ),
+        ),
+      );
+    },
+  );
   const prefs = SchedulePreferences(
     preferredTime: 'No Preference',
     preferredDays: [],

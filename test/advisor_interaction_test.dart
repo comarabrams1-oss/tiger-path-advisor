@@ -57,6 +57,17 @@ void main() {
         expect(data['context']['classification'], 'Junior');
         expect(data['context'].containsKey('progressChanges'), isTrue);
         latestChanges = data['context']['progressChanges'] as List;
+        if ((data['messages'] as List).last['text'].contains('sharp layout')) {
+          return http.Response(
+            jsonEncode({
+              'answer': 'Tap to apply the sharp layout.',
+              'actions': [
+                {'type': 'changeDesign', 'target': 'sharp'},
+              ],
+            }),
+            200,
+          );
+        }
         if ((data['messages'] as List).last['text'].contains('teal')) {
           return http.Response(
             jsonEncode({
@@ -175,6 +186,22 @@ void main() {
         .actions
         .single;
     expect(saved.primaryHex, '#008080');
+    await tester.enterText(find.byType(TextField), 'Use the sharp layout');
+    await tester.tap(find.byTooltip('Send question'));
+    await settle(tester);
+    expect((await ThemeService.load()).customTheme.design, AppDesign.classic);
+    final designButton = find.widgetWithText(
+      FilledButton,
+      'Apply sharp layout',
+    );
+    await tester.ensureVisible(designButton);
+    await tester.tap(designButton);
+    await settle(tester);
+    final redesigned = await ThemeService.load();
+    expect(redesigned.customTheme.design, AppDesign.sharp);
+    expect(redesigned.customTheme.primaryColor, theme.customTheme.primaryColor);
+    expect(redesigned.customTheme.accentColor, theme.customTheme.accentColor);
+    expect(redesigned.preset, theme.preset);
     await tester.enterText(find.byType(TextField), 'A question');
     await tester.sendKeyDownEvent(LogicalKeyboardKey.shiftLeft);
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
