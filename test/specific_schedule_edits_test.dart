@@ -52,6 +52,7 @@ void main() {
       MaterialApp(
         home: Scaffold(
           body: ManualScheduleEditor(
+            courseNames: const {'PHYS 234': 'Principles of Physics II'},
             schedule: const GeneratedSchedule(scheduled: [], unscheduled: []),
             sections: sections
                 .where((s) => s.courseCode == 'PHYS 234')
@@ -60,9 +61,13 @@ void main() {
         ),
       ),
     );
-    await tester.enterText(find.byType(TextField), 'Pandit');
+    await tester.enterText(find.byType(TextField), 'Principles');
     await tester.pumpAndSettle();
     expect(find.text('PHYS 234 · 01'), findsOneWidget);
+    expect(find.text('PHYS 234 · 02'), findsOneWidget);
+    expect(find.text('Principles of Physics II'), findsNWidgets(2));
+    await tester.enterText(find.byType(TextField), 'Pandit');
+    await tester.pumpAndSettle();
     expect(find.text('PHYS 234 · 02'), findsNothing);
     expect(find.text('Add'), findsOneWidget);
     expect(tester.takeException(), isNull);

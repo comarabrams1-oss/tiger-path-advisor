@@ -13,10 +13,12 @@ class ManualScheduleChoice {
 class ManualScheduleEditor extends StatefulWidget {
   final GeneratedSchedule schedule;
   final List<CourseSection> sections;
+  final Map<String, String> courseNames;
   const ManualScheduleEditor({
     super.key,
     required this.schedule,
     required this.sections,
+    this.courseNames = const {},
   });
   @override
   State<ManualScheduleEditor> createState() => _ManualScheduleEditorState();
@@ -24,6 +26,45 @@ class ManualScheduleEditor extends StatefulWidget {
 
 class _ManualScheduleEditorState extends State<ManualScheduleEditor> {
   String query = '';
+  String _name(CourseSection section) {
+    final name = widget.courseNames[section.courseCode] ?? section.courseName;
+    if (name != null && name.trim().isNotEmpty) return name.trim();
+    for (final item in widget.schedule.scheduled) {
+      if (item.section.courseCode == section.courseCode) {
+        return item.planItem.title;
+      }
+    }
+    return 'Course name unavailable';
+  }
+
+  Widget _courseTile(CourseSection section, Widget action) => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _name(section),
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+              Text(
+                '${section.courseCode} · ${section.sectionNumber}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              const SizedBox(height: 4),
+              Text(section.instructorDisplay),
+              Text(section.scheduleDisplay),
+            ],
+          ),
+        ),
+        const SizedBox(width: 8),
+        action,
+      ],
+    ),
+  );
   @override
   Widget build(BuildContext context) {
     final selected = {
@@ -34,7 +75,7 @@ class _ManualScheduleEditorState extends State<ManualScheduleEditor> {
         widget.sections
             .where(
               (s) =>
-                  '${s.courseCode} ${s.instructorDisplay} ${s.scheduleDisplay}'
+                  '${_name(s)} ${s.courseCode} ${s.instructorDisplay} ${s.scheduleDisplay}'
                       .toLowerCase()
                       .contains(query.toLowerCase()),
             )
@@ -89,14 +130,9 @@ class _ManualScheduleEditorState extends State<ManualScheduleEditor> {
                       style: TextStyle(fontWeight: FontWeight.bold),
                     ),
                     for (final s in selected.values)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text('${s.courseCode} · ${s.sectionNumber}'),
-                        subtitle: Text(
-                          '${s.instructorDisplay}\n${s.scheduleDisplay}',
-                        ),
-                        isThreeLine: true,
-                        trailing: IconButton(
+                      _courseTile(
+                        s,
+                        IconButton(
                           tooltip: 'Remove ${s.courseCode}',
                           icon: const Icon(Icons.remove_circle_outline),
                           onPressed: () => Navigator.pop(
@@ -116,16 +152,9 @@ class _ManualScheduleEditorState extends State<ManualScheduleEditor> {
                       title: Text('No eligible open sections match.'),
                     ),
                   for (final s in choices)
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text('${s.courseCode} · ${s.sectionNumber}'),
-                      subtitle: Text(
-                        '${s.instructorDisplay}\n${s.scheduleDisplay}',
-                      ),
-                      isThreeLine: true,
-                      trailing:
-                          selected[s.courseCode]?.sectionNumber ==
-                              s.sectionNumber
+                    _courseTile(
+                      s,
+                      selected[s.courseCode]?.sectionNumber == s.sectionNumber
                           ? const Icon(
                               Icons.check_circle_outline,
                               semanticLabel: 'Selected section',

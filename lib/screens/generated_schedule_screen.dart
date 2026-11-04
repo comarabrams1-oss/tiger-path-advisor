@@ -408,6 +408,9 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       builder: (context) => SizedBox(
         height: MediaQuery.sizeOf(context).height * .85,
         child: ManualScheduleEditor(
+          courseNames: {
+            for (final course in activeCatalog) course.code: course.title,
+          },
           schedule: schedule,
           sections: _sections
               .where(
@@ -1169,6 +1172,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               fontSize: 15,
             ),
           ),
+          const SizedBox(height: 3),
+          Text(
+            scheduled.planItem.title,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 5),
           Text(
             '${scheduled.section.startTime} - ${scheduled.section.endTime}',
@@ -1235,7 +1243,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                 child: Icon(Icons.menu_book_outlined, color: colors.primary),
               ),
               title: Text(
-                scheduled.section.courseCode,
+                '${scheduled.planItem.title} (${scheduled.section.courseCode})',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
