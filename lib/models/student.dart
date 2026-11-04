@@ -36,7 +36,12 @@ class Student {
   double get progressPercentage => (earnedCredits / requiredCredits) * 100;
 
   String get degreeLabel =>
-      ['Computer Science', 'Computer Engineering'].contains(major)
+      [
+        'Computer Science',
+        'Computer Engineering',
+        'Electrical Engineering',
+        'Physics',
+      ].contains(major)
       ? 'B.S.'
       : '';
 

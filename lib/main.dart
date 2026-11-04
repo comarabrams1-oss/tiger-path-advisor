@@ -12,6 +12,7 @@ import 'services/advisor_app_actions.dart';
 import 'services/mock_auth_service.dart';
 import 'services/advisor_history_service.dart';
 import 'screens/login_screen.dart';
+import 'screens/program_library_screen.dart';
 import 'themes/app_theme.dart';
 import 'widgets/academic_workspace.dart';
 import 'widgets/workspace_shell.dart';
@@ -270,6 +271,22 @@ class HomeScreen extends StatelessWidget {
                 _compactHeader(context)
               else
                 _buildHero(context),
+              const SizedBox(height: 12),
+              Center(
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: const Text('Programs of study'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      settings: const RouteSettings(
+                        name: 'ProgramLibraryScreen',
+                      ),
+                      builder: (_) => const ProgramLibraryScreen(),
+                    ),
+                  ),
+                ),
+              ),
               const SizedBox(height: 22),
               _compactSummary(context),
               const SizedBox(height: 28),

@@ -1,4 +1,6 @@
 import '../models/student.dart';
+import 'student_scenarios.dart';
+export 'student_scenarios.dart';
 import '../models/student_course.dart';
 
 const Student testStudent = Student(
@@ -331,6 +333,6 @@ void selectDemoStudent(String? email) {
   activeStudent = switch (email) {
     mockStudentEmail => fictionalStudent,
     engineeringStudentEmail => engineeringStudent,
-    _ => testStudent,
+    _ => additionalStudentScenarios[email] ?? testStudent,
   };
 }

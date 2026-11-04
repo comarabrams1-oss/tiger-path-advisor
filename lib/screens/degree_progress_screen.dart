@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'program_library_screen.dart';
 
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
@@ -57,6 +58,7 @@ class _DegreeProgressScreenState
     return Scaffold(
       appBar: AppBar(
         title: const Text('Degree Progress'),
+        actions:[IconButton(tooltip:'Programs of study',icon:const Icon(Icons.menu_book_outlined),onPressed:()=>Navigator.push(context,MaterialPageRoute(builder:(_)=>const ProgramLibraryScreen())))],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

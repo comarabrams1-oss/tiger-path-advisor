@@ -1,6 +1,8 @@
 import '../models/course.dart';
 import '../models/course_section.dart';
 import '../models/degree_program.dart';
+import '../data/program_registry.dart';
+import 'program_check_service.dart';
 import '../models/student.dart';
 import 'course_priority_service.dart';
 import 'degree_audit_service.dart';
@@ -60,6 +62,12 @@ class AdvisorContextService {
     return {
       'program': program.name,
       'catalogYear': program.catalogYear,
+      if (programMappings.containsKey(program.name))
+        'programMappingReview': [
+          ...ProgramCheckService.check(program.name).errors,
+          ...ProgramCheckService.check(program.name).review,
+        ],
+      'programLibrary': 'Programs of study is available from Home and Degree Progress. Reference pages alone do not verify a program mapping.',
       'classification': student.classification,
       'term': term,
       'requirements': [

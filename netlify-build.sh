@@ -14,4 +14,6 @@ export PATH="$HOME/flutter/bin:$PATH"
 
 flutter --version
 flutter pub get
+flutter analyze
+flutter test
 flutter build web --release

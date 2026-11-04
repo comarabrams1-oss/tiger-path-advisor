@@ -276,6 +276,33 @@ class _LoginScreenState extends State<LoginScreen> {
                                 'Jordan Taylor · Computer Science · Freshman · 16 current credits\nTest email: demo.student@my.benedict.edu',
                                 style: TextStyle(fontSize: 12),
                               ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'More student scenarios',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              for (final scenario
+                                  in additionalStudentScenarios.entries)
+                                Padding(
+                                  padding: const EdgeInsets.only(top: 8),
+                                  child: OutlinedButton(
+                                    onPressed: _busy
+                                        ? null
+                                        : () {
+                                            _email.text = scenario.key;
+                                            _signIn();
+                                          },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                      child: Text(
+                                        '${scenario.value.classification} · ${scenario.value.major}\n${scenario.value.name} · ${scenario.value.earnedCredits.toInt()} earned · ${scenario.value.inProgressCredits.toInt()} current credits',
+                                        textAlign: TextAlign.center,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               const SizedBox(height: 22),
                               Container(
                                 padding: const EdgeInsets.all(14),
