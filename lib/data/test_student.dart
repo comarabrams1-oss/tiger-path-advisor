@@ -332,7 +332,8 @@ const engineeringStudent = Student(
 void selectDemoStudent(String? email) {
   activeStudent = switch (email) {
     mockStudentEmail => fictionalStudent,
-    engineeringStudentEmail => engineeringStudent,
+    // Legacy demo address opens the current engineering scenario.
+    engineeringStudentEmail => sophomoreStudent,
     _ => additionalStudentScenarios[email] ?? testStudent,
   };
 }

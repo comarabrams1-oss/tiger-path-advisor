@@ -10,10 +10,10 @@ Program pages and scheduling rules are deliberately separate. Four majors have a
 | --- | --- | --- | --- | --- |
 | demo.student@my.benedict.edu | Jordan Taylor | Freshman | Computer Science | 6 / 16 |
 | demo.sophomore@my.benedict.edu | Casey Brooks | Sophomore | Electrical Engineering | 33 / 16 |
-| demo.junior@my.benedict.edu | Morgan Lee | Junior | Computer Engineering | 76 / 15 |
+| demo.junior@my.benedict.edu | Morgan Lee | Junior | Computer Science | 68 / 16 |
 | demo.senior@my.benedict.edu | Riley Chen | Senior | Physics | 96 / 12 |
 
-Alex Morgan's original engineering freshman account remains available at demo.engineering@my.benedict.edu. All are mock identities, not verified student accounts. Existing per-email isolation for chat, change history, and preferences applies. New scenarios calculate credits and GPA from their fixture transcripts. Riley's 12-credit term is full time, and explicitly confirmed elective credit is kept separate from unverified electives.
+The sign-in page offers exactly these four profiles: one per classification, two CS majors and two other STEM majors. The old demo.engineering address aliases Casey rather than exposing a fifth profile. The older CE student remains an internal regression fixture only. All are mock identities, not verified student accounts. Existing per-email isolation for chat, change history, and preferences applies. New scenarios calculate credits and GPA from their fixture transcripts. Riley's 12-credit term is full time, and explicitly confirmed elective credit is kept separate from unverified electives.
 
 ## Automatic checks
 

@@ -240,7 +240,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: OutlinedButton.icon(
                                   icon: const Icon(Icons.person_outline),
                                   label: const Text(
-                                    'Use fictional test student',
+                                    'Freshman · Computer Science\nJordan Taylor · 16 current credits',
                                   ),
                                   onPressed: _busy
                                       ? null
@@ -250,37 +250,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         },
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.engineering_outlined),
-                                  label: const Text(
-                                    'Use engineering test student',
-                                  ),
-                                  onPressed: _busy
-                                      ? null
-                                      : () {
-                                          _email.text = engineeringStudentEmail;
-                                          _signIn();
-                                        },
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Alex Morgan · Computer Engineering · Freshman · 16 current credits\nTest email: demo.engineering@my.benedict.edu',
-                                style: TextStyle(fontSize: 12),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'Jordan Taylor · Computer Science · Freshman · 16 current credits\nTest email: demo.student@my.benedict.edu',
-                                style: TextStyle(fontSize: 12),
-                              ),
                               const SizedBox(height: 12),
-                              const Text(
-                                'More student scenarios',
-                                style: TextStyle(fontWeight: FontWeight.bold),
-                              ),
                               for (final scenario
                                   in additionalStudentScenarios.entries)
                                 Padding(

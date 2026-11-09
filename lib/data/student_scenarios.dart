@@ -92,45 +92,23 @@ final sophomoreStudent = _student(
 );
 final juniorStudent = _student(
   'Morgan Lee',
-  'Computer Engineering',
+  'Computer Science',
   'Junior',
-  125,
+  120,
   [
-    ('Summer 2024 (dual enrollment)', ['AR 130', 'MATH 138']),
+    ('Summer 2024 (dual enrollment)', ['AR 130', 'MATH 134']),
     (
       'Fall 2024',
-      ['ENG 131', 'MATH 143', 'CSC 132', 'ENGR 130', 'HIST 130', 'AA 111'],
+      ['ENG 131', 'MATH 143', 'CSC 132', 'CSC 133', 'HIST 130', 'AA 111'],
     ),
-    ('Spring 2025', ['ENG 132', 'MATH 144', 'CSC 135', 'AR 233', 'ART 130']),
+    ('Spring 2025', ['ENG 132', 'MATH 144', 'CSC 135', 'CSC 138', 'AR 233']),
     (
       'Fall 2025',
-      [
-        'CE 211L',
-        'CE 231',
-        'EE 211L',
-        'EE 231',
-        'MATH 237',
-        'PHYS 213L',
-        'PHYS 233',
-        'AA 211',
-      ],
+      ['ENG 237', 'MATH 237', 'CSC 139', 'CSC 232', 'CSC 233', 'AA 211'],
     ),
-    (
-      'Spring 2026',
-      [
-        'CSC 233',
-        'EE 212L',
-        'EE 232',
-        'EE 213L',
-        'EE 233',
-        'MATH 230',
-        'PHYS 214L',
-        'PHYS 234',
-      ],
-    ),
-    ('Summer 2026', ['EE 330']),
+    ('Spring 2026', ['MATH 230', 'CSC 234', 'CSC 235', 'PHIL 330', 'ART 130']),
   ],
-  ['CE 332', 'CSC 339', 'ENG 237', 'MATH 236', 'MATH 336'],
+  ['CSC 334', 'CSC 336', 'CSC 339', 'CSC 238', 'PHYS 233', 'PHYS 213L'],
 );
 final seniorStudent = _student(
   'Riley Chen',

@@ -21,7 +21,7 @@ void main() {
     }
   });
   test(
-    'four class years use different majors and honest full-time records',
+    'four class years have two CS and two STEM students with full-time records',
     () {
       final students = [
         fictionalStudent,
@@ -35,7 +35,12 @@ void main() {
         'Junior',
         'Senior',
       });
-      expect(students.map((s) => s.major).toSet().length, 4);
+      expect(students.where((s) => s.major == 'Computer Science').length, 2);
+      expect(students.map((s) => s.major).toSet(), {
+        'Computer Science',
+        'Electrical Engineering',
+        'Physics',
+      });
       for (final student in students) {
         final catalog = catalogFor(student), program = programFor(student);
         expect(student.inProgressCredits, inInclusiveRange(12, 18));

@@ -24,18 +24,15 @@ void main() {
           .toList();
   tearDown(() => selectDemoStudent(null));
   test(
-    'engineering login restores and chooses a separate 125-credit program',
+    'engineering login restores and chooses a separate 123-credit program',
     () async {
       SharedPreferences.setMockInitialValues({});
       final auth = MockAuthService();
-      final session = await auth.signIn(
-        engineeringStudentEmail,
-        remember: true,
-      );
+      final session = await auth.signIn(sophomoreEmail, remember: true);
       selectDemoStudent((await auth.restore())!.email);
-      expect(activeStudent, same(engineeringStudent));
-      expect(activeProgram.name, 'Computer Engineering');
-      expect(activeProgram.totalCreditsRequired, 125);
+      expect(activeStudent, same(sophomoreStudent));
+      expect(activeProgram.name, 'Electrical Engineering');
+      expect(activeProgram.totalCreditsRequired, 123);
       expect(
         session.profileId,
         isNot(MockStudentSession(mockStudentEmail).profileId),
@@ -48,7 +45,7 @@ void main() {
       );
       expect(
         academic.fold<double>(0, (sum, r) => sum + r.creditsRequired),
-        125,
+        123,
       );
       expect(activeProgram.requirements.any((r) => r.id == 'ENGR 130'), isTrue);
       expect(activeProgram.requirements.any((r) => r.id == 'CSC 139'), isFalse);

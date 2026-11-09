@@ -22,7 +22,7 @@ void main() {
     'asking Gemini for 16 credits rebuilds the engineering timetable in place',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
-      selectDemoStudent(engineeringStudentEmail);
+      activeStudent = engineeringStudent; // Internal CE regression fixture.
       PreferencesService.useProfile('engineering-credit-target-test');
       const prefs = SchedulePreferences(
         preferredTime: 'No Preference',
