@@ -93,8 +93,13 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
 
   Future<void> _loadProfile(MockStudentSession? session) async {
     selectDemoStudent(session?.email);
-    PreferencesService.useProfile(session?.profileId ?? 'demo-cs-2024');
-    if (session != null) await ScheduleDraftService.restore();
+    final profile = session?.profileId ?? 'demo-cs-2024';
+    PreferencesService.useProfile(profile);
+    if (session == null) return;
+    await PreferencesService.restore();
+    if (mounted && PreferencesService.profileId == profile) {
+      await ScheduleDraftService.restore();
+    }
   }
 
   Future<void> _signOut() async {

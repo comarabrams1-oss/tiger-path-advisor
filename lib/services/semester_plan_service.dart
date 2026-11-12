@@ -59,6 +59,7 @@ class SemesterPlanService {
     required List<Course> catalog,
     required int maxCredits,
     List<CourseSection>? sections,
+    List<CourseSection>? publishedSections,
     SchedulePreferences? preferences,
     Map<String, String> preferredSections = const {},
     List<String> preferredCourses = const [],
@@ -277,7 +278,17 @@ class SemesterPlanService {
             '$code: ${result.eligibility.reason ?? 'Eligibility needs advisor review'}',
           );
         } else if (sectionSearch?.hasOpenCourse(code) == false) {
-          explanations.add('$code has no open imported sections');
+          final hasPublishedSection = publishedSections?.any(
+            (section) =>
+                section.courseCode == code &&
+                section.isOpen &&
+                section.hasOpenSeats,
+          );
+          explanations.add(
+            hasPublishedSection == true
+                ? '$code has open sections outside your saved course and section choices'
+                : '$code has no open imported sections',
+          );
         } else {
           explanations.add(
             '$code did not fit this combination within the credit limit and meeting times',

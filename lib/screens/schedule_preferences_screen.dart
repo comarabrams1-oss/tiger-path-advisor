@@ -46,17 +46,18 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
     super.initState();
 
     final saved = PreferencesService.preferences;
+    if (saved != null) _applyPreferences(saved);
+  }
 
-    if (saved != null) {
-      preferredTime = saved.preferredTime;
-      preferredDays.addAll(saved.preferredDays);
-      avoidedDays.addAll(saved.avoidedDays);
-      preferredProfessors.addAll(saved.preferredProfessors);
-      maxCredits = saved.maxCredits;
-      avoidEarlyClasses = saved.avoidEarlyClasses;
-      avoidLateClasses = saved.avoidLateClasses;
-      minimizeGaps = saved.minimizeGaps;
-    }
+  void _applyPreferences(SchedulePreferences saved) {
+    preferredTime = saved.preferredTime;
+    preferredDays = saved.preferredDays.toSet();
+    avoidedDays = saved.avoidedDays.toSet();
+    preferredProfessors = List.of(saved.preferredProfessors);
+    maxCredits = saved.maxCredits;
+    avoidEarlyClasses = saved.avoidEarlyClasses;
+    avoidLateClasses = saved.avoidLateClasses;
+    minimizeGaps = saved.minimizeGaps;
   }
 
   @override
@@ -78,24 +79,45 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
     );
   }
 
-  void _savePreferences() {
-    PreferencesService.savePreferences(_buildPreferences());
-
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Schedule preferences saved')));
-  }
-
-  void _generatePlan() {
-    PreferencesService.savePreferences(_buildPreferences());
-
-    Navigator.push(
-      context,
-      MaterialPageRoute<void>(
-        settings: const RouteSettings(name: 'SemesterPlanScreen'),
-        builder: (_) => const SemesterPlanScreen(),
+  Future<void> _savePreferences() async {
+    final saved = await PreferencesService.savePreferences(_buildPreferences());
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          saved
+              ? 'Schedule preferences saved'
+              : 'Preferences could only be kept for this session.',
+        ),
       ),
     );
+  }
+
+  Future<void> _generatePlan() {
+    PreferencesService.savePreferences(_buildPreferences());
+    return _openScheduleRoute(
+      'SemesterPlanScreen',
+      (_) => const SemesterPlanScreen(),
+    );
+  }
+
+  Future<void> _openScheduleRoute(String name, WidgetBuilder builder) async {
+    final profile = PreferencesService.profileId;
+    final before = PreferencesService.preferences;
+    await Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        settings: RouteSettings(name: name),
+        builder: builder,
+      ),
+    );
+    final saved = PreferencesService.preferences;
+    if (mounted &&
+        profile == PreferencesService.profileId &&
+        saved != null &&
+        !identical(saved, before)) {
+      setState(() => _applyPreferences(saved));
+    }
   }
 
   void _togglePreferredDay(String day, bool selected) {
@@ -165,16 +187,11 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                         trailing: const Icon(Icons.arrow_forward),
                         textColor: colors.onSecondaryContainer,
                         iconColor: colors.onSecondaryContainer,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            settings: const RouteSettings(
-                              name: 'GeneratedScheduleScreen',
-                            ),
-                            builder: (_) => GeneratedScheduleScreen(
-                              plan: draft.plan,
-                              draft: draft,
-                            ),
+                        onTap: () => _openScheduleRoute(
+                          'GeneratedScheduleScreen',
+                          (_) => GeneratedScheduleScreen(
+                            plan: draft.plan,
+                            draft: draft,
                           ),
                         ),
                       ),

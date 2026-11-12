@@ -27,41 +27,40 @@ class CourseSectionRepository {
   }
 
   static Future<List<CourseSection>> loadForTerm(String term) async {
-    final assetPath = _termAssets[canonicalTerm(term)];
+    final canonical = canonicalTerm(term);
+    final assetPath = _termAssets[canonical];
 
     if (assetPath == null) {
       return [];
     }
 
-    final rawJson = await rootBundle.loadString(assetPath);
-
-    final decoded = jsonDecode(rawJson);
-
-    if (decoded is! List) {
-      throw const FormatException('Course section data must be a JSON list.');
-    }
-
-    final sections = <CourseSection>[];
-
-    for (final item in decoded) {
-      if (item is! Map) {
-        throw const FormatException('Invalid course section record.');
+    try {
+      final rawJson = await rootBundle.loadString(assetPath);
+      final decoded = jsonDecode(rawJson);
+      if (decoded is! List) {
+        throw const FormatException('Course section data must be a JSON list.');
       }
 
-      final json = Map<String, dynamic>.from(item);
-
-      final section = CourseSection.fromJson(json);
-
-      if (section.courseCode.trim().isEmpty ||
-          section.sectionNumber.trim().isEmpty ||
-          canonicalTerm(section.term) != canonicalTerm(term)) {
-        throw const FormatException('Invalid section identity or term.');
+      final sections = <CourseSection>[];
+      for (final item in decoded) {
+        if (item is! Map) {
+          throw const FormatException('Invalid course section record.');
+        }
+        final section = CourseSection.fromJson(Map<String, dynamic>.from(item));
+        if (section.courseCode.trim().isEmpty ||
+            section.sectionNumber.trim().isEmpty ||
+            canonicalTerm(section.term) != canonical) {
+          throw const FormatException('Invalid section identity or term.');
+        }
+        sections.add(section);
       }
-
-      sections.add(section);
+      if (sections.isEmpty) rootBundle.evict(assetPath);
+      return sections;
+    } catch (_) {
+      // A retry needs to fetch the asset again after a failed load or parse.
+      rootBundle.evict(assetPath);
+      rethrow;
     }
-
-    return sections;
   }
 
   static Future<List<CourseSection>> loadFall2026() {

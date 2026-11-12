@@ -5,6 +5,7 @@ import '../widgets/info_tip.dart';
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../services/preferences_service.dart';
+import '../services/schedule_draft_service.dart';
 import '../services/semester_plan_service.dart';
 import 'generated_schedule_screen.dart';
 import '../models/course_section.dart';
@@ -17,9 +18,12 @@ class SemesterPlanScreen extends StatefulWidget {
 }
 
 class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
-  late final _offerings = CourseSectionRepository.loadForTerm(
-    CourseSectionRepository.spring2027Term,
-  );
+  late var _offerings = _loadOfferings();
+
+  Future<List<CourseSection>> _loadOfferings() =>
+      CourseSectionRepository.loadForTerm(
+        CourseSectionRepository.spring2027Term,
+      );
 
   @override
   Widget build(BuildContext context) => FutureBuilder<List<CourseSection>>(
@@ -31,26 +35,70 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
           body: const Center(child: CircularProgressIndicator()),
         );
       }
-      return _buildPlan(context, snapshot.data, snapshot.hasError);
+      final sections = snapshot.data;
+      if (sections == null || sections.isEmpty) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Semester Plan')),
+          body: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('Spring 2027 sections could not load.'),
+                const SizedBox(height: 12),
+                FilledButton(
+                  onPressed: () {
+                    final offerings = _loadOfferings();
+                    setState(() {
+                      _offerings = offerings;
+                    });
+                  },
+                  child: const Text('Try again'),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+      return _buildPlan(context, sections);
     },
   );
 
-  Widget _buildPlan(
-    BuildContext context,
-    List<CourseSection>? sections,
-    bool failed,
-  ) {
+  Widget _buildPlan(BuildContext context, List<CourseSection> sections) {
     final preferences = PreferencesService.preferences;
-
     final maxCredits = preferences?.maxCredits ?? 15;
+    final previousDraft = ScheduleDraftService.current;
+    final pins = previousDraft?.sectionPreferences ?? const <String, String>{};
+    final previouslyScheduled = previousDraft?.schedule.scheduled ?? const [];
+    final pinnedCourses = [
+      for (final item in previouslyScheduled)
+        if (pins[item.section.courseCode] == item.section.sectionNumber)
+          item.section.courseCode,
+    ];
 
     final plan = SemesterPlanService().generatePlan(
       student: activeStudent,
       program: activeProgram,
       catalog: activeCatalog,
       maxCredits: maxCredits,
-      sections: sections,
+      sections: previousDraft == null
+          ? sections
+          : ScheduleDraftService.permittedSections(
+              sections,
+              excludedCourses: previousDraft.excludedCourses,
+              excludedSections: previousDraft.excludedSections,
+              sectionPreferences: pins,
+            ),
+      publishedSections: sections,
       preferences: preferences,
+      preferredSections: pins,
+      preferredCourses: [
+        for (final item in previouslyScheduled) item.section.courseCode,
+      ],
+      priorityCourseCodes: pinnedCourses,
+    );
+    final plannedCodes = plan.items.map((item) => item.courseCode).toSet();
+    final omittedPins = pinnedCourses.where(
+      (code) => !plannedCodes.contains(code),
     );
 
     return Scaffold(
@@ -72,13 +120,6 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
             const Padding(
               padding: EdgeInsets.only(top: 12),
               child: Text(engineeringPreviewNotice),
-            ),
-          if (failed)
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Text(
-                'Offerings could not load. This academic draft has not been checked against section availability.',
-              ),
             ),
           const SizedBox(height: 24),
 
@@ -122,6 +163,13 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
               padding: const EdgeInsets.only(bottom: 16),
               child: Text(plan.shortfallReason!),
             ),
+          if (omittedPins.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Text(
+                'Saved sections that did not fit: ${omittedPins.join(', ')}.',
+              ),
+            ),
           ...plan.items.map((item) => buildPlanItem(context, item)),
 
           if (plan.reviewItems.isNotEmpty)
@@ -153,16 +201,20 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
           if (plan.items.isNotEmpty)
             FilledButton.icon(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                await Navigator.push(
                   context,
                   MaterialPageRoute<void>(
                     settings: const RouteSettings(
                       name: 'GeneratedScheduleScreen',
                     ),
-                    builder: (_) => GeneratedScheduleScreen(plan: plan),
+                    builder: (_) => GeneratedScheduleScreen(
+                      plan: plan,
+                      previousDraft: previousDraft,
+                    ),
                   ),
                 );
+                if (mounted) setState(() {});
               },
               icon: const Icon(Icons.calendar_month),
               label: const Padding(

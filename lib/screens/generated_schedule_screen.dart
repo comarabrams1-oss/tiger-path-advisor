@@ -29,6 +29,7 @@ enum ScheduleView { weekly, list }
 
 class GeneratedScheduleScreen extends StatefulWidget {
   final ScheduleDraft? draft;
+  final ScheduleDraft? previousDraft;
   final String? initialRequest;
   final SemesterPlan plan;
   final ScheduleAssistantService? assistant;
@@ -38,6 +39,7 @@ class GeneratedScheduleScreen extends StatefulWidget {
     required this.plan,
     this.assistant,
     this.draft,
+    this.previousDraft,
     this.initialRequest,
   });
 
@@ -73,6 +75,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   String? _assistantStatus;
   late final String _profile;
   late final _history = ScheduleChangeHistoryService(_profile);
+  late final Future<void> _historyReady;
   GeneratedSchedule? _schedule;
   bool _draftSaveFailed = false;
   List<ScheduleChangeEntry> _changes = [];
@@ -95,8 +98,65 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     }
   }
 
+  Future<void> _saveHistory() async {
+    if (_historyError != null) return;
+    try {
+      await _history.save(_changes);
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _historyError = 'Your schedule changed, but its change log could not be saved on this device.',
+        );
+      }
+    }
+  }
+
+  ScheduleChangeEntry _changeEntry(
+    String request,
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences,
+    List<String> changes,
+  ) => ScheduleChangeEntry(
+    time: DateTime.now(),
+    term: _plannedTerm,
+    request: request,
+    changes: changes,
+    result:
+        '${schedule.scheduled.length} courses · ${schedule.scheduledCredits.toInt()} of ${preferences.maxCredits} credits · ${schedule.unscheduled.length} unresolved',
+  );
+
+  void _rememberChange(ScheduleChangeEntry change) {
+    _latestChange = change;
+    _changes = [change, ..._changes].take(20).toList();
+  }
+
   List<SemesterPlanItem> _deferred = [];
   bool _advisorReview = false;
+
+  List<SemesterPlanItem> _remainingDeferred(
+    SemesterPlan plan,
+    Iterable<SemesterPlanItem> candidates,
+  ) {
+    bool stillOutstanding(SemesterPlanItem previous) {
+      if (previous.courseCode != null &&
+          plan.items.any((item) => item.courseCode == previous.courseCode)) {
+        return false;
+      }
+      final requirement = previous.priority?.requirementId;
+      final budget = previous.priority?.requirementCreditsRemaining;
+      return requirement == null ||
+          budget == null ||
+          plan.items
+                  .where((item) => item.priority?.requirementId == requirement)
+                  .fold<double>(0, (sum, item) => sum + item.credits) <
+              budget;
+    }
+
+    return {
+      for (final item in candidates) (item.courseCode ?? item.title): item,
+    }.values.where(stillOutstanding).toList();
+  }
+
   List<CoursePriorityResult> get _alternatives {
     final offeredCodes = {
       for (final section in _sections)
@@ -149,8 +209,8 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     super.initState();
     // Bind async work to the profile that opened this screen.
     _profile = PreferencesService.profileId;
-    if (widget.draft case final draft?) {
-      _updatedPlan = draft.plan;
+    _updatedPlan = widget.draft?.plan;
+    if ((widget.draft ?? widget.previousDraft) case final draft?) {
       _preferredSections = Map.of(draft.sectionPreferences);
       _excludedCourses = List.of(draft.excludedCourses);
       _excludedSections = List.of(draft.excludedSections);
@@ -170,7 +230,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           avoidLateClasses: false,
           minimizeGaps: true,
         );
-    _loadHistory();
+    _historyReady = _loadHistory();
     _loadSections();
   }
 
@@ -181,6 +241,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     } catch (_) {
       // Keep the existing draft available while the student retries.
     }
+    await _historyReady;
     if (!mounted || _profile != PreferencesService.profileId) return;
     if (sections.isEmpty) {
       setState(() => _sectionLoadFailed = true);
@@ -195,20 +256,48 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       if (firstDate == null || start.isBefore(firstDate)) firstDate = start;
       if (lastDate == null || end.isAfter(lastDate)) lastDate = end;
     }
+    _sections = sections;
+    final schedule = ScheduleGenerationService().generateSchedule(
+      plan: _plan,
+      sections: _permittedSections(),
+      instructors: testInstructors,
+      preferences: _preferences,
+      preferredSections: _preferredSections,
+    );
+    final previous = widget.previousDraft;
+    final changes = previous == null
+        ? const <String>[]
+        : ScheduleChangeEntry.compare(
+            previous.schedule,
+            schedule,
+            previous.preferences,
+            _preferences,
+          );
     setState(() {
-      _sections = sections;
       if (firstDate != null && lastDate != null) {
         _termDates = (firstDate, lastDate);
       }
-      _schedule = ScheduleGenerationService().generateSchedule(
-        plan: _plan,
-        sections: _permittedSections(),
-        instructors: testInstructors,
-        preferences: _preferences,
-        preferredSections: _preferredSections,
-      );
+      _schedule = schedule;
+      if (previous != null) {
+        _deferred = _remainingDeferred(_plan, [
+          ..._deferred,
+          ...previous.plan.items,
+        ]);
+        _advisorReview = _advisorReview || _deferred.isNotEmpty;
+      }
+      if (changes.isNotEmpty) {
+        _rememberChange(
+          _changeEntry(
+            'Rebuilt from schedule preferences',
+            schedule,
+            _preferences,
+            changes,
+          ),
+        );
+      }
     });
     await _saveDraft();
+    if (changes.isNotEmpty) await _saveHistory();
   }
 
   Future<void> _saveDraft() async {
@@ -537,6 +626,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         catalog: activeCatalog,
         maxCredits: update.preferences.maxCredits,
         sections: workingSections,
+        publishedSections: _sections,
         preferences: update.preferences,
         preferredSections: choices,
         preferredCourses: [
@@ -637,54 +727,22 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           'Sections to avoid: ${_excludedSections.isEmpty ? 'None' : _excludedSections.join(', ')} → ${update.excludedSections.isEmpty ? 'None' : update.excludedSections.join(', ')}.',
         );
       }
-      final change = ScheduleChangeEntry(
-        time: DateTime.now(),
-        term: _plannedTerm,
-        request: text,
-        changes: [
-          ...ScheduleChangeEntry.compare(
-            schedule,
-            rebuilt,
-            preferences,
-            update.preferences,
-          ),
-          ...constraintChanges,
-        ],
-        result:
-            '${rebuilt.scheduled.length} courses · ${rebuilt.scheduledCredits.toInt()} of ${update.preferences.maxCredits} credits · ${rebuilt.unscheduled.length} unresolved',
-      );
+      final change = _changeEntry(text, rebuilt, update.preferences, [
+        ...ScheduleChangeEntry.compare(
+          schedule,
+          rebuilt,
+          preferences,
+          update.preferences,
+        ),
+        ...constraintChanges,
+      ]);
       setState(() {
-        _latestChange = change;
-        _changes = [change, ..._changes].take(20).toList();
-        bool stillOutstanding(SemesterPlanItem previous) {
-          if (plan.items.any(
-            (item) =>
-                item.courseCode == previous.courseCode &&
-                previous.courseCode != null,
-          )) {
-            return false;
-          }
-          final requirement = previous.priority?.requirementId;
-          final budget = previous.priority?.requirementCreditsRemaining;
-          if (requirement != null &&
-              budget != null &&
-              plan.items
-                      .where((i) => i.priority?.requirementId == requirement)
-                      .fold<double>(0, (sum, i) => sum + i.credits) >=
-                  budget) {
-            return false;
-          }
-          return true;
-        }
-
-        _deferred = {
-          for (final item in [
-            ..._deferred,
-            ...recovery.deferred,
-            ..._plan.items.where(stillOutstanding),
-          ])
-            (item.courseCode ?? item.title): item,
-        }.values.where(stillOutstanding).toList();
+        _rememberChange(change);
+        _deferred = _remainingDeferred(plan, [
+          ..._deferred,
+          ...recovery.deferred,
+          ..._plan.items,
+        ]);
         _advisorReview =
             update.advisorReview ||
             _deferred.isNotEmpty ||
@@ -709,17 +767,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       });
       PreferencesService.savePreferences(update.preferences);
       await _saveDraft();
-      if (_historyError == null) {
-        try {
-          await _history.save(_changes);
-        } catch (_) {
-          if (mounted) {
-            setState(
-              () => _historyError = 'Your schedule changed, but its change log could not be saved on this device.',
-            );
-          }
-        }
-      }
+      await _saveHistory();
     } catch (error) {
       if (mounted) {
         setState(
