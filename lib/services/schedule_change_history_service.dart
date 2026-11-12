@@ -56,6 +56,16 @@ class ScheduleChangeEntry {
     SchedulePreferences newPrefs,
   ) {
     final changes = <String>[];
+    if (oldPrefs.maxCredits != newPrefs.maxCredits) {
+      changes.add(
+        'Credit target: ${oldPrefs.maxCredits} → ${newPrefs.maxCredits}.',
+      );
+    }
+    if (before.scheduledCredits != after.scheduledCredits) {
+      changes.add(
+        'Scheduled credits: ${before.scheduledCredits.toInt()} → ${after.scheduledCredits.toInt()}.',
+      );
+    }
     final old = {for (final i in before.scheduled) i.section.courseCode: i};
     final next = {for (final i in after.scheduled) i.section.courseCode: i};
     String details(ScheduledCourseSection i) =>
@@ -63,17 +73,13 @@ class ScheduleChangeEntry {
     for (final code in old.keys.where((c) => !next.containsKey(c))) {
       changes.add('Removed $code (${details(old[code]!)}).');
     }
-    for (final code in next.keys) {
-      if (!old.containsKey(code)) {
-        changes.add('Added $code (${details(next[code]!)}).');
-      } else if (details(old[code]!) != details(next[code]!)) {
+    for (final code in next.keys.where((c) => !old.containsKey(c))) {
+      changes.add('Added $code (${details(next[code]!)}).');
+    }
+    for (final code in next.keys.where(old.containsKey)) {
+      if (details(old[code]!) != details(next[code]!)) {
         changes.add('$code: ${details(old[code]!)} → ${details(next[code]!)}.');
       }
-    }
-    if (before.scheduledCredits != after.scheduledCredits) {
-      changes.add(
-        'Scheduled credits: ${before.scheduledCredits.toInt()} → ${after.scheduledCredits.toInt()}.',
-      );
     }
     if (before.unscheduled.length != after.unscheduled.length) {
       changes.add(
@@ -99,7 +105,6 @@ class ScheduleChangeEntry {
       }
     }
     final labels = {
-      'maxCredits': 'Credit target',
       'preferredTime': 'Preferred time',
       'preferredDays': 'Preferred days',
       'avoidedDays': 'Days to avoid',
