@@ -144,8 +144,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
               child: Padding(
                 padding: EdgeInsets.all(20),
                 child: Text(
-                  'No courses or requirement slots could '
-                  'currently be added to this plan.',
+                  'No eligible Spring 2027 sections fit this plan. Check Future requirements & advisor review for the remaining courses and their availability.',
                 ),
               ),
             ),

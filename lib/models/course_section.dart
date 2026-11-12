@@ -69,17 +69,11 @@ class CourseMeeting {
     };
   }
 
-  factory CourseMeeting.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory CourseMeeting.fromJson(Map<String, dynamic> json) {
     return CourseMeeting(
-      days: List<String>.from(
-        json['days'] as List? ?? const [],
-      ),
-      startMinutes:
-          (json['startMinutes'] as num?)?.toInt(),
-      endMinutes:
-          (json['endMinutes'] as num?)?.toInt(),
+      days: List<String>.from(json['days'] as List? ?? const []),
+      startMinutes: (json['startMinutes'] as num?)?.toInt(),
+      endMinutes: (json['endMinutes'] as num?)?.toInt(),
       location: json['location'] as String?,
       rawText: json['rawText'] as String?,
     );
@@ -159,9 +153,56 @@ class CourseSection {
     return startMinutes >= 0 && endMinutes > startMinutes;
   }
 
-  bool get hasWeeklyMeeting =>
-      (hasPrimaryMeetingTime && days.isNotEmpty) ||
-      meetings.any((meeting) => meeting.hasTime && meeting.days.isNotEmpty);
+  List<CourseMeeting> get weeklyMeetings {
+    final timed = meetings
+        .where((meeting) => meeting.hasTime && meeting.days.isNotEmpty)
+        .toList();
+    if (hasPrimaryMeetingTime &&
+        days.isNotEmpty &&
+        !timed.any(
+          (meeting) =>
+              meeting.startMinutes == startMinutes &&
+              meeting.endMinutes == endMinutes &&
+              meeting.days.length == days.length &&
+              days.every(meeting.days.contains),
+        )) {
+      timed.insert(
+        0,
+        CourseMeeting(
+          days: days,
+          startMinutes: startMinutes,
+          endMinutes: endMinutes,
+          location: location,
+        ),
+      );
+    }
+    return timed;
+  }
+
+  bool get hasWeeklyMeeting => weeklyMeetings.isNotEmpty;
+
+  bool get needsMeetingConfirmation =>
+      !isAsynchronous &&
+      (!hasWeeklyMeeting ||
+          meetings.any((meeting) => !meeting.hasTime || meeting.days.isEmpty));
+
+  DateTime? get beginsOn => _parseDate(beginDate);
+  DateTime? get endsOn => _parseDate(endDate);
+
+  static DateTime? _parseDate(String? raw) {
+    if (raw == null) return null;
+    final text = raw.trim();
+    final portal = RegExp(r'^(\d{1,2})/(\d{1,2})/(\d{4})$').firstMatch(text);
+    final iso = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$').firstMatch(text);
+    if (portal == null && iso == null) return null;
+    final year = int.parse(portal?[3] ?? iso![1]!);
+    final month = int.parse(portal?[1] ?? iso![2]!);
+    final day = int.parse(portal?[2] ?? iso![3]!);
+    final date = DateTime.utc(year, month, day);
+    return date.year == year && date.month == month && date.day == day
+        ? date
+        : null;
+  }
 
   /// Online alone does not imply asynchronous; require explicit source text.
   bool get isAsynchronous {
@@ -195,8 +236,7 @@ class CourseSection {
   List<String> get allInstructorNames {
     final names = <String>[];
 
-    if (instructorName != null &&
-        instructorName!.trim().isNotEmpty) {
+    if (instructorName != null && instructorName!.trim().isNotEmpty) {
       names.add(instructorName!.trim());
     }
 
@@ -259,13 +299,10 @@ class CourseSection {
 
   String get scheduleDisplay {
     if (meetings.isNotEmpty) {
-      return meetings
-          .map((meeting) => meeting.displayText)
-          .join(' | ');
+      return meetings.map((meeting) => meeting.displayText).join(' | ');
     }
 
-    if (rawSchedule != null &&
-        rawSchedule!.trim().isNotEmpty) {
+    if (rawSchedule != null && rawSchedule!.trim().isNotEmpty) {
       return rawSchedule!.trim();
     }
 
@@ -324,57 +361,40 @@ class CourseSection {
       'beginDate': beginDate,
       'endDate': endDate,
       'rawSchedule': rawSchedule,
-      'meetings':
-          meetings.map((meeting) => meeting.toJson()).toList(),
+      'meetings': meetings.map((meeting) => meeting.toJson()).toList(),
     };
   }
 
-  factory CourseSection.fromJson(
-    Map<String, dynamic> json,
-  ) {
+  factory CourseSection.fromJson(Map<String, dynamic> json) {
     return CourseSection(
       courseCode: json['courseCode'] as String? ?? '',
-      sectionNumber:
-          json['sectionNumber'] as String? ?? '',
-      instructorId:
-          json['instructorId'] as String? ?? '',
+      sectionNumber: json['sectionNumber'] as String? ?? '',
+      instructorId: json['instructorId'] as String? ?? '',
       term: json['term'] as String? ?? '',
-      days: List<String>.from(
-        json['days'] as List? ?? const [],
-      ),
-      startMinutes:
-          (json['startMinutes'] as num?)?.toInt() ?? 0,
-      endMinutes:
-          (json['endMinutes'] as num?)?.toInt() ?? 0,
+      days: List<String>.from(json['days'] as List? ?? const []),
+      startMinutes: (json['startMinutes'] as num?)?.toInt() ?? 0,
+      endMinutes: (json['endMinutes'] as num?)?.toInt() ?? 0,
       location: json['location'] as String? ?? '',
-      deliveryMethod:
-          json['deliveryMethod'] as String? ?? 'Unknown',
+      deliveryMethod: json['deliveryMethod'] as String? ?? 'Unknown',
       courseName: json['courseName'] as String?,
-      instructorName:
-          json['instructorName'] as String?,
+      instructorName: json['instructorName'] as String?,
       instructorNames: List<String>.from(
         json['instructorNames'] as List? ?? const [],
       ),
-      openSeats:
-          (json['openSeats'] as num?)?.toInt(),
-      capacity:
-          (json['capacity'] as num?)?.toInt(),
+      openSeats: (json['openSeats'] as num?)?.toInt(),
+      capacity: (json['capacity'] as num?)?.toInt(),
       status: json['status'] as String?,
-      credits:
-          (json['credits'] as num?)?.toDouble(),
+      credits: (json['credits'] as num?)?.toDouble(),
       beginDate: json['beginDate'] as String?,
       endDate: json['endDate'] as String?,
       rawSchedule: json['rawSchedule'] as String?,
-      meetings:
-          (json['meetings'] as List? ?? const [])
-              .map(
-                (meeting) => CourseMeeting.fromJson(
-                  Map<String, dynamic>.from(
-                    meeting as Map,
-                  ),
-                ),
-              )
-              .toList(),
+      meetings: (json['meetings'] as List? ?? const [])
+          .map(
+            (meeting) => CourseMeeting.fromJson(
+              Map<String, dynamic>.from(meeting as Map),
+            ),
+          )
+          .toList(),
     );
   }
 }

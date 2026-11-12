@@ -23,84 +23,69 @@ class ScheduleRecoveryService {
     required SchedulePreferences preferences,
     Map<String, String> preferredSections = const {},
   }) {
-    final generator = ScheduleGenerationService();
-    final initial = generator.generateSchedule(
-      plan: plan,
+    if (requestedCourses.isEmpty) return ScheduleRecovery(plan, const []);
+    final search = ScheduleSectionSearch(
       sections: sections,
       instructors: instructors,
       preferences: preferences,
       preferredSections: preferredSections,
     );
+    final initial = search.buildSchedule(plan);
     final items = initial.scheduled.map((item) => item.planItem).toList();
     final codes = items.map((item) => item.courseCode).toSet();
-    var credits = items.fold<double>(0, (sum, item) => sum + item.credits);
-    final orderedRequests = <String>[];
-    final seenRequests = <String>{};
-    void order(String code) {
-      if (!seenRequests.add(code)) return;
-      final matches = candidates.where((r) => r.course.code == code);
-      if (matches.isNotEmpty) {
-        for (final companion in matches.first.eligibility.requiredCompanions) {
-          order(companion);
-        }
-      }
-      orderedRequests.add(code);
-    }
+    final eligible = {
+      for (final result in candidates)
+        if (result.eligibility.status == EligibilityStatus.eligible ||
+            result.eligibility.status ==
+                EligibilityStatus.eligibleAfterCurrentTerm)
+          result.course.code: result,
+    };
 
-    for (final code in requestedCourses) {
-      order(code);
-    }
-    for (final code in orderedRequests) {
-      final matches = candidates.where(
-        (candidate) =>
-            candidate.course.code == code &&
-            [
-              EligibilityStatus.eligible,
-              EligibilityStatus.eligibleAfterCurrentTerm,
-            ].contains(candidate.eligibility.status),
-      );
-      if (matches.isEmpty || codes.contains(code)) continue;
-      final candidate = matches.first;
-      final requirementId = candidate.requirementId;
-      if (requirementId != null &&
-          candidate.requirementCreditsRemaining != null) {
-        final allocated = items
-            .where((i) => i.priority?.requirementId == requirementId)
-            .fold<double>(0, (sum, i) => sum + i.credits);
-        if (allocated + candidate.course.credits >
-            candidate.requirementCreditsRemaining!) {
-          continue;
+    for (final requested in requestedCourses.toSet()) {
+      final bundle = <SemesterPlanItem>[];
+      final visited = <String>{};
+      bool collect(String code) {
+        if (codes.contains(code) || !visited.add(code)) return true;
+        final candidate = eligible[code];
+        if (candidate == null) return false;
+        for (final companion in candidate.eligibility.requiredCompanions) {
+          if (!collect(companion)) return false;
         }
+        bundle.add(
+          SemesterPlanItem(
+            type: SemesterPlanItemType.course,
+            title: candidate.course.title,
+            category: candidate.course.category,
+            credits: candidate.course.credits,
+            courseCode: code,
+            reason: 'Another remaining degree course moved into this term after schedule recovery.',
+            projectedEligibility:
+                candidate.eligibility.status ==
+                EligibilityStatus.eligibleAfterCurrentTerm,
+            priority: candidate,
+          ),
+        );
+        return true;
       }
-      if (credits + candidate.course.credits > preferences.maxCredits) continue;
-      final item = SemesterPlanItem(
-        type: SemesterPlanItemType.course,
-        title: candidate.course.title,
-        category: candidate.course.category,
-        credits: candidate.course.credits,
-        courseCode: code,
-        reason: 'Another remaining degree course moved into this term after schedule recovery.',
-        projectedEligibility:
-            candidate.eligibility.status ==
-            EligibilityStatus.eligibleAfterCurrentTerm,
-        priority: candidate,
-      );
-      final trial = SemesterPlan(
-        items: [...items, item],
-        totalCredits: credits + item.credits,
-        maxCredits: preferences.maxCredits,
-      );
-      final result = generator.generateSchedule(
-        plan: trial,
-        sections: sections,
-        instructors: instructors,
-        preferences: preferences,
-        preferredSections: preferredSections,
-      );
-      if (result.unscheduled.isNotEmpty) continue;
-      items.add(item);
-      codes.add(code);
-      credits += item.credits;
+
+      if (!collect(requested) || bundle.isEmpty) continue;
+      final trialItems = [...items, ...bundle];
+      final withinRequirements = bundle.every((item) {
+        final id = item.priority?.requirementId;
+        final limit = item.priority?.requirementCreditsRemaining;
+        return id == null ||
+            limit == null ||
+            trialItems
+                    .where((item) => item.priority?.requirementId == id)
+                    .fold<double>(0, (sum, item) => sum + item.credits) <=
+                limit;
+      });
+      if (!withinRequirements ||
+          !search.canFitAll(trialItems, maxCredits: plan.maxCredits)) {
+        continue;
+      }
+      items.addAll(bundle);
+      codes.addAll(bundle.map((item) => item.courseCode));
     }
     if (items.length == initial.scheduled.length) {
       return ScheduleRecovery(plan, const []);
@@ -108,8 +93,8 @@ class ScheduleRecoveryService {
     return ScheduleRecovery(
       SemesterPlan(
         items: items,
-        totalCredits: credits,
-        maxCredits: preferences.maxCredits,
+        totalCredits: items.fold<double>(0, (sum, item) => sum + item.credits),
+        maxCredits: plan.maxCredits,
         reviewItems: plan.reviewItems,
       ),
       initial.unscheduled

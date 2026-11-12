@@ -33,24 +33,7 @@ class CourseEligibilityService {
     DegreeProgram program,
     List<Course> catalog,
   ) {
-    final requiredCourseCodes = DegreeAuditService()
-        .auditProgram(student, program)
-        .where((item) => item.status == RequirementStatus.remaining)
-        .where(
-          (item) => [
-            RequirementType.requiredCourse,
-            RequirementType.creditHours,
-            RequirementType.oneOfCourses,
-          ].contains(item.requirement.type),
-        )
-        .expand((item) => item.requirement.courseCodes)
-        .toSet();
-
-    final completedCodes = student.courses
-        .where((course) => course.status == CourseStatus.completed)
-        .map((course) => course.courseCode)
-        .toSet();
-
+    final audit = DegreeAuditService().auditProgram(student, program);
     final inProgressCodes = student.courses
         .where((course) => course.status == CourseStatus.inProgress)
         .map((course) => course.courseCode)
@@ -58,9 +41,8 @@ class CourseEligibilityService {
 
     final remainingCourses = catalog.where(
       (course) =>
-          requiredCourseCodes.contains(course.code) &&
-          !completedCodes.contains(course.code) &&
-          !inProgressCodes.contains(course.code),
+          !inProgressCodes.contains(course.code) &&
+          audit.any((item) => item.needsCourse(student, course.code)),
     );
 
     return remainingCourses
@@ -71,17 +53,15 @@ class CourseEligibilityService {
   CourseEligibilityResult checkCourse(Student student, Course course) {
     final completedCodes = student.courses
         .where(
-          (studentCourse) =>
-              studentCourse.status == CourseStatus.completed &&
+          (attempt) =>
+              attempt.meetsMinimumGrade(
+                course.minimumPrerequisiteGrades[attempt.courseCode],
+              ) &&
               (!course.requiresPassingPrerequisites ||
                   RegExp(r'^[ABCD][+-]?$')
-                      .hasMatch(studentCourse.grade?.toUpperCase() ?? '')) &&
-              _meetsPrerequisiteGrade(
-                studentCourse.grade,
-                course.minimumPrerequisiteGrades[studentCourse.courseCode],
-              ),
+                      .hasMatch(attempt.normalizedGrade ?? '')),
         )
-        .map((studentCourse) => studentCourse.courseCode)
+        .map((attempt) => attempt.courseCode)
         .toSet();
 
     final inProgressCodes = student.courses
@@ -124,27 +104,30 @@ class CourseEligibilityService {
     final companionNote = requiredCompanions.isEmpty
         ? ''
         : ' Must take together with ${requiredCompanions.join(', ')}.';
+    final placementVerified = student.verifiedPlacementCourses.contains(
+      course.code,
+    );
     final failedElementary =
         course.allowsPlacementExemption &&
-        student.courses.any(
-          (c) =>
-              c.status == CourseStatus.completed &&
-              c.grade?.toUpperCase() == 'F' &&
-              course.prerequisiteGroups.any((g) => g.contains(c.courseCode)),
+        course.prerequisiteGroups.any(
+          (group) =>
+              !group.any(completedCodes.contains) &&
+              student.courses.any(
+                (attempt) =>
+                    group.contains(attempt.courseCode) &&
+                    attempt.normalizedGrade == 'F',
+              ),
         );
-    if (failedElementary) {
-      return CourseEligibilityResult(
-        course: course,
-        status: EligibilityStatus.blocked,
-        reason: 'Elementary language must be passed. A failed elementary course cannot be bypassed by a placement exemption.',
-      );
-    }
     if (course.allowsPlacementExemption &&
-        student.verifiedPlacementCourses.contains(course.code)) {
+        !failedElementary &&
+        currentCorequisites.isEmpty &&
+        placementVerified) {
       return CourseEligibilityResult(
         course: course,
         status: EligibilityStatus.eligible,
-        reason: 'Verified college placement exemption for ${course.code}.',
+        reason:
+            'Verified college placement exemption for ${course.code}.$companionNote',
+        requiredCompanions: requiredCompanions,
       );
     }
     final missing = <String>[];
@@ -181,7 +164,9 @@ class CourseEligibilityService {
         course: course,
         status: EligibilityStatus.blocked,
         missingPrerequisites: missing,
-        reason: 'Prerequisites have not been completed.',
+        reason: failedElementary
+            ? 'Elementary language must be passed before taking this course.'
+            : 'Prerequisites have not been completed.',
       );
     }
 
@@ -190,7 +175,7 @@ class CourseEligibilityService {
         course: course,
         status: EligibilityStatus.eligibleAfterCurrentTerm,
         reason:
-            'For next term only: must first pass ${[...course.prerequisiteGroups.where((g) => !g.any(completedCodes.contains)).map((g) => g.join(' or ')), ...currentCorequisites].join(' and ')}${course.allowsPlacementExemption ? '. No placement exemption is recorded' : ''}.$companionNote',
+            'For next term only: must first pass ${[...course.prerequisiteGroups.where((g) => !g.any(completedCodes.contains)).map((g) => g.join(' or ')), ...currentCorequisites].join(' and ')}${course.allowsPlacementExemption && !placementVerified ? '. No placement exemption is recorded' : ''}.$companionNote',
         requiredCompanions: requiredCompanions,
       );
     }
@@ -201,28 +186,6 @@ class CourseEligibilityService {
       reason: 'Prerequisites completed.$companionNote',
       requiredCompanions: requiredCompanions,
     );
-  }
-
-  bool _meetsPrerequisiteGrade(String? grade, String? minimum) {
-    if (minimum == null) return true;
-    const values = {
-      'A+': 12,
-      'A': 11,
-      'A-': 10,
-      'B+': 9,
-      'B': 8,
-      'B-': 7,
-      'C+': 6,
-      'C': 5,
-      'C-': 4,
-      'D+': 3,
-      'D': 2,
-      'D-': 1,
-      'F': 0,
-    };
-    final actual = values[grade?.toUpperCase()];
-    final required = values[minimum.toUpperCase()];
-    return actual != null && required != null && actual >= required;
   }
 
   bool _meetsClassStanding(String currentStanding, String? requiredStanding) {

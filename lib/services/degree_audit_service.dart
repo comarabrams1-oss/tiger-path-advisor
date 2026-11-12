@@ -16,6 +16,18 @@ class DegreeAuditItem {
     this.completedCredits = 0,
     this.inProgressCredits = 0,
   });
+
+  bool needsCourse(Student student, String code) =>
+      status == RequirementStatus.remaining &&
+      (requirement.type == RequirementType.requiredCourse ||
+          requirement.type == RequirementType.oneOfCourses ||
+          requirement.type == RequirementType.creditHours) &&
+      requirement.courseCodes.contains(code) &&
+      !student.courses.any(
+        (course) =>
+            course.courseCode == code &&
+            course.meetsMinimumGrade(requirement.minimumGrade),
+      );
 }
 
 class DegreeAuditService {
@@ -31,10 +43,8 @@ class DegreeAuditService {
   ) {
     switch (requirement.type) {
       case RequirementType.requiredCourse:
-        return _auditRequiredCourse(student, requirement);
-
       case RequirementType.oneOfCourses:
-        return _auditOneOfCourses(student, requirement);
+        return _auditCourseChoice(student, requirement);
 
       case RequirementType.creditHours:
         return _auditCreditHours(student, requirement);
@@ -78,65 +88,29 @@ class DegreeAuditService {
     }
   }
 
-  DegreeAuditItem _auditRequiredCourse(
+  DegreeAuditItem _auditCourseChoice(
     Student student,
     DegreeRequirement requirement,
   ) {
-    for (final studentCourse in student.courses) {
-      if (!requirement.courseCodes.contains(studentCourse.courseCode)) {
-        continue;
-      }
-
-      if (studentCourse.status == CourseStatus.completed &&
-          _meetsMinimumGrade(studentCourse.grade, requirement.minimumGrade)) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.completed,
-          completedCredits: requirement.creditsRequired,
-        );
-      }
-
-      if (studentCourse.status == CourseStatus.inProgress) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.inProgress,
-          inProgressCredits: requirement.creditsRequired,
-        );
-      }
-    }
-
-    return DegreeAuditItem(
-      requirement: requirement,
-      status: RequirementStatus.remaining,
+    final matching = student.courses.where(
+      (course) => requirement.courseCodes.contains(course.courseCode),
     );
-  }
-
-  DegreeAuditItem _auditOneOfCourses(
-    Student student,
-    DegreeRequirement requirement,
-  ) {
-    for (final studentCourse in student.courses) {
-      if (!requirement.courseCodes.contains(studentCourse.courseCode)) {
-        continue;
-      }
-
-      if (studentCourse.status == CourseStatus.completed) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.completed,
-          completedCredits: requirement.creditsRequired,
-        );
-      }
-
-      if (studentCourse.status == CourseStatus.inProgress) {
-        return DegreeAuditItem(
-          requirement: requirement,
-          status: RequirementStatus.inProgress,
-          inProgressCredits: requirement.creditsRequired,
-        );
-      }
+    if (matching.any(
+      (course) => course.meetsMinimumGrade(requirement.minimumGrade),
+    )) {
+      return DegreeAuditItem(
+        requirement: requirement,
+        status: RequirementStatus.completed,
+        completedCredits: requirement.creditsRequired,
+      );
     }
-
+    if (matching.any((course) => course.status == CourseStatus.inProgress)) {
+      return DegreeAuditItem(
+        requirement: requirement,
+        status: RequirementStatus.inProgress,
+        inProgressCredits: requirement.creditsRequired,
+      );
+    }
     return DegreeAuditItem(
       requirement: requirement,
       status: RequirementStatus.remaining,
@@ -147,22 +121,23 @@ class DegreeAuditService {
     Student student,
     DegreeRequirement requirement,
   ) {
-    double completed = 0;
-    double inProgress = 0;
-
+    final completedCodes = <String>{};
+    final inProgressCodes = <String>{};
     for (final course in student.courses) {
-      if (!requirement.courseCodes.contains(course.courseCode)) {
-        continue;
-      }
-
-      final credits = _creditsForCourse(course.courseCode);
-
-      if (course.status == CourseStatus.completed) {
-        completed += credits;
+      if (!requirement.courseCodes.contains(course.courseCode)) continue;
+      if (course.meetsMinimumGrade(requirement.minimumGrade)) {
+        completedCodes.add(course.courseCode);
       } else if (course.status == CourseStatus.inProgress) {
-        inProgress += credits;
+        inProgressCodes.add(course.courseCode);
       }
     }
+    final completed = completedCodes.fold<double>(
+      0,
+      (sum, code) => sum + _creditsForCourse(code),
+    );
+    final inProgress = inProgressCodes
+        .difference(completedCodes)
+        .fold<double>(0, (sum, code) => sum + _creditsForCourse(code));
 
     if (completed >= requirement.creditsRequired) {
       return DegreeAuditItem(
@@ -209,41 +184,6 @@ class DegreeAuditService {
     };
 
     return credits[code] ?? 0;
-  }
-
-  bool _meetsMinimumGrade(String? grade, String? minimumGrade) {
-    if (minimumGrade == null) {
-      return true;
-    }
-
-    if (grade == null) {
-      return false;
-    }
-
-    final gradeValues = {
-      'A+': 12,
-      'A': 11,
-      'A-': 10,
-      'B+': 9,
-      'B': 8,
-      'B-': 7,
-      'C+': 6,
-      'C': 5,
-      'C-': 4,
-      'D+': 3,
-      'D': 2,
-      'D-': 1,
-      'F': 0,
-    };
-
-    final studentGrade = gradeValues[grade.toUpperCase()];
-    final requiredGrade = gradeValues[minimumGrade.toUpperCase()];
-
-    if (studentGrade == null || requiredGrade == null) {
-      return false;
-    }
-
-    return studentGrade >= requiredGrade;
   }
 
   List<DegreeAuditItem> completedRequirements(

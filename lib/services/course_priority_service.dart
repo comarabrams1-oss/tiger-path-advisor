@@ -41,7 +41,7 @@ class CoursePriorityService {
     );
 
     final completedCodes = student.courses
-        .where((course) => course.status == CourseStatus.completed)
+        .where((course) => course.meetsMinimumGrade(null))
         .map((course) => course.courseCode)
         .toSet();
 
@@ -109,9 +109,7 @@ class CoursePriorityService {
       }
 
       final requirements = audit.where(
-        (a) =>
-            a.status == RequirementStatus.remaining &&
-            a.requirement.courseCodes.contains(course.code),
+        (item) => item.needsCourse(student, course.code),
       );
       final requirement = requirements.isEmpty ? null : requirements.first;
       results.add(

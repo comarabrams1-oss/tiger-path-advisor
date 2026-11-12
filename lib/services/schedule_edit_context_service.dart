@@ -20,6 +20,8 @@ class ScheduleEditContextService {
     'start': section.startTime,
     'end': section.endTime,
     'meetings': [for (final meeting in section.meetings) meeting.displayText],
+    if (section.beginDate != null) 'beginDate': section.beginDate,
+    if (section.endDate != null) 'endDate': section.endDate,
     'open': section.isOpen && section.hasOpenSeats,
     'openSeats': section.openSeats,
   };

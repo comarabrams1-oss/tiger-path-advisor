@@ -1,7 +1,6 @@
 import '../models/course.dart';
 import '../models/degree_program.dart';
 import '../models/student.dart';
-import '../models/student_course.dart';
 import '../models/course_section.dart';
 import '../models/schedule_preferences.dart';
 import 'schedule_generation_service.dart';
@@ -66,14 +65,9 @@ class SemesterPlanService {
     List<String> priorityCourseCodes = const [],
   }) {
     final audit = DegreeAuditService().auditProgram(student, program);
-    final used = student.courses
-        .where(
-          (c) =>
-              c.status == CourseStatus.completed ||
-              c.status == CourseStatus.inProgress,
-        )
-        .map((c) => c.courseCode)
-        .toSet();
+    final requirements = {
+      for (final item in audit) item.requirement.id: item.requirement,
+    };
     final ranked = CoursePriorityService().rankCourses(
       student,
       program,
@@ -94,7 +88,6 @@ class SemesterPlanService {
       });
     }
     final freshman = student.classification.toLowerCase() == 'freshman';
-    final generator = ScheduleGenerationService();
     final effectivePreferences =
         preferences ??
         SchedulePreferences(
@@ -107,6 +100,18 @@ class SemesterPlanService {
           avoidLateClasses: false,
           minimizeGaps: true,
         );
+    final sectionSearch = sections == null
+        ? null
+        : ScheduleSectionSearch(
+            sections: sections,
+            instructors: const [],
+            preferences: effectivePreferences,
+            preferredSections: preferredSections,
+          );
+    final resultsByCode = {
+      for (final result in ranked) result.course.code: result,
+    };
+
     int compareChoices(_PlanChoice a, _PlanChoice b) {
       final aRequests = a.items
           .where((i) => priorityCourseCodes.contains(i.courseCode))
@@ -121,11 +126,10 @@ class SemesterPlanService {
     var states = <_PlanChoice>[const _PlanChoice([], {}, 0, 0)];
     for (final result in ranked) {
       final course = result.course;
-      if (used.contains(course.code) ||
-          ![
-            EligibilityStatus.eligible,
-            EligibilityStatus.eligibleAfterCurrentTerm,
-          ].contains(result.eligibility.status)) {
+      if (![
+        EligibilityStatus.eligible,
+        EligibilityStatus.eligibleAfterCurrentTerm,
+      ].contains(result.eligibility.status)) {
         continue;
       }
       final level =
@@ -134,10 +138,7 @@ class SemesterPlanService {
           ) ??
           999;
       if (freshman && level >= 300) continue;
-      if (sections != null &&
-          !sections.any(
-            (s) => s.courseCode == course.code && s.isOpen && s.hasOpenSeats,
-          )) {
+      if (sectionSearch?.hasOpenCourse(course.code) == false) {
         continue;
       }
       // An added lab brings any unsatisfied lecture companion with it.
@@ -156,12 +157,11 @@ class SemesterPlanService {
               pending.any((r) => r.course.code == code)) {
             return true;
           }
-          if (!visiting.add(code) ||
-              used.contains(code) ||
-              ![
-                EligibilityStatus.eligible,
-                EligibilityStatus.eligibleAfterCurrentTerm,
-              ].contains(candidate.eligibility.status)) {
+          if (visiting.contains(code)) return true;
+          if (![
+            EligibilityStatus.eligible,
+            EligibilityStatus.eligibleAfterCurrentTerm,
+          ].contains(candidate.eligibility.status)) {
             return false;
           }
           final candidateLevel =
@@ -170,15 +170,11 @@ class SemesterPlanService {
               ) ??
               999;
           if (freshman && candidateLevel >= 300) return false;
-          if (sections != null &&
-              !sections.any(
-                (s) => s.courseCode == code && s.isOpen && s.hasOpenSeats,
-              )) {
-            return false;
-          }
+          if (sectionSearch?.hasOpenCourse(code) == false) return false;
+          visiting.add(code);
           for (final companion in candidate.eligibility.requiredCompanions) {
-            final matches = ranked.where((r) => r.course.code == companion);
-            if (matches.isEmpty || !collect(matches.first)) return false;
+            final match = resultsByCode[companion];
+            if (match == null || !collect(match)) return false;
           }
           pending.add(candidate);
           visiting.remove(code);
@@ -192,21 +188,13 @@ class SemesterPlanService {
         var score = state.score;
         var valid = true;
         for (final addition in pending) {
-          final matches = audit.where(
-            (a) =>
-                a.status == RequirementStatus.remaining &&
-                a.requirement.courseCodes.contains(addition.course.code),
-          );
-          if (matches.isEmpty) {
+          final requirement = requirements[addition.requirementId];
+          final budget = addition.requirementCreditsRemaining;
+          if (requirement == null || budget == null) {
             valid = false;
             break;
           }
-          final requirement = matches.first;
-          final allocated = allocations[requirement.requirement.id] ?? 0;
-          final budget =
-              requirement.requirement.creditsRequired -
-              requirement.completedCredits -
-              requirement.inProgressCredits;
+          final allocated = allocations[requirement.id] ?? 0;
           if (credits + addition.course.credits > maxCredits ||
               allocated + addition.course.credits > budget) {
             valid = false;
@@ -220,7 +208,7 @@ class SemesterPlanService {
               courseCode: addition.course.code,
               credits: addition.course.credits,
               reason:
-                  '${addition.reasons.join('. ')}. Counts toward ${requirement.requirement.title}.',
+                  '${addition.reasons.join('. ')}. Counts toward ${requirement.title}.',
               projectedEligibility:
                   addition.eligibility.status ==
                   EligibilityStatus.eligibleAfterCurrentTerm,
@@ -234,23 +222,11 @@ class SemesterPlanService {
           score +=
               addition.score +
               (preferenceIndex < 0 ? 0 : 500 - preferenceIndex);
-          allocations[requirement.requirement.id] =
-              allocated + addition.course.credits;
+          allocations[requirement.id] = allocated + addition.course.credits;
         }
         if (!valid) continue;
-        if (sections != null) {
-          final trial = generator.generateSchedule(
-            plan: SemesterPlan(
-              items: items,
-              totalCredits: credits,
-              maxCredits: maxCredits,
-            ),
-            sections: sections,
-            instructors: [],
-            preferences: effectivePreferences,
-            preferredSections: preferredSections,
-          );
-          if (trial.unscheduled.isNotEmpty) continue;
+        if (sectionSearch?.canFitAll(items, maxCredits: maxCredits) == false) {
+          continue;
         }
         expanded.add(_PlanChoice(items, allocations, credits, score));
       }
@@ -258,7 +234,15 @@ class SemesterPlanService {
       expanded.sort(compareChoices);
       // Keep multiple course/time combinations, including alternatives within
       // the same requirement. This bounded search does not promise optimality.
-      states = expanded.take(48).toList();
+      final seen = <String>{};
+      states = expanded
+          .where((choice) {
+            final codes = choice.items.map((item) => item.courseCode!).toList()
+              ..sort();
+            return seen.add(codes.join('|'));
+          })
+          .take(48)
+          .toList();
     }
     states.sort(compareChoices);
     final best = states.first;
@@ -279,21 +263,20 @@ class SemesterPlanService {
       if (remaining <= 0) continue;
       final explanations = <String>[];
       for (final code in item.requirement.courseCodes.where(
-        (code) =>
-            !used.contains(code) &&
-            !best.items.any((i) => i.courseCode == code),
+        (code) => !best.items.any((i) => i.courseCode == code),
       )) {
-        final matches = ranked.where((r) => r.course.code == code);
-        if (matches.isEmpty) continue;
-        final result = matches.first;
+        final result = resultsByCode[code];
+        if (result == null) continue;
         if (result.eligibility.missingPrerequisites.isNotEmpty) {
           explanations.add(
             '$code requires ${result.eligibility.missingPrerequisites.join(', ')}',
           );
-        } else if (sections != null &&
-            !sections.any(
-              (s) => s.courseCode == code && s.isOpen && s.hasOpenSeats,
-            )) {
+        } else if (result.eligibility.status == EligibilityStatus.blocked ||
+            result.eligibility.status == EligibilityStatus.requiresPermission) {
+          explanations.add(
+            '$code: ${result.eligibility.reason ?? 'Eligibility needs advisor review'}',
+          );
+        } else if (sectionSearch?.hasOpenCourse(code) == false) {
           explanations.add('$code has no open imported sections');
         } else {
           explanations.add(

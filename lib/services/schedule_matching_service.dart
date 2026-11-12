@@ -38,7 +38,11 @@ class ScheduleMatchingService {
         );
       }
 
-      final preferredDayMatches = section.days
+      final meetingDays = {
+        ...section.days,
+        for (final meeting in section.meetings) ...meeting.days,
+      };
+      final preferredDayMatches = meetingDays
           .where(preferences.preferredDays.contains)
           .length;
 
@@ -50,7 +54,7 @@ class ScheduleMatchingService {
         );
       }
 
-      final avoidedDayMatches = section.days
+      final avoidedDayMatches = meetingDays
           .where(preferences.avoidedDays.contains)
           .length;
 
@@ -93,7 +97,7 @@ class ScheduleMatchingService {
         }
       }
 
-      if (_isPreferredProfessor(
+      if (matchesPreferredProfessor(
         section,
         instructor,
         preferences.preferredProfessors,
@@ -218,7 +222,7 @@ class ScheduleMatchingService {
     }
   }
 
-  bool _isPreferredProfessor(
+  bool matchesPreferredProfessor(
     CourseSection section,
     Instructor? instructor,
     List<String> preferredProfessors,

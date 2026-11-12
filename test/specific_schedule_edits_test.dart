@@ -396,10 +396,37 @@ void main() {
             .sectionNumber,
         '02',
       );
+      final pinnedDraft = ScheduleDraftService.current!;
+      await openEditor();
+      await tester.enterText(
+        find.widgetWithText(TextField, 'Search course, instructor, or time'),
+        'CSC 434',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Add'));
+      await settle();
+      expect(ScheduleDraftService.current, same(pinnedDraft));
+      expect(find.textContaining('Your draft is unchanged.'), findsOneWidget);
+
+      final repair = find.text('Resolve issues and fill schedule');
+      await tester.ensureVisible(repair);
+      await tester.tap(repair);
+      await settle();
+      expect(
+        ScheduleDraftService.current!.schedule.scheduled
+            .singleWhere((item) => item.section.courseCode == 'PHYS 234')
+            .section
+            .sectionNumber,
+        '02',
+      );
+      expect(
+        ScheduleDraftService.current!.excludedCourses,
+        contains('CSC 338'),
+      );
       expect(
         apiCalls,
         callsBeforeManual,
-        reason: 'Manual edits must work without Gemini',
+        reason: 'Manual edits and the built-in repair button must work without Gemini',
       );
       expect(ScheduleDraftService.current!.schedule.unscheduled, isEmpty);
       expect(tester.takeException(), isNull);

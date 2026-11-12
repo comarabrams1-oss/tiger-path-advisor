@@ -180,6 +180,15 @@ void main() {
         preferences: prefs,
       );
       expect(recovered.plan.totalCredits, 4);
+      final conflicting = ScheduleRecoveryService().recover(
+        plan: const SemesterPlan(items: [], totalCredits: 0, maxCredits: 4),
+        candidates: candidates,
+        requestedCourses: ['PHYS 213L'],
+        sections: [section('PHYS 233', 540), section('PHYS 213L', 540)],
+        instructors: [],
+        preferences: prefs,
+      );
+      expect(conflicting.plan.items, isEmpty);
     },
   );
   test('passed and current lectures are handled without granting a finished prerequisite', () {

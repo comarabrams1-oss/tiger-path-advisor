@@ -16,13 +16,13 @@ import '../services/schedule_recovery_service.dart';
 import '../data/test_student.dart';
 import '../data/program_registry.dart';
 
-import '../data/test_course_sections.dart';
 import '../data/test_instructors.dart';
 import '../models/course_section.dart';
 import '../models/schedule_preferences.dart';
 import '../services/course_section_repository.dart';
 import '../services/preferences_service.dart';
 import '../services/schedule_generation_service.dart';
+import '../services/schedule_matching_service.dart';
 import '../services/semester_plan_service.dart';
 
 enum ScheduleView { weekly, list }
@@ -132,8 +132,9 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   }
 
   ScheduleView selectedView = ScheduleView.weekly;
-  List<CourseSection> _sections = testCourseSections;
-  bool _usingRealData = false;
+  List<CourseSection> _sections = const [];
+  bool _sectionLoadFailed = false;
+  (DateTime, DateTime)? _termDates;
 
   final List<String> days = const [
     'Monday',
@@ -178,12 +179,27 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     try {
       sections = await CourseSectionRepository.loadForTerm(_plannedTerm);
     } catch (_) {
-      // Retain the demo fallback when imported sections are unavailable.
+      // Keep the existing draft available while the student retries.
     }
     if (!mounted || _profile != PreferencesService.profileId) return;
+    if (sections.isEmpty) {
+      setState(() => _sectionLoadFailed = true);
+      return;
+    }
+    DateTime? firstDate;
+    DateTime? lastDate;
+    for (final section in sections) {
+      final start = section.beginsOn;
+      final end = section.endsOn;
+      if (start == null || end == null || start.isAfter(end)) continue;
+      if (firstDate == null || start.isBefore(firstDate)) firstDate = start;
+      if (lastDate == null || end.isAfter(lastDate)) lastDate = end;
+    }
     setState(() {
-      _usingRealData = sections.isNotEmpty;
-      _sections = _usingRealData ? sections : testCourseSections;
+      _sections = sections;
+      if (firstDate != null && lastDate != null) {
+        _termDates = (firstDate, lastDate);
+      }
       _schedule = ScheduleGenerationService().generateSchedule(
         plan: _plan,
         sections: _permittedSections(),
@@ -220,7 +236,30 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     if (generatedSchedule == null) {
       return Scaffold(
         appBar: AppBar(title: const Text('Generated Schedule')),
-        body: const Center(child: CircularProgressIndicator()),
+        body: _sectionLoadFailed
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Text(
+                        'Spring 2027 sections could not load.',
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 12),
+                      FilledButton(
+                        onPressed: () {
+                          setState(() => _sectionLoadFailed = false);
+                          _loadSections();
+                        },
+                        child: const Text('Try again'),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            : const Center(child: CircularProgressIndicator()),
       );
     }
     final preferences = _preferences;
@@ -311,7 +350,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                   generatedSchedule.scheduled.any(
                     (item) =>
                         item.planItem.projectedEligibility ||
-                        !item.section.hasPrimaryMeetingTime,
+                        item.section.needsMeetingConfirmation,
                   ))
                 Card(
                   child: Padding(
@@ -329,6 +368,15 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                             padding: const EdgeInsets.only(top: 8),
                             child: Text(
                               '${item.planItem.courseCode}: ${item.planItem.priority?.eligibility.reason ?? 'Current prerequisites must be passed first.'}',
+                            ),
+                          ),
+                        for (final item in generatedSchedule.scheduled.where(
+                          (i) => i.section.needsMeetingConfirmation,
+                        ))
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              '${item.section.courseCode} needs missing meeting days or times confirmed.',
                             ),
                           ),
                       ],
@@ -398,6 +446,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     await _updateSchedule(
       schedule,
       preferences,
+      manualSelection: choice.remove ? null : s,
       manualRequest: choice.remove
           ? 'Manual: remove ${s.courseCode}'
           : 'Manual: select ${s.courseCode} section ${s.sectionNumber}',
@@ -420,6 +469,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     SchedulePreferences preferences, {
     ScheduleUpdate? manualUpdate,
     String? manualRequest,
+    CourseSection? manualSelection,
   }) async {
     final text = manualRequest ?? _request.text.trim();
     if (_updating || _historyLoading || text.isEmpty) return;
@@ -514,6 +564,28 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         preferredSections: choices,
       );
       if (!mounted || _profile != PreferencesService.profileId) return;
+      if (manualSelection != null) {
+        final requested = {
+          for (final item in schedule.scheduled)
+            if (_preferredSections[item.section.courseCode] ==
+                item.section.sectionNumber)
+              item.section.courseCode: item.section.sectionNumber,
+          manualSelection.courseCode: manualSelection.sectionNumber,
+        };
+        final applied = {
+          for (final item in rebuilt.scheduled)
+            item.section.courseCode: item.section.sectionNumber,
+        };
+        if (requested.entries.any(
+          (choice) => applied[choice.key] != choice.value,
+        )) {
+          setState(
+            () => _assistantStatus =
+                'Could not fit ${manualSelection.fullCourseCode} with your saved sections, course requirements and credit limit. Your draft is unchanged.',
+          );
+          return;
+        }
+      }
       final actualNotes = <String>[];
       for (final choice in choices.entries) {
         final matching = available.where(
@@ -533,11 +605,16 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               : 'Could not fit ${choice.key} section ${choice.value}${teacher.isEmpty ? '' : ' with $teacher'} into a verified timetable under these constraints. Advisor review recommended.',
         );
       }
+      final matchingService = ScheduleMatchingService();
       for (final professor in update.preferences.preferredProfessors) {
-        final matching = rebuilt.scheduled
-            .where((s) => s.section.allInstructorNames.contains(professor))
-            .toList();
-        if (matching.isEmpty) {
+        final matched = rebuilt.scheduled.any(
+          (item) => matchingService.matchesPreferredProfessor(
+            item.section,
+            item.instructor,
+            [professor],
+          ),
+        );
+        if (!matched) {
           actualNotes.add(
             'No selected class matches $professor. That instructor request was not fulfilled in this draft; ask for another section or advisor review.',
           );
@@ -617,7 +694,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                   item.type == SemesterPlanItemType.requirementSlot,
             ) ||
             rebuilt.scheduled.any(
-              (item) => !item.section.hasPrimaryMeetingTime,
+              (item) => item.section.needsMeetingConfirmation,
             );
         _updatedPlan = plan;
         _preferences = update.preferences;
@@ -657,6 +734,27 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       if (mounted) setState(() => _updating = false);
     }
   }
+
+  Future<void> _resolveSchedule(
+    GeneratedSchedule schedule,
+    SchedulePreferences preferences, {
+    String? courseCode,
+  }) => _updateSchedule(
+    schedule,
+    preferences,
+    manualRequest: courseCode == null
+        ? 'Recheck conflicts and fill this schedule'
+        : 'Find a section for $courseCode',
+    manualUpdate: ScheduleUpdate(
+      'Rechecked available sections',
+      preferences,
+      _preferredSections,
+      [?courseCode],
+      _advisorReview,
+      excludedCourses: _excludedCourses,
+      excludedSections: _excludedSections,
+    ),
+  );
 
   Widget _buildAssistant(
     BuildContext context,
@@ -718,10 +816,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           OutlinedButton.icon(
             onPressed: _updating || _historyLoading
                 ? null
-                : () {
-                    _request.text = 'Resolve time conflicts and missing offerings using other eligible remaining degree courses. Aim to fill my credit limit. Keep deferred requirements for advisor review.';
-                    _updateSchedule(schedule, preferences);
-                  },
+                : () => _resolveSchedule(schedule, preferences),
             icon: const Icon(Icons.build_circle_outlined),
             label: const Text('Resolve issues and fill schedule'),
           ),
@@ -991,76 +1086,111 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   }
 
   Widget _buildWeeklyView(BuildContext context, GeneratedSchedule schedule) {
-    final colors = Theme.of(context).colorScheme;
-
     if (schedule.scheduled.isEmpty) {
       return _emptyState(context, 'No classes have been scheduled yet.');
     }
 
+    final meetings = <String, List<(ScheduledCourseSection, CourseMeeting)>>{};
+    final displayed = <(String, String, int?, int?)>{};
+    for (final item in schedule.scheduled) {
+      for (final meeting in item.section.weeklyMeetings) {
+        for (final day in meeting.days) {
+          if (displayed.add((
+            item.section.courseCode,
+            day,
+            meeting.startMinutes,
+            meeting.endMinutes,
+          ))) {
+            (meetings[day] ??= []).add((item, meeting));
+          }
+        }
+      }
+    }
+    final visibleDays = [
+      ...days,
+      for (final day in const ['Saturday', 'Sunday'])
+        if (meetings.containsKey(day)) day,
+    ];
+    final colors = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NonTimetabledCourses(courses: schedule.scheduled),
-        Text(
-          'Weekly Schedule',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: colors.onSurface,
+        if (meetings.isNotEmpty) ...[
+          Text(
+            'Weekly Schedule',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurface,
+            ),
           ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          'Scroll horizontally on smaller screens.',
-          style: TextStyle(
-            color: colors.onSurface.withValues(alpha: 0.55),
-            fontSize: 13,
+          const SizedBox(height: 5),
+          Text(
+            'Scroll horizontally on smaller screens.',
+            style: TextStyle(
+              color: colors.onSurface.withValues(alpha: 0.55),
+              fontSize: 13,
+            ),
           ),
-        ),
-        const SizedBox(height: 14),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final width = constraints.maxWidth < 1000
-                ? 1000.0
-                : constraints.maxWidth;
-
-            return SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: width,
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: days.map((day) {
-                    return Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 10),
-                        child: _buildDayColumn(context, day, schedule),
-                      ),
-                    );
-                  }).toList(),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final minimumWidth = 200.0 * visibleDays.length;
+              final width = constraints.maxWidth < minimumWidth
+                  ? minimumWidth
+                  : constraints.maxWidth;
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SizedBox(
+                  width: width,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      for (final day in visibleDays)
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.only(right: 10),
+                            child: _buildDayColumn(
+                              context,
+                              day,
+                              meetings[day] ?? const [],
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
-        ),
+              );
+            },
+          ),
+        ],
       ],
     );
+  }
+
+  String? _blockDates(CourseSection section) {
+    final start = section.beginsOn;
+    final end = section.endsOn;
+    final term = _termDates;
+    if (start == null ||
+        end == null ||
+        start.isAfter(end) ||
+        term == null ||
+        (start == term.$1 && end == term.$2)) {
+      return null;
+    }
+    return '${start.month}/${start.day} to ${end.month}/${end.day}';
   }
 
   Widget _buildDayColumn(
     BuildContext context,
     String day,
-    GeneratedSchedule schedule,
+    List<(ScheduledCourseSection, CourseMeeting)> meetings,
   ) {
     final colors = Theme.of(context).colorScheme;
-
-    final classes =
-        schedule.scheduled
-            .where((item) => item.section.days.contains(day))
-            .toList()
-          ..sort(
-            (a, b) => a.section.startMinutes.compareTo(b.section.startMinutes),
-          );
+    final classes = [...meetings]
+      ..sort((a, b) => a.$2.startMinutes!.compareTo(b.$2.startMinutes!));
 
     return Container(
       decoration: BoxDecoration(
@@ -1103,12 +1233,13 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             Padding(
               padding: const EdgeInsets.all(10),
               child: Column(
-                children: classes.map((scheduled) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: _weeklyClassBlock(context, scheduled),
-                  );
-                }).toList(),
+                children: [
+                  for (final (scheduled, meeting) in classes)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _weeklyClassBlock(context, scheduled, meeting),
+                    ),
+                ],
               ),
             ),
         ],
@@ -1119,8 +1250,10 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   Widget _weeklyClassBlock(
     BuildContext context,
     ScheduledCourseSection scheduled,
+    CourseMeeting meeting,
   ) {
     final colors = Theme.of(context).colorScheme;
+    final dates = _blockDates(scheduled.section);
 
     return Container(
       width: double.infinity,
@@ -1148,9 +1281,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            '${scheduled.section.startTime} - ${scheduled.section.endTime}',
+            '${meeting.startTime} - ${meeting.endTime}',
             style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12),
           ),
+          if (dates != null)
+            Text(dates, style: Theme.of(context).textTheme.bodySmall),
           const SizedBox(height: 5),
           Text(
             _professorName(scheduled),
@@ -1161,7 +1296,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           ),
           const SizedBox(height: 3),
           Text(
-            scheduled.section.location,
+            meeting.location ?? scheduled.section.location,
             style: TextStyle(
               color: colors.onSurface.withValues(alpha: 0.55),
               fontSize: 11,
@@ -1192,6 +1327,10 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         ),
         const SizedBox(height: 14),
         ...schedule.scheduled.map((scheduled) {
+          final dates = _blockDates(scheduled.section);
+          final meetingText = scheduled.section.isAsynchronous
+              ? 'Asynchronous · ${scheduled.planItem.credits.toInt()} credits · No fixed meeting time'
+              : scheduled.section.scheduleDisplay;
           return Card(
             margin: const EdgeInsets.only(bottom: 12),
             child: ExpansionTile(
@@ -1216,9 +1355,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
               subtitle: Text(
-                scheduled.section.isAsynchronous
-                    ? 'Asynchronous · ${scheduled.planItem.credits.toInt()} credits · No fixed meeting time'
-                    : scheduled.section.scheduleDisplay,
+                dates == null ? meetingText : '$meetingText\n$dates',
               ),
               children: [
                 _detailRow(context, 'Course', scheduled.planItem.title),
@@ -1369,11 +1506,11 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                             ),
                             onPressed: _updating || _historyLoading
                                 ? null
-                                : () {
-                                    _request.text =
-                                        'Try to resolve time conflicts for ${unscheduled.planItem.courseCode ?? unscheduled.planItem.title} using available sections. Keep my other preferences.';
-                                    _updateSchedule(schedule, _preferences);
-                                  },
+                                : () => _resolveSchedule(
+                                    schedule,
+                                    _preferences,
+                                    courseCode: unscheduled.planItem.courseCode,
+                                  ),
                           ),
                         const SizedBox(height: 8),
                         Text(
@@ -1407,9 +1544,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     children: [
       Expanded(
         child: Text(
-          _usingRealData
-              ? 'Imported Spring 2027 snapshot · verify current seats in Tiger Portal.'
-              : 'Demo sections in use. Imported offerings could not load.',
+          'Imported Spring 2027 snapshot · verify current seats in Tiger Portal.',
         ),
       ),
       const InfoTip(
