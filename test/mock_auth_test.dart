@@ -101,8 +101,12 @@ void main() {
     tester.view.physicalSize = const Size(390, 844);
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
-    await tester.ensureVisible(find.text('Freshman · Computer Science\nJordan Taylor · 16 current credits'));
-    await tester.tap(find.text('Freshman · Computer Science\nJordan Taylor · 16 current credits'));
+    await tester.ensureVisible(
+      find.widgetWithText(OutlinedButton, 'Freshman · Computer Science'),
+    );
+    await tester.tap(
+      find.widgetWithText(OutlinedButton, 'Freshman · Computer Science'),
+    );
     await settle(tester);
     expect(activeStudent, same(fictionalStudent));
     expect(find.text(mockStudentEmail), findsOneWidget);

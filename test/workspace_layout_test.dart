@@ -49,6 +49,10 @@ void main() {
         }
         await tester.tap(find.text('Plan'));
         expect(destination, 3);
+        tester.view.physicalSize = const Size(1280, 400);
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull, reason: 'short desktop window');
+
         tester.view.physicalSize = const Size(390, 844);
         await tester.pumpAndSettle();
         expect(find.byType(NavigationBar), findsOneWidget);

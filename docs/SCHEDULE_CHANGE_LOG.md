@@ -8,7 +8,7 @@ Supporting explanations use info icons with hover and tap support and keyboard-a
 
 ## Specific class and instructor requests
 
-Both Ask Tiger Path and Build with Tiger Path can revise the current in-session draft. In the main chat, an explicit edit produces an **Update current schedule** button; tapping it opens the same draft and runs the request once. A draft must first be generated. Drafts are isolated by profile and do not survive a browser reload.
+Both Ask Tiger Path and Build with Tiger Path can revise the current draft. In the main chat, an explicit edit produces an **Update current schedule** button; tapping it opens the same draft and runs the request once. A draft must first be generated. Each profile can continue its latest draft from Home or Plan on the same browser after reloading.
 
 The helper receives selected sections with their times and instructors, plus eligible alternatives. Instructor matches are prioritized in the bounded candidate context. Responses can exclude verified courses or exact sections and request verified instructor sections. Exclusions and section choices are enforced during planning, recovery, and timetable generation. Requested courses are prioritized ahead of maximizing credits, while prerequisite, degree, lab, availability, conflict, and credit-limit checks remain deterministic. Removing a course does not erase its outstanding degree requirement. Ambiguous requests ask for clarification without changing the draft.
 

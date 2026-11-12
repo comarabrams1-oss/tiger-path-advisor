@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../services/mock_auth_service.dart';
@@ -5,7 +7,7 @@ import '../data/test_student.dart';
 import '../themes/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
-  final ValueChanged<MockStudentSession> onSignedIn;
+  final FutureOr<void> Function(MockStudentSession) onSignedIn;
   final MockAuthService? auth;
   const LoginScreen({super.key, required this.onSignedIn, this.auth});
   @override
@@ -29,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
         _email.text,
         remember: _remember,
       );
-      if (mounted) widget.onSignedIn(session);
+      if (mounted) await widget.onSignedIn(session);
     } catch (_) {
       if (mounted) {
         setState(
@@ -85,52 +87,20 @@ class _LoginScreenState extends State<LoginScreen> {
                                 fit: BoxFit.contain,
                               ),
                             ),
-                            SizedBox(height: wide ? 26 : 16),
+                            SizedBox(height: wide ? 24 : 14),
                             Text(
-                              'TIGER PATH ADVISOR',
+                              'Tiger Path Advisor',
                               style: TextStyle(
                                 color: colors.onPrimary,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 2.6,
-                              ),
-                            ),
-                            const SizedBox(height: 14),
-                            Text(
-                              'Student sign-in',
-                              style: TextStyle(
-                                color: colors.onPrimary,
-                                fontSize: wide ? 36 : 28,
+                                fontSize: wide ? 34 : 25,
                                 fontWeight: FontWeight.w800,
-                                height: 1.18,
+                                height: 1.16,
                               ),
                             ),
-                            const SizedBox(height: 20),
+                            const SizedBox(height: 8),
                             Text(
-                              'Course planning and degree progress.',
-                              style: TextStyle(
-                                color: colors.onPrimary.withValues(alpha: 0.8),
-                                height: 1.6,
-                              ),
-                            ),
-                            SizedBox(height: wide ? 32 : 18),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 7,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colors.onPrimary.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                'BENEDICT COLLEGE · STUDENT EXPERIENCE',
-                                style: TextStyle(
-                                  color: colors.onPrimary,
-                                  fontSize: 9,
-                                  letterSpacing: 0.7,
-                                ),
-                              ),
+                              'Benedict College',
+                              style: TextStyle(color: colors.onPrimary),
                             ),
                           ],
                         ),
@@ -147,15 +117,6 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Chip(
-                                avatar: Icon(
-                                  Icons.science_outlined,
-                                  size: 16,
-                                  color: colors.primary,
-                                ),
-                                label: const Text('Demo sign-in'),
-                              ),
-                              const SizedBox(height: 18),
                               const Text(
                                 'Sign in',
                                 style: TextStyle(
@@ -165,13 +126,13 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'Continue with your Benedict student email.',
+                                'Use your Benedict student email or try a demo profile.',
                                 style: TextStyle(
                                   color: colors.onSurfaceVariant,
                                   height: 1.5,
                                 ),
                               ),
-                              const SizedBox(height: 30),
+                              const SizedBox(height: 20),
                               TextFormField(
                                 controller: _email,
                                 enabled: !_busy,
@@ -234,41 +195,65 @@ class _LoginScreenState extends State<LoginScreen> {
                                       : const Text('Continue to Tiger Path'),
                                 ),
                               ),
-                              const SizedBox(height: 12),
-                              SizedBox(
-                                width: double.infinity,
-                                child: OutlinedButton.icon(
-                                  icon: const Icon(Icons.person_outline),
-                                  label: const Text(
-                                    'Freshman · Computer Science\nJordan Taylor · 16 current credits',
-                                  ),
-                                  onPressed: _busy
-                                      ? null
-                                      : () {
-                                          _email.text = mockStudentEmail;
-                                          _signIn();
-                                        },
-                                ),
+                              const SizedBox(height: 22),
+                              Text(
+                                'Try a demo profile',
+                                style: Theme.of(context).textTheme.titleMedium,
                               ),
-                              const SizedBox(height: 12),
-                              for (final scenario
-                                  in additionalStudentScenarios.entries)
+                              for (final entry in {
+                                mockStudentEmail: fictionalStudent,
+                                ...additionalStudentScenarios,
+                              }.entries)
                                 Padding(
                                   padding: const EdgeInsets.only(top: 8),
-                                  child: OutlinedButton(
-                                    onPressed: _busy
-                                        ? null
-                                        : () {
-                                            _email.text = scenario.key;
-                                            _signIn();
-                                          },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 10,
+                                  child: SizedBox(
+                                    width: double.infinity,
+                                    child: OutlinedButton(
+                                      style: OutlinedButton.styleFrom(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 12,
+                                          horizontal: 14,
+                                        ),
                                       ),
-                                      child: Text(
-                                        '${scenario.value.classification} · ${scenario.value.major}\n${scenario.value.name} · ${scenario.value.earnedCredits.toInt()} earned · ${scenario.value.inProgressCredits.toInt()} current credits',
-                                        textAlign: TextAlign.center,
+                                      onPressed: _busy
+                                          ? null
+                                          : () {
+                                              _email.text = entry.key;
+                                              _signIn();
+                                            },
+                                      child: Row(
+                                        children: [
+                                          const Icon(
+                                            Icons.person_outline,
+                                            size: 19,
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  '${entry.value.classification} · ${entry.value.major}',
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                                Text(
+                                                  "${entry.value.name.replaceFirst(' (Demo)', '')} · ${entry.value.inProgressCredits.toInt()} credits in progress",
+                                                  style: Theme.of(context)
+                                                      .textTheme
+                                                      .bodySmall,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.arrow_forward,
+                                            size: 17,
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -281,7 +266,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Text(
-                                  'This is a mock login, not Tiger Portal. No password is needed, and email ownership is not verified. Each fictional test student has a separate sample academic record. Other student emails open the original sample record. Chats are saved separately for each email on this browser.',
+                                  'Demo sign-in uses sample academic records without verifying your email. Drafts and chats are stored on this browser.',
                                   style: TextStyle(
                                     fontSize: 12,
                                     height: 1.6,

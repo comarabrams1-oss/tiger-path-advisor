@@ -124,6 +124,7 @@ class WorkspaceShell extends StatelessWidget {
                   selectedIndex: selectedIndex,
                   onDestinationSelected: onNavigate,
                   labelType: NavigationRailLabelType.all,
+                  scrollable: true,
                   leading: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: const _CollegeLogo(),
@@ -147,49 +148,54 @@ class WorkspaceShell extends StatelessWidget {
                 width: 210,
                 child: Material(
                   color: colors.surface,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 32, 24, 30),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const _CollegeLogo(),
-                            const SizedBox(height: 12),
-                            const Text(
-                              'Tiger Path Advisor',
-                              style: TextStyle(
-                                fontSize: 23,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Student workspace',
-                              style: TextStyle(
-                                color: colors.onSurfaceVariant,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      for (var index = 0; index < labels.length; index++)
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                         Padding(
-                          padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
-                          child: ListTile(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
-                            ),
-                            selected: index == selectedIndex,
-                            selectedTileColor: colors.primaryContainer,
-                            leading: Icon(icons[index], color: colors.primary),
-                            title: Text(labels[index]),
-                            onTap: () => onNavigate(index),
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 30),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const _CollegeLogo(),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Tiger Path Advisor',
+                                style: TextStyle(
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                              const SizedBox(height: 5),
+                              Text(
+                                'Student workspace',
+                                style: TextStyle(
+                                  color: colors.onSurfaceVariant,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                    ],
+                        for (var index = 0; index < labels.length; index++)
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+                            child: ListTile(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(18),
+                              ),
+                              selected: index == selectedIndex,
+                              selectedTileColor: colors.primaryContainer,
+                              leading: Icon(
+                                icons[index],
+                                color: colors.primary,
+                              ),
+                              title: Text(labels[index]),
+                              onTap: () => onNavigate(index),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
               ),

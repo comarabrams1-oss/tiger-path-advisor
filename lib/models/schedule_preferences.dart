@@ -19,6 +19,20 @@ class SchedulePreferences {
     required this.minimizeGaps,
   });
 
+  factory SchedulePreferences.fromJson(Map<String, dynamic> json) =>
+      SchedulePreferences(
+        preferredTime: json['preferredTime'] as String,
+        preferredDays: List<String>.from(json['preferredDays'] as List),
+        avoidedDays: List<String>.from(json['avoidedDays'] as List),
+        preferredProfessors: List<String>.from(
+          json['preferredProfessors'] as List,
+        ),
+        maxCredits: json['maxCredits'] as int,
+        avoidEarlyClasses: json['avoidEarlyClasses'] as bool,
+        avoidLateClasses: json['avoidLateClasses'] as bool,
+        minimizeGaps: json['minimizeGaps'] as bool,
+      );
+
   Map<String, dynamic> toJson() {
     return {
       'preferredTime': preferredTime,

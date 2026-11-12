@@ -157,8 +157,11 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => GeneratedScheduleScreen(plan: plan),
+                  MaterialPageRoute<void>(
+                    settings: const RouteSettings(
+                      name: 'GeneratedScheduleScreen',
+                    ),
+                    builder: (_) => GeneratedScheduleScreen(plan: plan),
                   ),
                 );
               },

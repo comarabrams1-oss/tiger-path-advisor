@@ -4,10 +4,12 @@ import 'data/test_student.dart';
 import 'screens/course_recommendations_screen.dart';
 import 'screens/degree_progress_screen.dart';
 import 'screens/schedule_preferences_screen.dart';
+import 'screens/generated_schedule_screen.dart';
 import 'screens/ai_advisor_screen.dart';
 import 'screens/theme_settings_screen.dart';
 import 'services/theme_service.dart';
 import 'services/preferences_service.dart';
+import 'services/schedule_draft_service.dart';
 import 'services/advisor_app_actions.dart';
 import 'services/mock_auth_service.dart';
 import 'services/advisor_history_service.dart';
@@ -65,8 +67,8 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     try {
       final settings = await ThemeService.load();
       final session = await _auth.restore();
-      selectDemoStudent(session?.email);
-      PreferencesService.useProfile(session?.profileId ?? 'demo-cs-2024');
+      if (!mounted) return;
+      await _loadProfile(session);
 
       if (!mounted) {
         return;
@@ -87,6 +89,12 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
         _loadingTheme = false;
       });
     }
+  }
+
+  Future<void> _loadProfile(MockStudentSession? session) async {
+    selectDemoStudent(session?.email);
+    PreferencesService.useProfile(session?.profileId ?? 'demo-cs-2024');
+    if (session != null) await ScheduleDraftService.restore();
   }
 
   Future<void> _signOut() async {
@@ -187,10 +195,9 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
           ? const _ThemeLoadingScreen()
           : _session == null
           ? LoginScreen(
-              onSignedIn: (session) {
-                selectDemoStudent(session.email);
-                PreferencesService.useProfile(session.profileId);
-                setState(() => _session = session);
+              onSignedIn: (session) async {
+                await _loadProfile(session);
+                if (mounted) setState(() => _session = session);
               },
             )
           : HomeScreen(
@@ -226,34 +233,35 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final session = MockSessionScope.maybeOf(context);
     return Scaffold(
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 28, 20, 24),
-            children: [
-              if (MockSessionScope.maybeOf(context)?.session != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.account_circle_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          MockSessionScope.maybeOf(context)!.session!.email,
-                          style: const TextStyle(fontSize: 12),
-                          overflow: TextOverflow.ellipsis,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1140),
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              children: [
+                if (session?.session case final account?)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.account_circle_outlined, size: 18),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            account.email,
+                            style: Theme.of(context).textTheme.bodySmall,
+                            overflow: TextOverflow.ellipsis,
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          try {
-                            await MockSessionScope.maybeOf(context)!
-                                .onSignOut();
-                          } catch (_) {
-                            if (context.mounted) {
+                        TextButton(
+                          onPressed: () async {
+                            try {
+                              await session!.onSignOut();
+                            } catch (_) {
+                              if (!context.mounted) return;
                               ScaffoldMessenger.of(context).showSnackBar(
                                 const SnackBar(
                                   content: Text(
@@ -262,25 +270,208 @@ class HomeScreen extends StatelessWidget {
                                 ),
                               );
                             }
-                          }
-                        },
-                        child: const Text('Sign out'),
-                      ),
-                    ],
+                          },
+                          child: const Text('Sign out'),
+                        ),
+                      ],
+                    ),
+                  ),
+                _buildHeader(context),
+                const SizedBox(height: 16),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final progress = _buildCreditProgress(context);
+                    final planning = _buildPlanningCard(context);
+                    if (constraints.maxWidth >= 740) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(flex: 6, child: progress),
+                          const SizedBox(width: 16),
+                          Expanded(flex: 5, child: planning),
+                        ],
+                      );
+                    }
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        progress,
+                        const SizedBox(height: 12),
+                        planning,
+                      ],
+                    );
+                  },
+                ),
+                const SizedBox(height: 28),
+                const AcademicWorkspace(),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+          colors.primary.withValues(alpha: .08),
+          colors.surface,
+        ),
+        borderRadius: BorderRadius.circular(AppDesignTokens.of(context).radius),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            padding: const EdgeInsets.all(5),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Image.asset(
+              'assets/images/benedict_logo.png',
+              fit: BoxFit.contain,
+              semanticLabel: 'Benedict College logo',
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Benedict College', style: theme.textTheme.labelMedium),
+                const SizedBox(height: 3),
+                Text(
+                  'Tiger Path Advisor',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              if (AppDesignTokens.of(context).design == AppDesign.sharp)
-                _compactHeader(context)
-              else
-                _buildHero(context),
-              const SizedBox(height: 12),
-              Center(
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.menu_book_outlined),
+                const SizedBox(height: 4),
+                Text(
+                  '${activeStudent.major} ${activeStudent.degreeLabel} · ${activeStudent.classification}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: 'Open Theme Studio',
+            icon: const Icon(Icons.tune),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                settings: const RouteSettings(name: 'ThemeSettingsScreen'),
+                builder: (_) => ThemeSettingsScreen(
+                  currentPreset: currentPreset,
+                  currentCustomTheme: currentCustomTheme,
+                  onThemeChanged: onThemeChanged,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCreditProgress(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final student = activeStudent;
+    final progress = student.requiredCredits > 0
+        ? (student.earnedCredits / student.requiredCredits).clamp(0.0, 1.0)
+        : 0.0;
+    final projectedRemaining =
+        (student.remainingCredits - student.inProgressCredits)
+            .clamp(0.0, student.requiredCredits)
+            .toDouble();
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Credit progress',
+                    style: theme.textTheme.titleLarge,
+                  ),
+                ),
+                Text(
+                  '${(progress * 100).round()}%',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: progress,
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(4),
+              semanticsLabel: 'Credits earned toward degree',
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${_credits(student.earnedCredits)} of ${_credits(student.requiredCredits)} credits earned',
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 14),
+            Wrap(
+              spacing: 18,
+              runSpacing: 8,
+              children: [
+                _creditMetric(
+                  context,
+                  student.inProgressCredits,
+                  'In progress',
+                ),
+                _creditMetric(
+                  context,
+                  projectedRemaining,
+                  'Remaining if current courses are passed',
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.school_outlined, size: 18),
+                  label: const Text('View degree audit'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      settings: const RouteSettings(
+                        name: 'DegreeProgressScreen',
+                      ),
+                      builder: (_) => const DegreeProgressScreen(),
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.menu_book_outlined, size: 18),
                   label: const Text('Programs of study'),
                   onPressed: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
+                    MaterialPageRoute<void>(
                       settings: const RouteSettings(
                         name: 'ProgramLibraryScreen',
                       ),
@@ -288,263 +479,124 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 22),
-              _compactSummary(context),
-              const SizedBox(height: 28),
-              const AcademicWorkspace(),
-              const SizedBox(height: 24),
-              Text(
-                'Planning draft · verify registration and approvals with your academic advisor.',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildHero(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final design = AppDesignTokens.of(context);
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Color.lerp(colors.surfaceContainerLow, colors.primary, .05),
-        borderRadius: BorderRadius.circular(design.radius),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: .65)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 46,
-                padding: const EdgeInsets.all(4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Image.asset(
-                  'assets/images/benedict_logo.png',
-                  fit: BoxFit.contain,
-                  semanticLabel: 'Benedict College logo',
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Text(
-                      textAlign: TextAlign.center,
-                      'Benedict College',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      textAlign: TextAlign.center,
-                      'Tiger Path Advisor',
-                      style: TextStyle(
-                        fontSize: 23,
-                        height: 1.2,
-                        fontWeight: FontWeight.w700,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              IconButton(
-                tooltip: 'Open Theme Studio',
-                icon: const Icon(Icons.tune),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    settings: const RouteSettings(name: 'ThemeSettingsScreen'),
-                    builder: (_) => ThemeSettingsScreen(
-                      currentPreset: currentPreset,
-                      currentCustomTheme: currentCustomTheme,
-                      onThemeChanged: onThemeChanged,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final details = Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    textAlign: TextAlign.center,
-                    '${activeStudent.major} B.S. · ${activeStudent.classification}',
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    textAlign: TextAlign.center,
-                    'Fall 2026 overview · Spring 2027 planning',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
-              );
-              final button = FilledButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    settings: const RouteSettings(
-                      name: 'SchedulePreferencesScreen',
-                    ),
-                    builder: (_) => const SchedulePreferencesScreen(),
-                  ),
-                ),
-                icon: const Icon(Icons.calendar_month_outlined, size: 18),
-                label: const Text('Plan Spring 2027'),
-              );
-              if (constraints.maxWidth < 580) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [details, const SizedBox(height: 14), button],
-                );
-              }
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  details,
-                  const SizedBox(height: 14),
-                  Center(child: button),
-                ],
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _compactHeader(BuildContext context) => Row(
-    children: [
-      Container(
-        width: 48,
-        height: 48,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Image.asset(
-          'assets/images/benedict_logo.png',
-          fit: BoxFit.contain,
-          semanticLabel: 'Benedict College logo',
-        ),
-      ),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              textAlign: TextAlign.center,
-              'Tiger Path Advisor',
-              style: Theme.of(context).textTheme.headlineMedium
-                  ?.copyWith(fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              textAlign: TextAlign.center,
-              '${activeStudent.major} · ${activeStudent.classification} · Catalog ${activeStudent.catalogYear}',
+              ],
             ),
           ],
         ),
       ),
-      const SizedBox(width: 10),
-      IconButton(
-        tooltip: 'Open Theme Studio',
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(
-            settings: const RouteSettings(name: 'ThemeSettingsScreen'),
-            builder: (_) => ThemeSettingsScreen(
-              currentPreset: currentPreset,
-              currentCustomTheme: currentCustomTheme,
-              onThemeChanged: onThemeChanged,
-            ),
+    );
+  }
+
+  Widget _creditMetric(BuildContext context, double credits, String label) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(_credits(credits), style: theme.textTheme.titleLarge),
+        Text(label, style: theme.textTheme.bodySmall),
+      ],
+    );
+  }
+
+  Widget _buildPlanningCard(BuildContext context) => ValueListenableBuilder(
+    valueListenable: ScheduleDraftService.revision,
+    builder: (context, _, _) {
+      final theme = Theme.of(context);
+      final colors = theme.colorScheme;
+      final draft = ScheduleDraftService.current;
+      final unresolved = draft?.schedule.unscheduled.length ?? 0;
+      return Card(
+        margin: EdgeInsets.zero,
+        color: Color.alphaBlend(
+          colors.primary.withValues(alpha: .08),
+          colors.surface,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.calendar_month_outlined, color: colors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Spring 2027 schedule',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text(
+                draft == null
+                    ? 'Choose your preferences and build a draft from available sections.'
+                    : '${draft.schedule.scheduled.length} courses · ${_credits(draft.schedule.scheduledCredits)} credits'
+                          '${unresolved > 0 ? ' · $unresolved unresolved' : ''}',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.icon(
+                    icon: Icon(
+                      draft == null
+                          ? Icons.calendar_month_outlined
+                          : Icons.arrow_forward,
+                    ),
+                    label: Text(
+                      draft == null ? 'Plan Spring 2027' : 'Continue schedule',
+                    ),
+                    onPressed: () {
+                      if (draft == null) {
+                        _openPlanner(context);
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: 'GeneratedScheduleScreen',
+                            ),
+                            builder: (_) => GeneratedScheduleScreen(
+                              plan: draft.plan,
+                              draft: draft,
+                            ),
+                          ),
+                        );
+                      }
+                    },
+                  ),
+                  if (draft != null)
+                    TextButton(
+                      onPressed: () => _openPlanner(context),
+                      child: const Text('New plan'),
+                    ),
+                ],
+              ),
+            ],
           ),
         ),
-        icon: const Icon(Icons.tune),
-      ),
-    ],
+      );
+    },
   );
 
-  Widget _compactSummary(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final remaining =
-        (activeStudent.requiredCredits -
-                activeStudent.earnedCredits -
-                activeStudent.inProgressCredits)
-            .clamp(0, activeStudent.requiredCredits)
-            .toInt();
-    final values = [
-      ('${activeStudent.earnedCredits.toInt()}', 'Credits earned'),
-      ('${activeStudent.inProgressCredits.toInt()}', 'In progress'),
-      ('$remaining', 'Left after this term'),
-    ];
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-        child: Row(
-          children: [
-            for (var index = 0; index < values.length; index++) ...[
-              if (index > 0)
-                Container(width: 1, height: 42, color: colors.outlineVariant),
-              Expanded(
-                child: Column(
-                  children: [
-                    Text(
-                      values[index].$1,
-                      style: TextStyle(
-                        fontSize: 27,
-                        fontWeight: FontWeight.w800,
-                        color: index == 1 ? colors.secondary : colors.primary,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    Text(
-                      values[index].$2,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
+  void _openPlanner(BuildContext context) => Navigator.push(
+    context,
+    MaterialPageRoute<void>(
+      settings: const RouteSettings(name: 'SchedulePreferencesScreen'),
+      builder: (_) => const SchedulePreferencesScreen(),
+    ),
+  );
+
+  String _credits(double value) => value == value.roundToDouble()
+      ? '${value.toInt()}'
+      : value.toStringAsFixed(1);
 }
 
 class _WorkspaceRouteObserver extends NavigatorObserver {

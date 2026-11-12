@@ -52,7 +52,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   final _request = TextEditingController();
   late final _assistant = widget.assistant ?? ScheduleAssistantService();
   SemesterPlan? _updatedPlan;
-  SchedulePreferences? _updatedPreferences;
+  late SchedulePreferences _preferences;
   Map<String, String> _preferredSections = {};
   List<String> _excludedCourses = [];
   List<String> _excludedSections = [];
@@ -62,29 +62,19 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     List<String>? excludedSections,
     Map<String, String>? selections,
   }) {
-    final avoided = courses ?? _excludedCourses,
-        avoidedSections = excludedSections ?? _excludedSections;
-    final pins = selections ?? _preferredSections;
-    return _sections
-        .where(
-          (s) =>
-              !avoided.contains(s.courseCode) &&
-              !avoidedSections.contains(
-                ScheduleEditContextService.sectionKey(
-                  s.courseCode,
-                  s.sectionNumber,
-                ),
-              ) &&
-              (!pins.containsKey(s.courseCode) ||
-                  pins[s.courseCode] == s.sectionNumber),
-        )
-        .toList();
+    return ScheduleDraftService.permittedSections(
+      _sections,
+      excludedCourses: courses ?? _excludedCourses,
+      excludedSections: excludedSections ?? _excludedSections,
+      sectionPreferences: selections ?? _preferredSections,
+    );
   }
 
   String? _assistantStatus;
-  late final _history = ScheduleChangeHistoryService(
-    PreferencesService.profileId,
-  );
+  late final String _profile;
+  late final _history = ScheduleChangeHistoryService(_profile);
+  GeneratedSchedule? _schedule;
+  bool _draftSaveFailed = false;
   List<ScheduleChangeEntry> _changes = [];
   ScheduleChangeEntry? _latestChange;
   String? _historyError;
@@ -107,31 +97,30 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
 
   List<SemesterPlanItem> _deferred = [];
   bool _advisorReview = false;
-  List<CoursePriorityResult> get _alternatives => CoursePriorityService()
-      .rankCourses(activeStudent, activeProgram, activeCatalog)
-      .where(
-        (item) =>
-            (activeStudent.classification.toLowerCase() != 'freshman' ||
-                (int.tryParse(
-                          RegExp(r'\d{3}')
-                                  .firstMatch(item.course.code)
-                                  ?.group(0) ??
-                              '999',
-                        ) ??
-                        999) <
-                    300) &&
-            [
-              EligibilityStatus.eligible,
-              EligibilityStatus.eligibleAfterCurrentTerm,
-            ].contains(item.eligibility.status) &&
-            _sections.any(
-              (section) =>
-                  section.courseCode == item.course.code &&
-                  section.isOpen &&
-                  section.hasOpenSeats,
-            ),
-      )
-      .toList();
+  List<CoursePriorityResult> get _alternatives {
+    final offeredCodes = {
+      for (final section in _sections)
+        if (section.isOpen && section.hasOpenSeats) section.courseCode,
+    };
+    final freshman = activeStudent.classification.toLowerCase() == 'freshman';
+    return CoursePriorityService()
+        .rankCourses(activeStudent, activeProgram, activeCatalog)
+        .where((item) {
+          final code = item.course.code;
+          final status = item.eligibility.status;
+          final level =
+              int.tryParse(
+                RegExp(r'\d{3}').firstMatch(code)?.group(0) ?? '999',
+              ) ??
+              999;
+          return offeredCodes.contains(code) &&
+              (!freshman || level < 300) &&
+              (status == EligibilityStatus.eligible ||
+                  status == EligibilityStatus.eligibleAfterCurrentTerm);
+        })
+        .toList();
+  }
+
   bool _updating = false;
   SemesterPlan get _plan => _updatedPlan ?? widget.plan;
 
@@ -145,7 +134,6 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   ScheduleView selectedView = ScheduleView.weekly;
   List<CourseSection> _sections = testCourseSections;
   bool _usingRealData = false;
-  bool _loadingSections = true;
 
   final List<String> days = const [
     'Monday',
@@ -158,65 +146,18 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   @override
   void initState() {
     super.initState();
+    // Bind async work to the profile that opened this screen.
+    _profile = PreferencesService.profileId;
     if (widget.draft case final draft?) {
       _updatedPlan = draft.plan;
-      _updatedPreferences = draft.preferences;
       _preferredSections = Map.of(draft.sectionPreferences);
       _excludedCourses = List.of(draft.excludedCourses);
       _excludedSections = List.of(draft.excludedSections);
+      _deferred = List.of(draft.deferred);
+      _advisorReview = draft.advisorReview;
     }
-    _loadHistory();
-
-    if (CourseSectionRepository.hasTerm(_plannedTerm)) {
-      _loadSections();
-    } else {
-      _loadingSections = false;
-    }
-  }
-
-  Future<void> _loadSections() async {
-    try {
-      final sections = await CourseSectionRepository.loadForTerm(_plannedTerm);
-
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        if (sections.isEmpty) {
-          _sections = testCourseSections;
-          _usingRealData = false;
-        } else {
-          _sections = sections;
-          _usingRealData = true;
-        }
-
-        _loadingSections = false;
-      });
-    } catch (_) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        _sections = testCourseSections;
-        _usingRealData = false;
-        _loadingSections = false;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_loadingSections) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Generated Schedule')),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    final preferences =
-        _updatedPreferences ??
+    _preferences =
+        widget.draft?.preferences ??
         PreferencesService.preferences ??
         const SchedulePreferences(
           preferredTime: 'No Preference',
@@ -228,25 +169,61 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           avoidLateClasses: false,
           minimizeGaps: true,
         );
+    _loadHistory();
+    _loadSections();
+  }
 
-    final generatedSchedule = ScheduleGenerationService().generateSchedule(
-      plan: _plan,
-      sections: _permittedSections(),
-      instructors: testInstructors,
-      preferences: preferences,
-      preferredSections: _preferredSections,
-    );
+  Future<void> _loadSections() async {
+    var sections = <CourseSection>[];
+    try {
+      sections = await CourseSectionRepository.loadForTerm(_plannedTerm);
+    } catch (_) {
+      // Retain the demo fallback when imported sections are unavailable.
+    }
+    if (!mounted || _profile != PreferencesService.profileId) return;
+    setState(() {
+      _usingRealData = sections.isNotEmpty;
+      _sections = _usingRealData ? sections : testCourseSections;
+      _schedule = ScheduleGenerationService().generateSchedule(
+        plan: _plan,
+        sections: _permittedSections(),
+        instructors: testInstructors,
+        preferences: _preferences,
+        preferredSections: _preferredSections,
+      );
+    });
+    await _saveDraft();
+  }
 
-    ScheduleDraftService.save(
+  Future<void> _saveDraft() async {
+    if (_profile != PreferencesService.profileId) return;
+    final failed = !await ScheduleDraftService.save(
       ScheduleDraft(
         plan: _plan,
-        schedule: generatedSchedule,
-        preferences: preferences,
+        schedule: _schedule!,
+        preferences: _preferences,
         sectionPreferences: Map.of(_preferredSections),
         excludedCourses: List.of(_excludedCourses),
         excludedSections: List.of(_excludedSections),
+        deferred: List.of(_deferred),
+        advisorReview: _advisorReview,
       ),
     );
+    if (mounted && _draftSaveFailed != failed) {
+      setState(() => _draftSaveFailed = failed);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final generatedSchedule = _schedule;
+    if (generatedSchedule == null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Generated Schedule')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    final preferences = _preferences;
     if (!_initialRequestSent &&
         !_historyLoading &&
         widget.initialRequest != null) {
@@ -285,6 +262,14 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                   color: colors.onSurface.withValues(alpha: 0.65),
                 ),
               ),
+              if (_draftSaveFailed)
+                const Padding(
+                  padding: EdgeInsets.only(top: 8),
+                  child: Text(
+                    'This draft could only be kept for this session.',
+                    textAlign: TextAlign.center,
+                  ),
+                ),
               const SizedBox(height: 24),
               _buildSummary(context, generatedSchedule, preferences),
               if (generatedSchedule.scheduledCredits < preferences.maxCredits)
@@ -372,30 +357,6 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     );
   }
 
-  Map<String, Object?> _scheduleContext(
-    GeneratedSchedule schedule,
-    SchedulePreferences preferences,
-    String question,
-  ) => ScheduleEditContextService.build(
-    program: activeProgram.name,
-    classification: activeStudent.classification,
-    term: _plannedTerm,
-    schedule: schedule,
-    preferences: preferences,
-    candidates: _alternatives,
-    available: _sections
-        .where(
-          (s) =>
-              _plan.items.any((i) => i.courseCode == s.courseCode) ||
-              _alternatives.any((i) => i.course.code == s.courseCode),
-        )
-        .toList(),
-    question: question,
-    excludedCourses: _excludedCourses,
-    excludedSections: _excludedSections,
-    sectionPreferences: _preferredSections,
-  );
-
   Future<void> _editClasses(
     GeneratedSchedule schedule,
     SchedulePreferences preferences,
@@ -475,28 +436,34 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       _assistantStatus = 'Updating your schedule…';
     });
     try {
+      final alternatives = _alternatives;
+      final eligibleCourses = {
+        ...alternatives.map((item) => item.course.code),
+        ..._plan.items.map((item) => item.courseCode).whereType<String>(),
+      };
       final available = _sections
-          .where(
-            (section) =>
-                _plan.items.any(
-                  (item) => item.courseCode == section.courseCode,
-                ) ||
-                _alternatives.any(
-                  (item) => item.course.code == section.courseCode,
-                ),
-          )
+          .where((section) => eligibleCourses.contains(section.courseCode))
           .toList();
       final update =
           manualUpdate ??
           await _assistant.update(
             text,
-            _scheduleContext(schedule, preferences, text),
+            ScheduleEditContextService.build(
+              program: activeProgram.name,
+              classification: activeStudent.classification,
+              term: _plannedTerm,
+              schedule: schedule,
+              preferences: preferences,
+              candidates: alternatives,
+              available: available,
+              question: text,
+              excludedCourses: _excludedCourses,
+              excludedSections: _excludedSections,
+              sectionPreferences: _preferredSections,
+            ),
             preferences,
             available,
-            eligibleCourses: {
-              ..._alternatives.map((item) => item.course.code),
-              ..._plan.items.map((item) => item.courseCode).whereType<String>(),
-            }.toList(),
+            eligibleCourses: eligibleCourses.toList(),
           );
       if (update.needsClarification) {
         if (mounted) {
@@ -531,7 +498,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
 
       final recovery = ScheduleRecoveryService().recover(
         plan: plan,
-        candidates: _alternatives,
+        candidates: alternatives,
         requestedCourses: update.courseChoices,
         sections: workingSections,
         instructors: testInstructors,
@@ -546,7 +513,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         preferences: update.preferences,
         preferredSections: choices,
       );
-      if (!mounted) return;
+      if (!mounted || _profile != PreferencesService.profileId) return;
       final actualNotes = <String>[];
       for (final choice in choices.entries) {
         final matching = available.where(
@@ -653,7 +620,8 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               (item) => !item.section.hasPrimaryMeetingTime,
             );
         _updatedPlan = plan;
-        _updatedPreferences = update.preferences;
+        _preferences = update.preferences;
+        _schedule = rebuilt;
         _preferredSections = choices;
         _excludedCourses = update.excludedCourses;
         _excludedSections = update.excludedSections;
@@ -663,6 +631,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         _request.clear();
       });
       PreferencesService.savePreferences(update.preferences);
+      await _saveDraft();
       if (_historyError == null) {
         try {
           await _history.save(_changes);
@@ -1403,21 +1372,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                                 : () {
                                     _request.text =
                                         'Try to resolve time conflicts for ${unscheduled.planItem.courseCode ?? unscheduled.planItem.title} using available sections. Keep my other preferences.';
-                                    _updateSchedule(
-                                      schedule,
-                                      _updatedPreferences ??
-                                          PreferencesService.preferences ??
-                                          const SchedulePreferences(
-                                            preferredTime: 'No Preference',
-                                            preferredDays: [],
-                                            avoidedDays: [],
-                                            preferredProfessors: [],
-                                            maxCredits: 15,
-                                            avoidEarlyClasses: false,
-                                            avoidLateClasses: false,
-                                            minimizeGaps: true,
-                                          ),
-                                    );
+                                    _updateSchedule(schedule, _preferences);
                                   },
                           ),
                         const SizedBox(height: 8),

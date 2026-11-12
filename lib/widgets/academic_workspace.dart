@@ -33,14 +33,20 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
         });
   }
 
-  int? _openSections(String code) => _sections
-      ?.where(
-        (section) =>
-            section.courseCode == code &&
-            section.isOpen &&
-            section.hasOpenSeats,
-      )
-      .length;
+  Map<String, int>? get _openSections {
+    final sections = _sections;
+    if (sections == null) return null;
+    final counts = <String, int>{};
+    for (final section in sections.where((s) => s.isOpen && s.hasOpenSeats)) {
+      counts.update(
+        section.courseCode,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+    }
+    return counts;
+  }
+
   void _open(BuildContext context, Widget screen) => Navigator.push(
     context,
     MaterialPageRoute(
@@ -58,6 +64,10 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     final current = activeStudent.courses
         .where((course) => course.status == CourseStatus.inProgress)
         .toList();
+    final titles = {
+      for (final course in activeCatalog) course.code: course.title,
+    };
+    final openSections = _openSections;
     final recommended = CoursePriorityService()
         .rankCourses(activeStudent, activeProgram, activeCatalog)
         .where(
@@ -68,7 +78,8 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
         )
         .where(
           (item) =>
-              _sections == null || (_openSections(item.course.code) ?? 0) > 0,
+              openSections == null ||
+              openSections.containsKey(item.course.code),
         )
         .take(3)
         .toList();
@@ -79,35 +90,39 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
         icon: Icons.today_outlined,
         eyebrow: 'FALL 2026',
         title: 'Your current semester',
-        description: '${current.length} courses currently in progress',
+        description:
+            '${current.length} ${current.length == 1 ? 'course' : 'courses'} in progress',
         action: 'View transcript',
         onTap: () => _open(context, const TranscriptScreen()),
         children: [
+          if (current.isEmpty)
+            const Text('No current courses on this transcript.'),
           for (final course in current)
             Padding(
-              padding: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.only(bottom: 12),
               child: Row(
                 children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration: BoxDecoration(
-                      color: colors.secondary,
-                      shape: BoxShape.circle,
-                    ),
+                  Icon(
+                    Icons.menu_book_outlined,
+                    size: 18,
+                    color: colors.primary,
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      course.courseCode,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                  ),
-                  Text(
-                    'In progress',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          titles[course.courseCode] ?? course.courseCode,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        if (titles.containsKey(course.courseCode))
+                          Text(
+                            course.courseCode,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(color: colors.onSurfaceVariant),
+                          ),
+                      ],
                     ),
                   ),
                 ],
@@ -121,11 +136,17 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
         eyebrow: 'SPRING 2027',
         title: 'What could come next',
         description: _sections == null
-            ? 'A shortlist based on your remaining degree requirements.'
-            : 'Eligible degree courses with open Spring section snapshots.',
+            ? 'Based on your remaining degree requirements'
+            : 'Recommended courses with open sections',
         action: 'Explore recommendations',
         onTap: () => _open(context, const CourseRecommendationsScreen()),
         children: [
+          if (recommended.isEmpty)
+            Text(
+              openSections == null
+                  ? 'No eligible courses were found.'
+                  : 'No eligible courses have open sections in this snapshot.',
+            ),
           for (final item in recommended)
             Padding(
               padding: const EdgeInsets.only(bottom: 14),
@@ -145,24 +166,17 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          item.course.code,
+                          item.course.title,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         Text(
-                          item.course.title,
+                          '${item.course.code}'
+                          '${openSections == null ? '' : ' · ${openSections[item.course.code]} open ${openSections[item.course.code] == 1 ? 'section' : 'sections'}'}',
                           style: TextStyle(
                             fontSize: 12,
                             color: colors.onSurfaceVariant,
                           ),
                         ),
-                        if (_openSections(item.course.code) != null)
-                          Text(
-                            '${_openSections(item.course.code)} open ${_openSections(item.course.code) == 1 ? 'section' : 'sections'} in snapshot',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
                         if (item.eligibility.status ==
                             EligibilityStatus.eligibleAfterCurrentTerm)
                           Text(
@@ -194,31 +208,12 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            const SizedBox(width: 32),
-            Expanded(
-              child: Text(
-                textAlign: TextAlign.center,
-                'Your academic workspace',
-                style: Theme.of(context).textTheme.headlineSmall
-                    ?.copyWith(fontWeight: FontWeight.w800),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(Icons.space_dashboard_outlined, color: colors.primary),
-          ],
+        Text(
+          'Your academic workspace',
+          style: Theme.of(context).textTheme.headlineSmall
+              ?.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 6),
-        SizedBox(
-          width: double.infinity,
-          child: Text(
-            textAlign: TextAlign.center,
-            'This semester and what comes next.',
-            style: TextStyle(color: colors.onSurfaceVariant),
-          ),
-        ),
-        const SizedBox(height: 18),
+        const SizedBox(height: 14),
         if (AppDesignTokens.of(context).design == AppDesign.sharp) ...[
           SegmentedButton<int>(
             segments: const [
@@ -282,6 +277,7 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
   }) {
     final colors = Theme.of(context).colorScheme;
     return Card(
+      margin: EdgeInsets.zero,
       child: Padding(
         padding: EdgeInsets.all(
           AppDesignTokens.of(context).design == AppDesign.soft ? 26 : 22,
@@ -305,30 +301,18 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
               ],
             ),
             const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Text(
-                    textAlign: TextAlign.center,
-                    title,
-                    style: Theme.of(context).textTheme.titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    textAlign: TextAlign.center,
-                    description,
-                    style: TextStyle(
-                      color: colors.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
-                  ),
-                ],
-              ),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
-            const SizedBox(height: 22),
+            const SizedBox(height: 5),
+            Text(
+              description,
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 16),
             ...children,
             const SizedBox(height: 10),
             OutlinedButton.icon(

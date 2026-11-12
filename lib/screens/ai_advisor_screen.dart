@@ -241,7 +241,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           );
         } else {
           answer = const AdvisorReply(
-            'Generate a schedule first, then I can apply changes to that draft. Open the builder below; I cannot change a timetable that has not been generated in this session.',
+            'Open the builder and generate a schedule first. Then I can apply changes to that draft.',
             [AdvisorAction('navigate', 'scheduleBuilder')],
           );
         }

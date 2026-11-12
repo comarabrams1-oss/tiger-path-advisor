@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tiger_path/screens/generated_schedule_screen.dart';
 import 'package:tiger_path/services/schedule_assistant_service.dart';
 import 'package:tiger_path/services/semester_plan_service.dart';
@@ -15,6 +16,7 @@ void main() {
   testWidgets(
     'schedule request updates the builder in place and rejects invented sections',
     (tester) async {
+      SharedPreferences.setMockInitialValues({});
       rootBundle.clear();
       tester.binding.defaultBinaryMessenger.setMockMessageHandler(
         'flutter/assets',

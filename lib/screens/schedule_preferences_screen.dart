@@ -4,6 +4,8 @@ import '../widgets/info_tip.dart';
 
 import '../models/schedule_preferences.dart';
 import '../services/preferences_service.dart';
+import '../services/schedule_draft_service.dart';
+import 'generated_schedule_screen.dart';
 import 'semester_plan_screen.dart';
 import '../data/test_student.dart';
 import '../data/program_registry.dart';
@@ -68,7 +70,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
       preferredTime: preferredTime,
       preferredDays: preferredDays.toList(),
       avoidedDays: avoidedDays.toList(),
-      preferredProfessors: preferredProfessors,
+      preferredProfessors: List.of(preferredProfessors),
       maxCredits: maxCredits,
       avoidEarlyClasses: avoidEarlyClasses,
       avoidLateClasses: avoidLateClasses,
@@ -89,7 +91,10 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const SemesterPlanScreen()),
+      MaterialPageRoute<void>(
+        settings: const RouteSettings(name: 'SemesterPlanScreen'),
+        builder: (_) => const SemesterPlanScreen(),
+      ),
     );
   }
 
@@ -143,6 +148,40 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              ValueListenableBuilder<int>(
+                valueListenable: ScheduleDraftService.revision,
+                builder: (context, _, _) {
+                  final draft = ScheduleDraftService.current;
+                  if (draft == null) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Card(
+                      margin: EdgeInsets.zero,
+                      color: colors.secondaryContainer,
+                      child: ListTile(
+                        title: const Text('Continue schedule'),
+                        subtitle: const Text('Spring 2027 draft'),
+                        leading: const Icon(Icons.calendar_month_outlined),
+                        trailing: const Icon(Icons.arrow_forward),
+                        textColor: colors.onSecondaryContainer,
+                        iconColor: colors.onSecondaryContainer,
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: 'GeneratedScheduleScreen',
+                            ),
+                            builder: (_) => GeneratedScheduleScreen(
+                              plan: draft.plan,
+                              draft: draft,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
               Text(
                 textAlign: TextAlign.center,
                 activeStudent.classification.toLowerCase() == 'freshman'
