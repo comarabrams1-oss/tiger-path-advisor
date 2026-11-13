@@ -146,6 +146,12 @@ void main() {
       isFalse,
     );
     expect(
+      ScheduleDraftService.isEditRequest(
+        'I want to know what class CSC 237 covers and who teaches it',
+      ),
+      isFalse,
+    );
+    expect(
       ScheduleDraftService.isEditRequest('Change to the classic layout'),
       isFalse,
     );

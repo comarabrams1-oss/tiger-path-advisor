@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../models/course_section.dart';
 import '../models/schedule_preferences.dart';
+import 'advisor_endpoint.dart';
 
 class ScheduleUpdate {
   final List<String> excludedCourses;
@@ -31,7 +32,7 @@ class ScheduleAssistantService {
   final Uri endpoint;
   ScheduleAssistantService({http.Client? client, Uri? endpoint})
     : _client = client ?? http.Client(),
-      endpoint = endpoint ?? Uri.base.resolve('/.netlify/functions/advisor');
+      endpoint = endpoint ?? advisorEndpoint;
 
   /// Preserve one unambiguous numeric credit request even if the model
   /// accidentally echoes the old limit. Complex/range requests stay with Gemini.

@@ -41,7 +41,10 @@ void main() {
           expect(find.text('Spring 2027 recommendations'), findsOneWidget);
           expect(find.text('Fall 2026 courses'), findsNothing);
         } else if (design == AppDesign.soft) {
-          expect(find.byType(ListTile), findsNWidgets(6));
+          expect(
+            find.byType(ListTile),
+            findsNWidgets(WorkspaceShell.labels.length),
+          );
         } else {
           expect(find.byType(NavigationRail), findsNothing);
           expect(find.text('Fall 2026 courses'), findsOneWidget);

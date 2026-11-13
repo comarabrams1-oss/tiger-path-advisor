@@ -1,0 +1,8 @@
+[
+  {"id": "introduction", "text": "Tell me about yourself."},
+  {"id": "motivation", "text": "Why do you want this job?"},
+  {"id": "strength", "text": "What is one of your strengths?"},
+  {"id": "growth", "text": "What is one weakness you are working on?"},
+  {"id": "fit", "text": "Why should we hire you?"},
+  {"id": "leadership", "text": "Describe a time you led a team."}
+]

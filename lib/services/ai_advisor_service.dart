@@ -3,6 +3,8 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import 'advisor_endpoint.dart';
+
 class AdvisorAction {
   final String? request;
   final String type;
@@ -34,6 +36,7 @@ class AdvisorAction {
     'scheduleBuilder',
     'themeStudio',
     'programLibrary',
+    'readiness',
   ];
   static const designs = ['classic', 'soft', 'sharp'];
   static AdvisorAction? parse(dynamic value) {
@@ -131,7 +134,7 @@ class AiAdvisorService {
   final Uri endpoint;
   AiAdvisorService({http.Client? client, Uri? endpoint})
     : _client = client ?? http.Client(),
-      endpoint = endpoint ?? Uri.base.resolve('/.netlify/functions/advisor');
+      endpoint = endpoint ?? advisorEndpoint;
 
   Future<AdvisorReply> respond(
     List<AdvisorMessage> messages,

@@ -56,6 +56,7 @@ void main() {
           'Degree',
           'Plan',
           'Advisor',
+          'Readiness',
           'Style',
           'Home',
         ]) {

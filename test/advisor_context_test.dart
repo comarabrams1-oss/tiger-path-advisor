@@ -12,6 +12,73 @@ import 'package:tiger_path/services/course_priority_service.dart';
 import 'package:tiger_path/services/course_section_repository.dart';
 
 void main() {
+  Map<String, Object?> contextFor(
+    String question, {
+    List<String> earlier = const [],
+  }) => AdvisorContextService().build(
+    student: testStudent,
+    program: benedictComputerScience2024,
+    catalog: computerScienceCourseCatalog,
+    sections: [],
+    sectionsAvailable: false,
+    term: CourseSectionRepository.spring2027Term,
+    question: question,
+    earlierMessages: earlier,
+  );
+
+  test(
+    'course overviews work by code, name, or follow-up without section data',
+    () {
+      for (final question in [
+        'What is CSC338 about?',
+        'What do you learn in Intro to AI?',
+        'Tell me about Introduction to Artificial Intelligence',
+        'What is it about?',
+      ]) {
+        final context = contextFor(
+          question,
+          earlier: ['Tell me about CSC 338'],
+        );
+        final reply = AdvisorContextService.courseOverview(question, context);
+        expect(reply, contains('CSC 338'));
+        expect(reply, contains('reinforcement learning'));
+        expect(reply, contains('p. 284'));
+        final course = (context['focusedCourses'] as List).single as Map;
+        expect(course['eligibility'], isA<Map>());
+        expect(course.containsKey('openSections'), isFalse);
+      }
+    },
+  );
+
+  test(
+    'ambiguous names ask for the course and mixed questions go to Gemini',
+    () {
+      const ambiguous = 'What is Physics II about?';
+      final reply = AdvisorContextService.courseOverview(
+        ambiguous,
+        contextFor(ambiguous),
+      );
+      expect(reply, contains('Which course'));
+      expect(reply, contains('PHYS 232'));
+      expect(reply, contains('PHYS 234'));
+      const mixed = 'What is Java Programming about and who teaches it?';
+      expect(
+        AdvisorContextService.courseOverview(mixed, contextFor(mixed)),
+        isNull,
+      );
+      const unrelated = 'What do you know about internships?';
+      expect(
+        AdvisorContextService.courseOverview(unrelated, contextFor(unrelated)),
+        isNull,
+      );
+      const unknown = 'What is ZZZ999 about?';
+      expect(
+        AdvisorContextService.courseOverview(unknown, contextFor(unknown)),
+        contains('verified description'),
+      );
+    },
+  );
+
   test('AI context preserves computed eligibility and excludes identity', () {
     final context = AdvisorContextService().build(
       student: testStudent,

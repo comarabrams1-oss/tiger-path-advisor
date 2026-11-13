@@ -223,6 +223,11 @@ class ScheduleDraftService {
 
   static bool isEditRequest(String text) {
     final value = text.toLowerCase();
+    if (RegExp(
+      r"\b(?:i (?:want|would like)|i'd like) to (?:know|learn about|understand|ask)\b",
+    ).hasMatch(value)) {
+      return false;
+    }
     if (RegExp(r'\b(change|switch) (my |the )?(major|program|classification)\b')
         .hasMatch(value)) {
       return false;

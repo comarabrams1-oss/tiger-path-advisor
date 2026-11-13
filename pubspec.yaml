@@ -25,6 +25,7 @@ flutter:
     - assets/images/
     - assets/data/course_sections_fall_2026.json
     - assets/data/course_sections_spring_2027.json
+    - assets/data/interview_questions.json
     - assets/fonts/OFL-SourceSans3.txt
     - assets/fonts/OFL-Spectral.txt
   fonts:

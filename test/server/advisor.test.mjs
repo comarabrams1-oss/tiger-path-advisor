@@ -76,3 +76,39 @@ test('program review context and allowlisted layout/library actions reach the ap
     assert.deepEqual((await result.json()).actions,[{type:'changeDesign',target:'sharp'},{type:'navigate',target:'programLibrary'}]);
   } finally {globalThis.fetch=originalFetch;process.env=old;}
 });
+
+test('interview mode uses the saved question, sends only the practice content, and verifies scores', async () => {
+  const originalFetch = globalThis.fetch;
+  const old = {...process.env};
+  try {
+    process.env.AI_ENABLED = 'true';
+    process.env.GEMINI_API_KEY = 'test-only';
+    process.env.GEMINI_MODEL = 'test-model';
+    const practice = {mode: 'interview', questionId: 'leadership', answer: 'I led a class project.'};
+    let output = {relevance: 4, specificity: 2, clarity: 4, strength: 'You answered directly.', nextStep: 'Add what you did and how the project turned out.'};
+    let calls = 0;
+    globalThis.fetch = async (_url, options) => {
+      calls++;
+      const payload = JSON.parse(options.body);
+      assert(payload.systemInstruction.parts[0].text.includes('practice coach'));
+      assert.equal(payload.contents.length, 1);
+      assert.deepEqual(JSON.parse(payload.contents[0].parts[0].text), {
+        question: 'Describe a time you led a team.',
+        answer: 'I led a class project.',
+      });
+      assert.equal(payload.generationConfig.responseJsonSchema.properties.relevance.maximum, 5);
+      return Response.json({candidates: [{content: {parts: [{text: JSON.stringify(output)}]}}]});
+    };
+    assert.equal((await handler(request({...practice, questionId: 'invented'}))).status, 400);
+    assert.equal((await handler(request({...practice, answer: ' '.repeat(20)}))).status, 400);
+    assert.equal(calls, 0);
+    const result = await handler(request({...practice, profileId: 'private', context: {name: 'private'}}));
+    assert.equal(result.status, 200);
+    assert.deepEqual(await result.json(), output);
+    output = {...output, specificity: 99};
+    assert.equal((await (await handler(request(practice))).json()).code, 'INVALID_RESPONSE');
+  } finally {
+    globalThis.fetch = originalFetch;
+    process.env = old;
+  }
+});

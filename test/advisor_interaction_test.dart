@@ -110,6 +110,11 @@ void main() {
     );
     await tester.pumpWidget(app('first'));
     await settle(tester);
+    await tester.enterText(find.byType(TextField), 'What is CSC 434 about?');
+    await tester.sendKeyEvent(LogicalKeyboardKey.enter);
+    await settle(tester);
+    expect(find.textContaining('relational design'), findsOneWidget);
+    expect(latestChanges, isNull);
     await tester.enterText(find.byType(TextField), 'Change to Gold & Black');
     await tester.sendKeyEvent(LogicalKeyboardKey.enter);
     await settle(tester);
@@ -122,7 +127,7 @@ void main() {
     expect((await ThemeService.load()).preset, AppThemePreset.goldBlack);
     expect(
       (await const AdvisorHistoryService().load()).single.messages,
-      hasLength(2),
+      hasLength(4),
     );
     await tester.pumpWidget(app('reopen'));
     await settle(tester);

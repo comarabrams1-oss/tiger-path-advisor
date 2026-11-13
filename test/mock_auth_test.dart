@@ -36,6 +36,10 @@ void main() {
       expect(session.email, 'demo.student@my.benedict.edu');
       expect((await auth.restore())?.profileId, session.profileId);
       expect(
+        (await auth.signIn(' Demo.Student ', remember: true)).profileId,
+        session.profileId,
+      );
+      expect(
         (await auth.signIn('other@my.benedict.edu', remember: false)).profileId,
         isNot(session.profileId),
       );
@@ -74,15 +78,10 @@ void main() {
     await tester.enterText(find.byType(TextFormField), 'student@gmail.com');
     await tester.tap(find.text('Continue to Tiger Path'));
     await settle(tester);
-    expect(
-      find.text('Use your @my.benedict.edu student email.'),
-      findsOneWidget,
-    );
-    await tester.enterText(
-      find.byType(TextFormField),
-      'demo.student@my.benedict.edu',
-    );
-    await tester.tap(find.text('Continue to Tiger Path'));
+    expect(find.text('Enter your Benedict student username.'), findsOneWidget);
+    expect(find.text('@my.benedict.edu'), findsOneWidget);
+    await tester.enterText(find.byType(TextFormField), 'demo.student');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
     await settle(tester);
     expect(find.text('demo.student@my.benedict.edu'), findsOneWidget);
     expect(find.text('Tiger Path Advisor'), findsWidgets);

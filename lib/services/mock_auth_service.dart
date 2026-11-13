@@ -11,14 +11,20 @@ class MockStudentSession {
 
 /// Demo identity only: no password, email verification, or server authentication.
 class MockAuthService {
+  static const studentDomain = 'my.benedict.edu';
   static const _key = 'mock_student_session_v1';
   static String normalize(String email) => email.trim().toLowerCase();
+  static String emailForSignIn(String input) {
+    final value = normalize(input);
+    return value.contains('@') ? value : '$value@$studentDomain';
+  }
+
   static bool isStudentEmail(String email) {
     final value = normalize(email);
     if (value.length > 254) return false;
     final parts = value.split('@');
     return parts.length == 2 &&
-        parts.last == 'my.benedict.edu' &&
+        parts.last == studentDomain &&
         parts.first.length <= 64 &&
         !parts.first.contains('..') &&
         RegExp(r'^[a-z0-9](?:[a-z0-9._+-]*[a-z0-9])?$').hasMatch(parts.first);
@@ -32,14 +38,14 @@ class MockAuthService {
   }
 
   Future<MockStudentSession> signIn(
-    String email, {
+    String usernameOrEmail, {
     required bool remember,
   }) async {
-    if (!isStudentEmail(email)) {
+    final normalized = emailForSignIn(usernameOrEmail);
+    if (!isStudentEmail(normalized)) {
       throw const FormatException('Use your @my.benedict.edu student email.');
     }
     final preferences = await SharedPreferences.getInstance();
-    final normalized = normalize(email);
     final ok = remember
         ? await preferences.setString(_key, normalized)
         : await preferences.remove(_key);

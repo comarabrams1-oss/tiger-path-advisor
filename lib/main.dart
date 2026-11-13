@@ -6,6 +6,7 @@ import 'screens/degree_progress_screen.dart';
 import 'screens/schedule_preferences_screen.dart';
 import 'screens/generated_schedule_screen.dart';
 import 'screens/ai_advisor_screen.dart';
+import 'screens/readiness_screen.dart';
 import 'screens/theme_settings_screen.dart';
 import 'services/theme_service.dart';
 import 'services/preferences_service.dart';
@@ -47,6 +48,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
       'SemesterPlanScreen': 3,
       'AiAdvisorScreen': 4,
       'ThemeSettingsScreen': 5,
+      'ReadinessScreen': 6,
     };
     final index =
         names[route?.settings.name] ?? (route?.isFirst == true ? 0 : null);
@@ -134,6 +136,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
           profileId: _session?.profileId ?? 'demo-cs-2024',
         ),
       ),
+      6 => ReadinessScreen(profileId: _session?.profileId ?? 'demo-cs-2024'),
       _ => ThemeSettingsScreen(
         currentPreset: _themePreset,
         currentCustomTheme: _customTheme,
@@ -149,6 +152,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
             2 => 'DegreeProgressScreen',
             3 => 'SchedulePreferencesScreen',
             4 => 'AiAdvisorScreen',
+            6 => 'ReadinessScreen',
             _ => 'ThemeSettingsScreen',
           },
         ),

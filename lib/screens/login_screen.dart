@@ -15,7 +15,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final _email = TextEditingController();
+  final _username = TextEditingController();
   final _form = GlobalKey<FormState>();
   bool _remember = true;
   bool _busy = false;
@@ -28,7 +28,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       final session = await (widget.auth ?? MockAuthService()).signIn(
-        _email.text,
+        _username.text,
         remember: _remember,
       );
       if (mounted) await widget.onSignedIn(session);
@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   void dispose() {
-    _email.dispose();
+    _username.dispose();
     super.dispose();
   }
 
@@ -166,20 +166,36 @@ class _LoginScreenState extends State<LoginScreen> {
           Center(child: Text('Sign in', style: theme.textTheme.headlineSmall)),
           const SizedBox(height: 14),
           TextFormField(
-            controller: _email,
+            controller: _username,
             enabled: !_busy,
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.done,
             autocorrect: false,
             enableSuggestions: false,
             onFieldSubmitted: (_) => _signIn(),
-            decoration: const InputDecoration(
-              labelText: 'Student email',
-              hintText: 'your.name@my.benedict.edu',
+            decoration: InputDecoration(
+              labelText: 'Student username',
+              hintText: 'first.last',
+              suffixIcon: Align(
+                widthFactor: 1,
+                heightFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 12),
+                  child: Text(
+                    '@${MockAuthService.studentDomain}',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ),
             ),
-            validator: (value) => MockAuthService.isStudentEmail(value ?? '')
+            validator: (value) =>
+                MockAuthService.isStudentEmail(
+                  MockAuthService.emailForSignIn(value ?? ''),
+                )
                 ? null
-                : 'Use your @my.benedict.edu student email.',
+                : 'Enter your Benedict student username.',
           ),
           CheckboxListTile(
             contentPadding: EdgeInsets.zero,
@@ -241,7 +257,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: _busy
                     ? null
                     : () {
-                        _email.text = entry.key;
+                        _username.text = entry.key.split('@').first;
                         _signIn();
                       },
                 child: Row(

@@ -20,6 +20,7 @@ class WorkspaceShell extends StatelessWidget {
     'Plan',
     'Advisor',
     'Style',
+    'Readiness',
   ];
   static const icons = [
     Icons.space_dashboard_outlined,
@@ -28,6 +29,7 @@ class WorkspaceShell extends StatelessWidget {
     Icons.calendar_month_outlined,
     Icons.chat_bubble_outline,
     Icons.tune,
+    Icons.work_outline,
   ];
   static bool usesWideNavigation(AppDesign design, double width) =>
       width >= (design == AppDesign.classic ? 1200 : 1000);
@@ -46,6 +48,15 @@ class WorkspaceShell extends StatelessWidget {
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
             indicatorColor: colors.secondaryContainer,
             height: 72,
+            labelTextStyle: WidgetStateProperty.resolveWith((states) {
+              final theme = Theme.of(context);
+              return theme.textTheme.labelMedium?.copyWith(
+                fontSize: constraints.maxWidth < 410 ? 10 : 12,
+                color: states.contains(WidgetState.selected)
+                    ? colors.onSurface
+                    : colors.onSurfaceVariant,
+              );
+            }),
             onDestinationSelected: onNavigate,
             destinations: [
               for (var index = 0; index < labels.length; index++)

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
+import '../models/course_section.dart';
 import '../models/student.dart';
 import '../services/advisor_context_service.dart';
 import '../services/advisor_app_actions.dart';
@@ -19,6 +20,7 @@ import 'course_recommendations_screen.dart';
 import 'schedule_preferences_screen.dart';
 import 'theme_settings_screen.dart';
 import 'program_library_screen.dart';
+import 'readiness_screen.dart';
 import 'generated_schedule_screen.dart';
 import '../services/schedule_draft_service.dart';
 import '../services/schedule_assistant_service.dart';
@@ -69,10 +71,26 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   }
 
   Future<Map<String, Object?>> _buildContext([String question = '']) async {
-    final term = RegExp(r'fall\s*2026', caseSensitive: false).hasMatch(question)
+    final messages = _messages.reversed.where((m) => m.role == 'user');
+    final termPattern = RegExp(
+      r'\b(fall\s*2026|spring\s*2027)\b',
+      caseSensitive: false,
+    );
+    final termMention = [
+      question,
+      ...messages.take(5).map((m) => m.text),
+    ].map(termPattern.firstMatch).whereType<RegExpMatch>().firstOrNull;
+    final term = termMention?[1]?.toLowerCase().startsWith('fall') == true
         ? CourseSectionRepository.fall2026Term
         : CourseSectionRepository.spring2027Term;
-    final sections = await CourseSectionRepository.loadForTerm(term);
+    var sectionsAvailable = true;
+    List<CourseSection> sections = [];
+    try {
+      sections = await CourseSectionRepository.loadForTerm(term);
+      sectionsAvailable = sections.isNotEmpty;
+    } catch (_) {
+      sectionsAvailable = false;
+    }
     final context = AdvisorContextService().build(
       student: widget.student,
       program: programFor(widget.student),
@@ -80,9 +98,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       sections: sections,
       term: term,
       question: question,
+      earlierMessages: messages.take(5).map((m) => m.text),
+      sectionsAvailable: sectionsAvailable,
     );
     final theme = await ThemeService.load();
-    if (ScheduleDraftService.current case final draft?) {
+    if (ScheduleDraftService.current case final draft?
+        when term == CourseSectionRepository.spring2027Term) {
       context['schedule'] = draft.explanationContext;
     }
     context['currentTheme'] = theme.preset.name;
@@ -227,8 +248,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             ),
           )
           .toList();
-      final AdvisorReply answer;
-      if (ScheduleDraftService.isEditRequest(text)) {
+      AdvisorReply answer;
+      final overview = AdvisorContextService.courseOverview(text, fresh);
+      if (overview != null) {
+        answer = AdvisorReply(overview, []);
+      } else if (ScheduleDraftService.isEditRequest(text)) {
         if (text.length > 1000) {
           answer = const AdvisorReply(
             'Please keep a schedule change request under 1,000 characters.',
@@ -246,7 +270,17 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           );
         }
       } else {
-        answer = await _service.respond(recent, fresh);
+        try {
+          answer = await _service.respond(recent, fresh);
+        } on AdvisorException catch (error) {
+          final fallback = AdvisorContextService.courseOverview(
+            text,
+            fresh,
+            includeMixedQuestions: true,
+          );
+          if (fallback == null || !fresh.containsKey('focusedCourses')) rethrow;
+          answer = AdvisorReply('$fallback\n\n${error.message}', []);
+        }
       }
       if (!mounted) return;
       setState(() {
@@ -397,6 +431,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       'recommendations' => 'View Needed Classes',
       'scheduleBuilder' => 'Open Schedule Builder',
       'programLibrary' => 'Open Programs of Study',
+      'readiness' => 'Open Readiness',
       _ => 'Open Theme Studio',
     };
   }
@@ -482,6 +517,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             page = const SchedulePreferencesScreen();
           case 'programLibrary':
             page = const ProgramLibraryScreen();
+          case 'readiness':
+            page = ReadinessScreen(profileId: widget.history.profileId);
           default:
             final settings = await ThemeService.load();
             if (!mounted) return;
@@ -503,6 +540,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 'recommendations' => 'CourseRecommendationsScreen',
                 'scheduleBuilder' => 'SchedulePreferencesScreen',
                 'programLibrary' => 'ProgramLibraryScreen',
+                'readiness' => 'ReadinessScreen',
                 _ => 'ThemeSettingsScreen',
               },
             ),
@@ -655,6 +693,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         for (final question in [
           'What should I take in Spring 2027?',
           'What classes do I still need?',
+          'What is CSC 338 about?',
         ])
           TextButton.icon(
             onPressed: _context == null || _busy ? null : () => _send(question),
