@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 
+import '../themes/app_theme.dart';
 import '../widgets/info_tip.dart';
 import '../widgets/manual_schedule_editor.dart';
 import '../widgets/non_timetabled_courses.dart';
@@ -191,7 +192,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     super.dispose();
   }
 
-  ScheduleView selectedView = ScheduleView.weekly;
+  ScheduleView? _selectedView;
   List<CourseSection> _sections = const [];
   bool _sectionLoadFailed = false;
   (DateTime, DateTime)? _termDates;
@@ -362,132 +363,117 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         _updateSchedule(generatedSchedule, preferences);
       });
     }
-    final colors = Theme.of(context).colorScheme;
-
     return Scaffold(
       appBar: AppBar(title: const Text('Generated Schedule')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 1200),
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              Text(
-                textAlign: TextAlign.center,
-                'Your Semester Schedule',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                textAlign: TextAlign.center,
-                'Spring 2027 · Planning draft for advisor review',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: colors.onSurface.withValues(alpha: 0.65),
-                ),
-              ),
-              if (_draftSaveFailed)
-                const Padding(
-                  padding: EdgeInsets.only(top: 8),
-                  child: Text(
-                    'This draft could only be kept for this session.',
+          child: LayoutBuilder(
+            builder: (context, size) {
+              final view =
+                  _selectedView ??
+                  (size.maxWidth < 720
+                      ? ScheduleView.list
+                      : ScheduleView.weekly);
+              return ListView(
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Text(
+                    'Spring 2027 schedule',
                     textAlign: TextAlign.center,
+                    style: AppThemes.pageTitle(context),
                   ),
-                ),
-              const SizedBox(height: 24),
-              _buildSummary(context, generatedSchedule, preferences),
-              if (generatedSchedule.scheduledCredits < preferences.maxCredits)
-                Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          '${generatedSchedule.scheduledCredits.toInt()} of ${preferences.maxCredits} credits scheduled · advisor review needed',
-                        ),
+                  const SizedBox(height: 6),
+                  const Text('Planning draft', textAlign: TextAlign.center),
+                  if (_draftSaveFailed)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'This draft could only be kept for this session.',
+                        textAlign: TextAlign.center,
                       ),
-                      InfoTip(
-                        label: 'About the credit gap',
-                        message: _plan.shortfallReason ?? 'No verified combination filled the remaining credits under the current constraints.',
-                      ),
-                    ],
-                  ),
-                ),
-              const SizedBox(height: 12),
-              OutlinedButton.icon(
-                onPressed: _updating || _historyLoading
-                    ? null
-                    : () => _editClasses(generatedSchedule, preferences),
-                icon: const Icon(Icons.edit_calendar_outlined),
-                label: const Text('Add or edit classes'),
-              ),
-              _buildAssistant(context, generatedSchedule, preferences),
-              if (_deferred.isNotEmpty)
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Deferred from this term: ${_deferred.map((item) => item.courseCode ?? item.title).toSet().join(", ")}. Still required for your degree.',
+                    ),
+                  const SizedBox(height: 14),
+                  _buildSummary(context, generatedSchedule, preferences),
+                  const SizedBox(height: 12),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: OutlinedButton.icon(
+                      onPressed: _updating || _historyLoading
+                          ? null
+                          : () => _editClasses(generatedSchedule, preferences),
+                      icon: const Icon(Icons.edit_calendar_outlined, size: 18),
+                      label: const Text('Add or edit classes'),
                     ),
                   ),
-                ),
-              if (_advisorReview ||
-                  generatedSchedule.scheduled.any(
-                    (item) =>
-                        item.planItem.projectedEligibility ||
-                        item.section.needsMeetingConfirmation,
-                  ))
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Advisor review needed before registration.',
+                  const SizedBox(height: 10),
+                  _buildAssistant(context, generatedSchedule, preferences),
+                  if (_advisorReview ||
+                      _deferred.isNotEmpty ||
+                      generatedSchedule.scheduled.any(
+                        (item) =>
+                            item.planItem.projectedEligibility ||
+                            item.section.needsMeetingConfirmation,
+                      ))
+                    Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Advisor review needed before registration.',
+                              style: TextStyle(fontWeight: FontWeight.w600),
+                            ),
+                            if (_deferred.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  'Deferred requirements\n${_deferred.map((item) => item.courseCode ?? item.title).toSet().join(', ')}',
+                                ),
+                              ),
+                            for (final item
+                                in generatedSchedule.scheduled.where(
+                                  (i) => i.planItem.projectedEligibility,
+                                ))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  '${item.planItem.courseCode}: ${item.planItem.priority?.eligibility.reason ?? 'Current prerequisites must be passed first.'}',
+                                ),
+                              ),
+                            for (final item
+                                in generatedSchedule.scheduled.where(
+                                  (i) => i.section.needsMeetingConfirmation,
+                                ))
+                              Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(
+                                  '${item.section.courseCode} needs missing meeting days or times confirmed.',
+                                ),
+                              ),
+                          ],
                         ),
-                        for (final item in generatedSchedule.scheduled.where(
-                          (i) => i.planItem.projectedEligibility,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              '${item.planItem.courseCode}: ${item.planItem.priority?.eligibility.reason ?? 'Current prerequisites must be passed first.'}',
-                            ),
-                          ),
-                        for (final item in generatedSchedule.scheduled.where(
-                          (i) => i.section.needsMeetingConfirmation,
-                        ))
-                          Padding(
-                            padding: const EdgeInsets.only(top: 8),
-                            child: Text(
-                              '${item.section.courseCode} needs missing meeting days or times confirmed.',
-                            ),
-                          ),
-                      ],
+                      ),
                     ),
-                  ),
-                ),
 
-              const SizedBox(height: 22),
-              _buildViewToggle(context),
-              const SizedBox(height: 20),
-              if (selectedView == ScheduleView.weekly)
-                _buildWeeklyView(context, generatedSchedule)
-              else
-                _buildListView(context, generatedSchedule),
-              if (generatedSchedule.unscheduled.isNotEmpty) ...[
-                const SizedBox(height: 30),
-                _buildUnscheduledSection(context, generatedSchedule),
-              ],
-              const SizedBox(height: 24),
-              _buildDataNotice(context),
-              const SizedBox(height: 20),
-            ],
+                  const SizedBox(height: 22),
+                  _buildViewToggle(view),
+                  const SizedBox(height: 20),
+                  if (view == ScheduleView.weekly)
+                    _buildWeeklyView(context, generatedSchedule)
+                  else
+                    _buildListView(context, generatedSchedule),
+                  if (generatedSchedule.unscheduled.isNotEmpty) ...[
+                    const SizedBox(height: 30),
+                    _buildUnscheduledSection(context, generatedSchedule),
+                  ],
+                  const SizedBox(height: 24),
+                  _buildDataNotice(context),
+                  const SizedBox(height: 20),
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -816,26 +802,18 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
         children: [
           Row(
             children: [
-              const SizedBox(width: 48),
-              const Expanded(
+              Expanded(
                 child: Text(
-                  'Build with Tiger Path',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
+                  'Schedule changes',
+                  style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               const InfoTip(
                 label: 'How schedule updates work',
-                message: 'Tiger Path checks prerequisites, lab pairings, availability and time conflicts. Preferences are flexible. Updates change this draft only; registration and required approvals still need review.',
+                message: 'Updates use open sections, prerequisites, lab pairings and meeting times. Confirm your draft with your advisor before registration.',
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          const Text(
-            textAlign: TextAlign.center,
-            'Ask for a credit goal, different times, or another section.',
-          ),
-          const SizedBox(height: 12),
           TextField(
             controller: _request,
             enabled: !_updating && !_historyLoading,
@@ -844,29 +822,33 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             onSubmitted: (_) => _updateSchedule(schedule, preferences),
             decoration: const InputDecoration(
               labelText: 'Change my schedule',
-              hintText: 'Get me to 16 credits, try mornings, or avoid Friday…',
-              border: OutlineInputBorder(),
+              hintText: 'For example, try mornings or avoid Friday',
             ),
           ),
-          FilledButton.icon(
-            onPressed: _updating || _historyLoading
-                ? null
-                : () => _updateSchedule(schedule, preferences),
-            icon: _updating
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.auto_awesome),
-            label: Text(_updating ? 'Updating…' : 'Update schedule'),
-          ),
-          OutlinedButton.icon(
-            onPressed: _updating || _historyLoading
-                ? null
-                : () => _resolveSchedule(schedule, preferences),
-            icon: const Icon(Icons.build_circle_outlined),
-            label: const Text('Resolve issues and fill schedule'),
+          Wrap(
+            spacing: 10,
+            runSpacing: 8,
+            children: [
+              FilledButton.icon(
+                onPressed: _updating || _historyLoading
+                    ? null
+                    : () => _updateSchedule(schedule, preferences),
+                icon: _updating
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.arrow_forward, size: 18),
+                label: Text(_updating ? 'Updating…' : 'Update schedule'),
+              ),
+              OutlinedButton(
+                onPressed: _updating || _historyLoading
+                    ? null
+                    : () => _resolveSchedule(schedule, preferences),
+                child: const Text('Resolve issues and fill schedule'),
+              ),
+            ],
           ),
           if (_assistantStatus != null)
             Padding(
@@ -911,7 +893,6 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             initiallyExpanded: false,
             tilePadding: EdgeInsets.zero,
             title: Text('Change log (${_changes.length})'),
-            subtitle: const Text('Saved on this device · latest 20 updates'),
             children: [
               if (_changes.isEmpty)
                 const ListTile(title: Text('No schedule updates yet.')),
@@ -941,197 +922,74 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     GeneratedSchedule schedule,
     SchedulePreferences preferences,
   ) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: colors.primary,
-        borderRadius: BorderRadius.circular(22),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 650;
-
-          final items = [
-            _summaryItem(
-              context,
-              Icons.school_outlined,
-              '${schedule.scheduled.length}',
-              'Courses',
-            ),
-            _summaryItem(
-              context,
-              Icons.menu_book_outlined,
-              '${schedule.scheduledCredits.toInt()}',
-              'Credits',
-            ),
-            _summaryItem(
-              context,
-              Icons.schedule_outlined,
-              preferences.preferredTime,
-              'Preferred Time',
-            ),
-            _summaryItem(
-              context,
-              Icons.warning_amber_outlined,
-              '${schedule.unscheduled.length}',
-              'Unresolved',
-            ),
-          ];
-
-          if (compact) {
-            return Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: items[0]),
-                    const SizedBox(width: 10),
-                    Expanded(child: items[1]),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Expanded(child: items[2]),
-                    const SizedBox(width: 10),
-                    Expanded(child: items[3]),
-                  ],
-                ),
-              ],
-            );
-          }
-
-          return Row(
+    final theme = Theme.of(context);
+    final credits = schedule.scheduledCredits.toInt();
+    final limit = preferences.maxCredits;
+    final courseCount = schedule.scheduled.length;
+    final unresolved = schedule.unscheduled.length;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 1),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
             children: [
-              Expanded(child: items[0]),
-              const SizedBox(width: 10),
-              Expanded(child: items[1]),
-              const SizedBox(width: 10),
-              Expanded(child: items[2]),
-              const SizedBox(width: 10),
-              Expanded(child: items[3]),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _summaryItem(
-    BuildContext context,
-    IconData icon,
-    String value,
-    String label,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 15, horizontal: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary
-                  .withValues(alpha: 0.75),
-              fontSize: 11,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildViewToggle(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          color: colors.primary.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(14),
-        ),
-        child: Wrap(
-          children: [
-            _viewButton(
-              context,
-              view: ScheduleView.weekly,
-              icon: Icons.calendar_view_week_outlined,
-              label: 'Weekly View',
-            ),
-            _viewButton(
-              context,
-              view: ScheduleView.list,
-              icon: Icons.view_agenda_outlined,
-              label: 'List View',
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _viewButton(
-    BuildContext context, {
-    required ScheduleView view,
-    required IconData icon,
-    required String label,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    final selected = selectedView == view;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(11),
-      onTap: () {
-        setState(() {
-          selectedView = view;
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        decoration: BoxDecoration(
-          color: selected ? colors.primary : Colors.transparent,
-          borderRadius: BorderRadius.circular(11),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              icon,
-              size: 18,
-              color: selected ? colors.onPrimary : colors.primary,
-            ),
-            const SizedBox(width: 7),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: selected ? colors.onPrimary : colors.primary,
+              Expanded(
+                child: Wrap(
+                  spacing: 16,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Text(
+                      '$credits / $limit credits',
+                      style: theme.textTheme.titleLarge,
+                    ),
+                    Text(
+                      '$courseCount ${courseCount == 1 ? 'course' : 'courses'}',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    if (unresolved > 0)
+                      Text(
+                        '$unresolved unresolved',
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.error,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              if (credits < limit)
+                InfoTip(
+                  label: 'About the credit gap',
+                  message:
+                      _plan.shortfallReason ??
+                      'Ask your advisor about the ${limit - credits}-credit gap. No additional eligible sections fit this draft.',
+                ),
+            ],
+          ),
         ),
-      ),
+        const Divider(height: 1),
+      ],
     );
   }
+
+  Widget _buildViewToggle(ScheduleView view) => Align(
+    alignment: Alignment.centerLeft,
+    child: SegmentedButton<ScheduleView>(
+      segments: const [
+        ButtonSegment(value: ScheduleView.weekly, label: Text('Weekly View')),
+        ButtonSegment(value: ScheduleView.list, label: Text('List View')),
+      ],
+      selected: {view},
+      showSelectedIcon: false,
+      style: SegmentedButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onSelectionChanged: (value) =>
+          setState(() => _selectedView = value.single),
+    ),
+  );
 
   Widget _buildWeeklyView(BuildContext context, GeneratedSchedule schedule) {
     if (schedule.scheduled.isEmpty) {
@@ -1159,28 +1017,13 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       for (final day in const ['Saturday', 'Sunday'])
         if (meetings.containsKey(day)) day,
     ];
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         NonTimetabledCourses(courses: schedule.scheduled),
         if (meetings.isNotEmpty) ...[
-          Text(
-            'Weekly Schedule',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            'Scroll horizontally on smaller screens.',
-            style: TextStyle(
-              color: colors.onSurface.withValues(alpha: 0.55),
-              fontSize: 13,
-            ),
-          ),
+          Text('Weekly Schedule', style: theme.textTheme.titleLarge),
           const SizedBox(height: 14),
           LayoutBuilder(
             builder: (context, constraints) {
@@ -1188,27 +1031,37 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               final width = constraints.maxWidth < minimumWidth
                   ? minimumWidth
                   : constraints.maxWidth;
-              return SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: width,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      for (final day in visibleDays)
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.only(right: 10),
-                            child: _buildDayColumn(
-                              context,
-                              day,
-                              meetings[day] ?? const [],
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (constraints.maxWidth < minimumWidth)
+                    const Padding(
+                      padding: EdgeInsets.only(bottom: 8),
+                      child: Text('Scroll across for more days.'),
+                    ),
+                  SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SizedBox(
+                      width: width,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          for (final day in visibleDays)
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(right: 10),
+                                child: _buildDayColumn(
+                                  context,
+                                  day,
+                                  meetings[day] ?? const [],
+                                ),
+                              ),
                             ),
-                          ),
-                        ),
-                    ],
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               );
             },
           ),
@@ -1243,25 +1096,19 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     return Container(
       decoration: BoxDecoration(
         color: colors.surface,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: colors.onSurface.withValues(alpha: 0.10)),
+        border: Border.all(color: colors.outlineVariant),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Container(
             padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: colors.primary,
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(17),
-              ),
-            ),
+            color: colors.surfaceContainerLow,
             child: Text(
               day,
               textAlign: TextAlign.center,
               style: TextStyle(
-                color: colors.onPrimary,
+                color: colors.onSurface,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -1272,9 +1119,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
               child: Text(
                 'No classes',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: colors.onSurface.withValues(alpha: 0.45),
-                ),
+                style: TextStyle(color: colors.onSurfaceVariant),
               ),
             )
           else
@@ -1307,9 +1152,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.primary.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.18)),
+        border: Border(bottom: BorderSide(color: colors.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1337,18 +1180,12 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
           const SizedBox(height: 5),
           Text(
             _professorName(scheduled),
-            style: TextStyle(
-              color: colors.onSurface.withValues(alpha: 0.68),
-              fontSize: 12,
-            ),
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
           ),
           const SizedBox(height: 3),
           Text(
             meeting.location ?? scheduled.section.location,
-            style: TextStyle(
-              color: colors.onSurface.withValues(alpha: 0.55),
-              fontSize: 11,
-            ),
+            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 13),
           ),
         ],
       ),
@@ -1356,108 +1193,83 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
   }
 
   Widget _buildListView(BuildContext context, GeneratedSchedule schedule) {
-    final colors = Theme.of(context).colorScheme;
-
     if (schedule.scheduled.isEmpty) {
       return _emptyState(context, 'No classes have been scheduled yet.');
     }
 
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Scheduled Classes',
-          style: TextStyle(
-            fontSize: 22,
-            fontWeight: FontWeight.bold,
-            color: colors.onSurface,
+        Text('Scheduled Classes', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 10),
+        const Divider(height: 1),
+        for (final scheduled in schedule.scheduled) ...[
+          _scheduleRow(context, scheduled, colors),
+          const Divider(height: 1),
+        ],
+      ],
+    );
+  }
+
+  Widget _scheduleRow(
+    BuildContext context,
+    ScheduledCourseSection scheduled,
+    ColorScheme colors,
+  ) {
+    final section = scheduled.section;
+    final dates = _blockDates(section);
+    final meetingText = section.isAsynchronous
+        ? 'Asynchronous · ${scheduled.planItem.credits.toInt()} credits'
+        : section.scheduleDisplay;
+    final notes = scheduled.matchReasons
+        .where(
+          (reason) => reason != 'Has open seats' && reason != 'Section is open',
+        )
+        .toList();
+
+    return ExpansionTile(
+      shape: const Border(),
+      collapsedShape: const Border(),
+      tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+      childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+      title: Text(
+        scheduled.planItem.title,
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      subtitle: Text(
+        [
+          '${section.fullCourseCode} · ${_professorName(scheduled)}',
+          meetingText,
+          ?dates,
+        ].join('\n'),
+      ),
+      children: [
+        if (section.deliveryMethod.trim().isNotEmpty)
+          _detailRow(context, 'Delivery', section.deliveryMethod),
+        if (section.openSeats != null)
+          _detailRow(
+            context,
+            'Open Seats',
+            section.capacity == null
+                ? '${section.openSeats}'
+                : '${section.openSeats} / ${section.capacity}',
           ),
-        ),
-        const SizedBox(height: 14),
-        ...schedule.scheduled.map((scheduled) {
-          final dates = _blockDates(scheduled.section);
-          final meetingText = scheduled.section.isAsynchronous
-              ? 'Asynchronous · ${scheduled.planItem.credits.toInt()} credits · No fixed meeting time'
-              : scheduled.section.scheduleDisplay;
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            child: ExpansionTile(
-              shape: const Border(),
-              collapsedShape: const Border(),
-              tilePadding: const EdgeInsets.symmetric(
-                horizontal: 18,
-                vertical: 8,
+        if (section.location.trim().isNotEmpty &&
+            !meetingText.contains(section.location))
+          _detailRow(context, 'Location', section.location),
+        if (notes.isNotEmpty)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                notes.join('. '),
+                style: TextStyle(color: colors.onSurfaceVariant),
               ),
-              childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-              leading: Container(
-                width: 45,
-                height: 45,
-                decoration: BoxDecoration(
-                  color: colors.primary.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(Icons.menu_book_outlined, color: colors.primary),
-              ),
-              title: Text(
-                '${scheduled.planItem.title} (${scheduled.section.courseCode})',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                dates == null ? meetingText : '$meetingText\n$dates',
-              ),
-              children: [
-                _detailRow(context, 'Course', scheduled.planItem.title),
-                _detailRow(context, 'Section', scheduled.section.sectionNumber),
-                _detailRow(context, 'Professor', _professorName(scheduled)),
-                _detailRow(context, 'Location', scheduled.section.location),
-                _detailRow(
-                  context,
-                  'Delivery',
-                  scheduled.section.deliveryMethod,
-                ),
-                if (scheduled.section.openSeats != null)
-                  _detailRow(
-                    context,
-                    'Open Seats',
-                    scheduled.section.capacity == null
-                        ? '${scheduled.section.openSeats}'
-                        : '${scheduled.section.openSeats} / ${scheduled.section.capacity}',
-                  ),
-                if (scheduled.section.status != null &&
-                    scheduled.section.status!.trim().isNotEmpty)
-                  _detailRow(context, 'Status', scheduled.section.status!),
-                if (scheduled.matchReasons.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  const Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Why this section?',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  ...scheduled.matchReasons.map((reason) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.check_circle,
-                            size: 16,
-                            color: colors.primary,
-                          ),
-                          const SizedBox(width: 7),
-                          Expanded(child: Text(reason)),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ],
             ),
-          );
-        }),
+          ),
       ],
     );
   }
@@ -1548,7 +1360,10 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                         ],
                         if (unscheduled.reason.contains('conflict'))
                           TextButton.icon(
-                            icon: const Icon(Icons.auto_awesome, size: 16),
+                            icon: const Icon(
+                              Icons.event_repeat_outlined,
+                              size: 16,
+                            ),
                             label: const Text(
                               'Try resolving schedule conflicts',
                             ),

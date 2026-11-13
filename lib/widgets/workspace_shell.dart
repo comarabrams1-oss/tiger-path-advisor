@@ -29,6 +29,9 @@ class WorkspaceShell extends StatelessWidget {
     Icons.chat_bubble_outline,
     Icons.tune,
   ];
+  static bool usesWideNavigation(AppDesign design, double width) =>
+      width >= (design == AppDesign.classic ? 1200 : 1000);
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -37,9 +40,7 @@ class WorkspaceShell extends StatelessWidget {
       color: Theme.of(context).scaffoldBackgroundColor,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide =
-              constraints.maxWidth >=
-              (design == AppDesign.classic ? 1200 : 1000);
+          final wide = usesWideNavigation(design, constraints.maxWidth);
           final navigation = NavigationBar(
             selectedIndex: selectedIndex,
             labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -65,7 +66,7 @@ class WorkspaceShell extends StatelessWidget {
                     margin: const EdgeInsets.fromLTRB(12, 0, 12, 10),
                     clipBehavior: Clip.antiAlias,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
+                      borderRadius: BorderRadius.circular(design.radius),
                       border: Border.all(color: colors.outlineVariant),
                     ),
                     child: navigation,
@@ -95,18 +96,29 @@ class WorkspaceShell extends StatelessWidget {
                         ),
                         const Spacer(),
                         for (var index = 0; index < labels.length; index++)
-                          TextButton.icon(
-                            style: TextButton.styleFrom(
-                              backgroundColor: index == selectedIndex
-                                  ? colors.primaryContainer
-                                  : null,
-                              foregroundColor: index == selectedIndex
-                                  ? colors.onPrimaryContainer
-                                  : colors.primary,
+                          Semantics(
+                            selected: index == selectedIndex,
+                            child: DecoratedBox(
+                              decoration: BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: index == selectedIndex
+                                        ? colors.primary
+                                        : Colors.transparent,
+                                    width: 2,
+                                  ),
+                                ),
+                              ),
+                              child: TextButton(
+                                style: TextButton.styleFrom(
+                                  foregroundColor: index == selectedIndex
+                                      ? colors.primary
+                                      : colors.onSurfaceVariant,
+                                ),
+                                onPressed: () => onNavigate(index),
+                                child: Text(labels[index]),
+                              ),
                             ),
-                            onPressed: () => onNavigate(index),
-                            icon: Icon(icons[index], size: 18),
-                            label: Text(labels[index]),
                           ),
                       ],
                     ),
@@ -166,14 +178,6 @@ class WorkspaceShell extends StatelessWidget {
                                   fontWeight: FontWeight.w800,
                                 ),
                               ),
-                              const SizedBox(height: 5),
-                              Text(
-                                'Student workspace',
-                                style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                  fontSize: 12,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -182,7 +186,7 @@ class WorkspaceShell extends StatelessWidget {
                             padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
                             child: ListTile(
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(18),
+                                borderRadius: BorderRadius.circular(8),
                               ),
                               selected: index == selectedIndex,
                               selectedTileColor: colors.primaryContainer,

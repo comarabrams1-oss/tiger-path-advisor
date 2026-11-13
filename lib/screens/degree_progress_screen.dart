@@ -7,6 +7,7 @@ import '../data/program_registry.dart';
 import '../data/test_student.dart';
 import '../models/degree_program.dart';
 import '../services/degree_audit_service.dart';
+import '../themes/app_theme.dart';
 
 class DegreeProgressScreen extends StatefulWidget {
   const DegreeProgressScreen({super.key});
@@ -143,11 +144,7 @@ class _DegreeProgressScreenState
         Text(
           textAlign: TextAlign.center,
           '${activeStudent.major} - ${activeStudent.degreeLabel}',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-            color: colors.onSurface,
-          ),
+          style: AppThemes.pageTitle(context),
         ),
         const SizedBox(height: 7),
         Text(
@@ -175,28 +172,21 @@ class _DegreeProgressScreenState
     required double projectedProgress,
   }) {
     final colors = Theme.of(context).colorScheme;
-    final bannerColor = colors.primary;
-    final bannerText = colors.onPrimary;
+    final bannerText = colors.onSurface;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: bannerColor,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: bannerColor.withValues(alpha: 0.20),
-            blurRadius: 22,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: colors.surface,
+        border: Border.all(color: colors.outlineVariant),
+        borderRadius: BorderRadius.circular(AppDesignTokens.of(context).radius),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Overall Graduation Progress',
+            'Graduation progress',
             style: TextStyle(
               color: bannerText,
               fontSize: 22,
@@ -241,15 +231,13 @@ class _DegreeProgressScreenState
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: completedProgress,
-              minHeight: 11,
+              minHeight: 6,
               backgroundColor:
                   bannerText.withValues(alpha: 0.20),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                bannerText,
-              ),
+              color: colors.primary,
             ),
           ),
           const SizedBox(height: 20),
@@ -261,15 +249,13 @@ class _DegreeProgressScreenState
           ),
           const SizedBox(height: 8),
           ClipRRect(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(3),
             child: LinearProgressIndicator(
               value: projectedProgress,
-              minHeight: 11,
+              minHeight: 6,
               backgroundColor:
                   bannerText.withValues(alpha: 0.20),
-              valueColor: AlwaysStoppedAnimation<Color>(
-                bannerText.withValues(alpha: 0.75),
-              ),
+              color: colors.secondary,
             ),
           ),
           const SizedBox(height: 12),
@@ -291,18 +277,8 @@ class _DegreeProgressScreenState
     required String label,
     required Color foreground,
   }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 14,
-      ),
-      decoration: BoxDecoration(
-        color: foreground.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(15),
-        border: Border.all(
-          color: foreground.withValues(alpha: 0.12),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Column(
         children: [
           Text(

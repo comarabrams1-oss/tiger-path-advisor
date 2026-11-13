@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../themes/app_theme.dart';
 import '../widgets/info_tip.dart';
 
 import '../models/schedule_preferences.dart';
@@ -185,8 +186,6 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                         subtitle: const Text('Spring 2027 draft'),
                         leading: const Icon(Icons.calendar_month_outlined),
                         trailing: const Icon(Icons.arrow_forward),
-                        textColor: colors.onSecondaryContainer,
-                        iconColor: colors.onSecondaryContainer,
                         onTap: () => _openScheduleRoute(
                           'GeneratedScheduleScreen',
                           (_) => GeneratedScheduleScreen(
@@ -200,49 +199,38 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 },
               ),
               Text(
+                'Spring 2027',
                 textAlign: TextAlign.center,
-                activeStudent.classification.toLowerCase() == 'freshman'
-                    ? 'Plan your first-year courses'
-                    : 'Plan your next semester',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
+                style: AppThemes.pageTitle(context),
               ),
-              const SizedBox(height: 6),
-              Text(
-                textAlign: TextAlign.center,
-                activeStudent.classification.toLowerCase() == 'freshman'
-                    ? 'Start with introductory major courses, English, and other remaining foundations. Then choose the times that work for you.'
-                    : 'Set your schedule preferences.',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: colors.onSurface.withValues(alpha: 0.65),
+              if (activeStudent.classification.toLowerCase() == 'freshman')
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'First-year courses and prerequisites',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: colors.onSurfaceVariant),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-
               if (activeStudent.major == 'Computer Engineering')
                 const Padding(
-                  padding: EdgeInsets.only(bottom: 16),
+                  padding: EdgeInsets.only(top: 10),
                   child: Text(engineeringPreviewNotice),
                 ),
-              _buildOverviewCard(context),
-
-              const SizedBox(height: 20),
-
+              const SizedBox(height: 16),
               _buildSection(
                 context,
-                icon: Icons.schedule_outlined,
                 title: 'Preferred Class Time',
-                subtitle: 'Choose the part of the day you prefer.',
                 child: DropdownButtonFormField<String>(
+                  key: ValueKey(preferredTime),
                   initialValue: preferredTime,
-                  decoration: const InputDecoration(
-                    border: OutlineInputBorder(),
-                  ),
+                  decoration: const InputDecoration(),
                   items: const [
+                    DropdownMenuItem(
+                      value: 'No Preference',
+                      child: Text('Any time'),
+                    ),
                     DropdownMenuItem(value: 'Morning', child: Text('Morning')),
                     DropdownMenuItem(
                       value: 'Afternoon',
@@ -266,9 +254,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
               _buildSection(
                 context,
-                icon: Icons.calendar_today_outlined,
                 title: 'Preferred Days',
-                subtitle: 'Select days you would like to have classes.',
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -288,9 +274,8 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
               _buildSection(
                 context,
-                icon: Icons.event_busy_outlined,
                 title: 'Days to Avoid',
-                subtitle: 'Tiger Path Advisor will try not to schedule classes on these days.',
+                help: 'Classes may still meet on these days if another section doesn’t fit.',
                 child: Wrap(
                   spacing: 8,
                   runSpacing: 8,
@@ -310,9 +295,8 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
               _buildSection(
                 context,
-                icon: Icons.school_outlined,
                 title: 'Preferred Professors',
-                subtitle: 'Add professors you would prefer when multiple sections are available.',
+                help: 'Use a first or last name. An instructor preference can yield to course requirements or a time conflict.',
                 child: Column(
                   children: [
                     Row(
@@ -323,8 +307,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                             textInputAction: TextInputAction.done,
                             onSubmitted: (_) => _addProfessor(),
                             decoration: const InputDecoration(
-                              hintText: 'Professor name',
-                              border: OutlineInputBorder(),
+                              labelText: 'Professor name',
                             ),
                           ),
                         ),
@@ -363,10 +346,8 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
               _buildSection(
                 context,
-                icon: Icons.menu_book_outlined,
                 title: 'Maximum Credits',
-                subtitle:
-                    'Set the maximum number of credits for your semester.',
+                help: 'The builder schedules up to this limit using eligible, open sections.',
                 child: Column(
                   children: [
                     Row(
@@ -405,18 +386,13 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
               _buildSection(
                 context,
-                icon: Icons.tune_outlined,
                 title: 'Schedule Priorities',
-                subtitle:
-                    'Choose additional preferences for the generated schedule.',
+                help: 'Time and gap preferences are flexible when sections are limited.',
                 child: Column(
                   children: [
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Prefer later starts'),
-                      subtitle: const Text(
-                        'Favor starts at 10:00 AM or later. Earlier sections may still be selected.',
-                      ),
+                      title: const Text('Prefer starts at 10:00 AM or later'),
                       value: avoidEarlyClasses,
                       onChanged: (value) {
                         setState(() {
@@ -427,10 +403,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                     const Divider(),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Prefer earlier finishes'),
-                      subtitle: const Text(
-                        'Favor finishes by 5:00 PM. Later sections may still be selected.',
-                      ),
+                      title: const Text('Prefer finishes by 5:00 PM'),
                       value: avoidLateClasses,
                       onChanged: (value) {
                         setState(() {
@@ -441,10 +414,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                     const Divider(),
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Minimize gaps'),
-                      subtitle: const Text(
-                        'Try to keep classes closer together during the day.',
-                      ),
+                      title: const Text('Minimize gaps between classes'),
                       value: minimizeGaps,
                       onChanged: (value) {
                         setState(() {
@@ -456,200 +426,54 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 ),
               ),
 
-              const SizedBox(height: 26),
-
-              FilledButton.icon(
-                onPressed: _generatePlan,
-                icon: const Icon(Icons.auto_awesome),
-                label: const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 4),
-                  child: Text('Find courses for my semester'),
+              const SizedBox(height: 22),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Wrap(
+                  spacing: 10,
+                  runSpacing: 8,
+                  children: [
+                    FilledButton.icon(
+                      onPressed: _generatePlan,
+                      iconAlignment: IconAlignment.end,
+                      icon: const Icon(Icons.arrow_forward, size: 18),
+                      label: const Text('Find courses for my semester'),
+                    ),
+                    OutlinedButton(
+                      onPressed: _savePreferences,
+                      child: const Text('Save Preferences'),
+                    ),
+                  ],
                 ),
               ),
-
-              const SizedBox(height: 10),
-
-              OutlinedButton.icon(
-                onPressed: _savePreferences,
-                icon: const Icon(Icons.save_outlined),
-                label: const Text('Save Preferences'),
-              ),
-
-              const SizedBox(height: 20),
-
-              Text(
-                'Spring 2027 · imported course offerings',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onSurface.withValues(alpha: 0.55),
-                ),
-              ),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 18),
             ],
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _buildOverviewCard(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.primary,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 550;
-
-          final items = [
-            _overviewItem(
-              context,
-              Icons.schedule,
-              preferredTime,
-              'Preferred Time',
-            ),
-            _overviewItem(
-              context,
-              Icons.menu_book,
-              '$maxCredits',
-              'Max Credits',
-            ),
-            _overviewItem(
-              context,
-              Icons.calendar_month,
-              preferredDays.isEmpty ? 'Any' : '${preferredDays.length}',
-              'Preferred Days',
-            ),
-          ];
-
-          if (compact) {
-            return Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(child: items[0]),
-                    const SizedBox(width: 10),
-                    Expanded(child: items[1]),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                items[2],
-              ],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(child: items[0]),
-              const SizedBox(width: 10),
-              Expanded(child: items[1]),
-              const SizedBox(width: 10),
-              Expanded(child: items[2]),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _overviewItem(
-    BuildContext context,
-    IconData icon,
-    String value,
-    String label,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Theme.of(context).colorScheme.onPrimary),
-          const SizedBox(height: 7),
-          Text(
-            value,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary
-                  .withValues(alpha: 0.75),
-              fontSize: 11,
-            ),
-          ),
-        ],
       ),
     );
   }
 
   Widget _buildSection(
     BuildContext context, {
-    required IconData icon,
     required String title,
-    required String subtitle,
+    String? help,
     required Widget child,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: colors.primary.withValues(alpha: 0.10),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(icon, color: colors.primary),
-                ),
-                const SizedBox(width: 13),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                InfoTip(label: 'About $title', message: subtitle),
-              ],
-            ),
-            const SizedBox(height: 18),
-            child,
-          ],
-        ),
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      const Divider(height: 1),
+      const SizedBox(height: 10),
+      Row(
+        children: [
+          Expanded(
+            child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+          ),
+          if (help != null) InfoTip(label: 'About $title', message: help),
+        ],
       ),
-    );
-  }
+      const SizedBox(height: 8),
+      child,
+    ],
+  );
 }

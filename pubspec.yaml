@@ -1,5 +1,5 @@
 name: tiger_path
-description: "A new Flutter project."
+description: "Course planning and degree progress for Benedict College students."
 publish_to: 'none'
 version: 0.1.0+1
 
@@ -25,3 +25,18 @@ flutter:
     - assets/images/
     - assets/data/course_sections_fall_2026.json
     - assets/data/course_sections_spring_2027.json
+    - assets/fonts/OFL-SourceSans3.txt
+    - assets/fonts/OFL-Spectral.txt
+  fonts:
+    - family: Source Sans 3
+      fonts:
+        - asset: assets/fonts/SourceSans3-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/SourceSans3-Semibold.ttf
+          weight: 600
+        - asset: assets/fonts/SourceSans3-Bold.ttf
+          weight: 700
+    - family: Spectral
+      fonts:
+        - asset: assets/fonts/Spectral-SemiBold.ttf
+          weight: 600

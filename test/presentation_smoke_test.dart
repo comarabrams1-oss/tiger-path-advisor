@@ -67,11 +67,7 @@ void main() {
         addTearDown(tester.view.resetPhysicalSize);
         addTearDown(tester.view.resetDevicePixelRatio);
         for (final screen in <Widget>[
-          HomeScreen(
-            currentPreset: preset,
-            currentCustomTheme: const CustomThemeSettings(),
-            onThemeChanged: (_) {},
-          ),
+          const HomeScreen(),
           const TranscriptScreen(),
           const DegreeProgressScreen(),
           const CourseRecommendationsScreen(),
@@ -87,7 +83,7 @@ void main() {
           await tester.pumpAndSettle();
           if (screen is HomeScreen) {
             await tester.scrollUntilVisible(
-              find.text('Your academic workspace'),
+              find.text('Fall 2026 courses'),
               400,
               scrollable: find
                   .descendant(
@@ -136,7 +132,7 @@ void main() {
           await Future<void>.delayed(const Duration(milliseconds: 200));
         });
         await tester.pumpAndSettle();
-        expect(find.text('Your Semester Schedule'), findsOneWidget);
+        expect(find.text('Spring 2027 schedule'), findsOneWidget);
         expect(find.textContaining('Demo sections in use'), findsNothing);
         await tester.scrollUntilVisible(
           find.textContaining('Imported Spring 2027 snapshot'),
@@ -154,7 +150,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
         await tester.scrollUntilVisible(
-          find.text('Build with Tiger Path'),
+          find.text('Schedule changes'),
           -400,
           scrollable: find
               .descendant(

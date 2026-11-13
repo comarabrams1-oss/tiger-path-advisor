@@ -205,12 +205,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
                 if (mounted) setState(() => _session = session);
               },
             )
-          : HomeScreen(
-              key: ValueKey(_session!.email),
-              currentPreset: _themePreset,
-              currentCustomTheme: _customTheme,
-              onThemeChanged: _applyTheme,
-            ),
+          : HomeScreen(key: ValueKey(_session!.email)),
     );
   }
 }
@@ -225,20 +220,20 @@ class _ThemeLoadingScreen extends StatelessWidget {
 }
 
 class HomeScreen extends StatelessWidget {
-  final AppThemePreset currentPreset;
-  final CustomThemeSettings currentCustomTheme;
-  final ValueChanged<ThemeSettings> onThemeChanged;
-
-  const HomeScreen({
-    super.key,
-    required this.currentPreset,
-    required this.currentCustomTheme,
-    required this.onThemeChanged,
-  });
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     final session = MockSessionScope.maybeOf(context);
+    final design = AppDesignTokens.of(context).design;
+    final hasWideNavigation = WorkspaceShell.usesWideNavigation(
+      design,
+      MediaQuery.sizeOf(context).width,
+    );
+    final showBrand =
+        session?.session == null ||
+        !hasWideNavigation ||
+        design == AppDesign.sharp;
     return Scaffold(
       body: SafeArea(
         child: Center(
@@ -281,28 +276,28 @@ class HomeScreen extends StatelessWidget {
                       ],
                     ),
                   ),
-                _buildHeader(context),
-                const SizedBox(height: 16),
+                _buildHeader(context, showBrand: showBrand),
+                const SizedBox(height: 24),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final progress = _buildCreditProgress(context);
-                    final planning = _buildPlanningCard(context);
+                    final planning = _buildPlanning(context);
                     if (constraints.maxWidth >= 740) {
                       return Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Expanded(flex: 6, child: progress),
-                          const SizedBox(width: 16),
-                          Expanded(flex: 5, child: planning),
+                          Expanded(flex: 7, child: planning),
+                          const SizedBox(width: 32),
+                          Expanded(flex: 5, child: progress),
                         ],
                       );
                     }
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        progress,
-                        const SizedBox(height: 12),
                         planning,
+                        const SizedBox(height: 24),
+                        progress,
                       ],
                     );
                   },
@@ -317,75 +312,41 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  Widget _buildHeader(BuildContext context, {required bool showBrand}) {
     final theme = Theme.of(context);
-    final colors = theme.colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
-      decoration: BoxDecoration(
-        color: Color.alphaBlend(
-          colors.primary.withValues(alpha: .08),
-          colors.surface,
-        ),
-        borderRadius: BorderRadius.circular(AppDesignTokens.of(context).radius),
-        border: Border.all(color: colors.outlineVariant),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 54,
-            height: 54,
-            padding: const EdgeInsets.all(5),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Image.asset(
-              'assets/images/benedict_logo.png',
-              fit: BoxFit.contain,
-              semanticLabel: 'Benedict College logo',
-            ),
+    final title = showBrand ? 'Tiger Path Advisor' : activeStudent.major;
+    final details = showBrand
+        ? '${activeStudent.major} ${activeStudent.degreeLabel} · ${activeStudent.classification}'
+        : '${activeStudent.degreeLabel} · ${activeStudent.classification}';
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (showBrand) ...[
+          Image.asset(
+            'assets/images/benedict_logo.png',
+            width: 44,
+            height: 48,
+            fit: BoxFit.contain,
+            semanticLabel: 'Benedict College logo',
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Benedict College', style: theme.textTheme.labelMedium),
-                const SizedBox(height: 3),
-                Text(
-                  'Tiger Path Advisor',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '${activeStudent.major} ${activeStudent.degreeLabel} · ${activeStudent.classification}',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Open Theme Studio',
-            icon: const Icon(Icons.tune),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                settings: const RouteSettings(name: 'ThemeSettingsScreen'),
-                builder: (_) => ThemeSettingsScreen(
-                  currentPreset: currentPreset,
-                  currentCustomTheme: currentCustomTheme,
-                  onThemeChanged: onThemeChanged,
+          const SizedBox(width: 12),
+        ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: AppThemes.pageTitle(context)),
+              const SizedBox(height: 4),
+              Text(
+                details,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -400,164 +361,116 @@ class HomeScreen extends StatelessWidget {
         (student.remainingCredits - student.inProgressCredits)
             .clamp(0.0, student.requiredCredits)
             .toDouble();
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    'Credit progress',
-                    style: theme.textTheme.titleLarge,
-                  ),
-                ),
-                Text(
-                  '${(progress * 100).round()}%',
-                  style: theme.textTheme.headlineSmall?.copyWith(
-                    color: colors.primary,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text('Degree progress', style: theme.textTheme.titleLarge),
+        const SizedBox(height: 9),
+        Text.rich(
+          TextSpan(
+            text: _credits(student.earnedCredits),
+            style: theme.textTheme.headlineMedium?.copyWith(
+              color: colors.primary,
+              fontWeight: FontWeight.w600,
             ),
-            const SizedBox(height: 8),
-            ExcludeSemantics(
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(4),
+            children: [
+              TextSpan(
+                text: ' of ${_credits(student.requiredCredits)} credits earned',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: colors.onSurface,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 10),
+        ExcludeSemantics(
+          child: LinearProgressIndicator(
+            value: progress,
+            minHeight: 5,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          '${_credits(student.inProgressCredits)} in progress · ${_credits(projectedRemaining)} left if passed',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colors.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 8,
+          children: [
+            TextButton(
+              child: const Text('View degree audit'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  settings: const RouteSettings(name: 'DegreeProgressScreen'),
+                  builder: (_) => const DegreeProgressScreen(),
+                ),
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              '${_credits(student.earnedCredits)} of ${_credits(student.requiredCredits)} credits earned',
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 18,
-              runSpacing: 8,
-              children: [
-                _creditMetric(
-                  context,
-                  student.inProgressCredits,
-                  'In progress',
+            TextButton(
+              child: const Text('Programs of study'),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  settings: const RouteSettings(name: 'ProgramLibraryScreen'),
+                  builder: (_) => const ProgramLibraryScreen(),
                 ),
-                _creditMetric(
-                  context,
-                  projectedRemaining,
-                  'Remaining if current courses are passed',
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: [
-                TextButton.icon(
-                  icon: const Icon(Icons.school_outlined, size: 18),
-                  label: const Text('View degree audit'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(
-                        name: 'DegreeProgressScreen',
-                      ),
-                      builder: (_) => const DegreeProgressScreen(),
-                    ),
-                  ),
-                ),
-                TextButton.icon(
-                  icon: const Icon(Icons.menu_book_outlined, size: 18),
-                  label: const Text('Programs of study'),
-                  onPressed: () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      settings: const RouteSettings(
-                        name: 'ProgramLibraryScreen',
-                      ),
-                      builder: (_) => const ProgramLibraryScreen(),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _creditMetric(BuildContext context, double credits, String label) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(_credits(credits), style: theme.textTheme.titleLarge),
-        Text(label, style: theme.textTheme.bodySmall),
       ],
     );
   }
 
-  Widget _buildPlanningCard(BuildContext context) => ValueListenableBuilder(
+  Widget _buildPlanning(BuildContext context) => ValueListenableBuilder(
     valueListenable: ScheduleDraftService.revision,
     builder: (context, _, _) {
       final theme = Theme.of(context);
       final colors = theme.colorScheme;
       final draft = ScheduleDraftService.current;
       final unresolved = draft?.schedule.unscheduled.length ?? 0;
-      return Card(
-        margin: EdgeInsets.zero,
-        color: Color.alphaBlend(
-          colors.primary.withValues(alpha: .08),
-          colors.surface,
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(
+            top: BorderSide(color: colors.primary, width: 2),
+            bottom: BorderSide(color: colors.outlineVariant),
+          ),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.fromLTRB(20, 15, 20, 16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Icon(Icons.calendar_month_outlined, color: colors.primary),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Spring 2027 schedule',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
               Text(
-                draft == null
-                    ? 'Choose your preferences and build a draft from available sections.'
-                    : '${draft.schedule.scheduled.length} courses · ${_credits(draft.schedule.scheduledCredits)} credits'
-                          '${unresolved > 0 ? ' · $unresolved unresolved' : ''}',
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
+                'Spring 2027 schedule',
+                style: AppThemes.pageTitle(context, size: 25),
               ),
+              if (draft != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  '${draft.schedule.scheduled.length} courses · ${_credits(draft.schedule.scheduledCredits)} of ${draft.preferences.maxCredits} credits'
+                  '${unresolved > 0 ? ' · $unresolved unresolved' : ''}',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
               const SizedBox(height: 14),
               Wrap(
                 spacing: 8,
-                runSpacing: 8,
+                runSpacing: 4,
                 children: [
                   FilledButton.icon(
-                    icon: Icon(
-                      draft == null
-                          ? Icons.calendar_month_outlined
-                          : Icons.arrow_forward,
-                    ),
+                    icon: const Icon(Icons.arrow_forward, size: 18),
                     label: Text(
-                      draft == null ? 'Plan Spring 2027' : 'Continue schedule',
+                      draft == null ? 'Build schedule' : 'Continue schedule',
                     ),
                     onPressed: () {
                       if (draft == null) {
@@ -581,7 +494,7 @@ class HomeScreen extends StatelessWidget {
                   if (draft != null)
                     TextButton(
                       onPressed: () => _openPlanner(context),
-                      child: const Text('New plan'),
+                      child: const Text('Schedule preferences'),
                     ),
                 ],
               ),

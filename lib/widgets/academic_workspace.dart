@@ -61,15 +61,16 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final current = activeStudent.courses
+    final theme = Theme.of(context);
+    final student = activeStudent;
+    final catalog = catalogFor(student);
+    final current = student.courses
         .where((course) => course.status == CourseStatus.inProgress)
         .toList();
-    final titles = {
-      for (final course in activeCatalog) course.code: course.title,
-    };
+    final titles = {for (final course in catalog) course.code: course.title};
     final openSections = _openSections;
     final recommended = CoursePriorityService()
-        .rankCourses(activeStudent, activeProgram, activeCatalog)
+        .rankCourses(student, programFor(student), catalog)
         .where(
           (item) => [
             EligibilityStatus.eligible,
@@ -87,133 +88,69 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     final panels = [
       _panel(
         context,
-        icon: Icons.today_outlined,
-        eyebrow: 'FALL 2026',
-        title: 'Your current semester',
-        description:
-            '${current.length} ${current.length == 1 ? 'course' : 'courses'} in progress',
+        title: 'Fall 2026 courses',
         action: 'View transcript',
         onTap: () => _open(context, const TranscriptScreen()),
         children: [
           if (current.isEmpty)
-            const Text('No current courses on this transcript.'),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text('No courses in progress.'),
+            ),
           for (final course in current)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.menu_book_outlined,
-                    size: 18,
-                    color: colors.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          titles[course.courseCode] ?? course.courseCode,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        if (titles.containsKey(course.courseCode))
-                          Text(
-                            course.courseCode,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: colors.onSurfaceVariant),
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+            _courseRow(
+              context,
+              title: titles[course.courseCode] ?? course.courseCode,
+              detail: titles.containsKey(course.courseCode)
+                  ? course.courseCode
+                  : null,
             ),
         ],
       ),
       _panel(
         context,
-        icon: Icons.route_outlined,
-        eyebrow: 'SPRING 2027',
-        title: 'What could come next',
-        description: _sections == null
-            ? 'Based on your remaining degree requirements'
-            : 'Recommended courses with open sections',
-        action: 'Explore recommendations',
+        title: 'Spring 2027 recommendations',
+        action: 'View recommendations',
         onTap: () => _open(context, const CourseRecommendationsScreen()),
         children: [
-          if (recommended.isEmpty)
-            Text(
-              openSections == null
-                  ? 'No eligible courses were found.'
-                  : 'No eligible courses have open sections in this snapshot.',
-            ),
-          for (final item in recommended)
+          if (openSections == null)
             Padding(
-              padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Icon(
-                    item.eligibility.status == EligibilityStatus.eligible
-                        ? Icons.check_circle_outline
-                        : Icons.pending_outlined,
-                    size: 18,
-                    color: colors.primary,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.course.title,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        Text(
-                          '${item.course.code}'
-                          '${openSections == null ? '' : ' · ${openSections[item.course.code]} open ${openSections[item.course.code] == 1 ? 'section' : 'sections'}'}',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        if (item.eligibility.status ==
-                            EligibilityStatus.eligibleAfterCurrentTerm)
-                          Text(
-                            item.eligibility.reason ??
-                                'After current prerequisites are completed',
-                            style: TextStyle(fontSize: 11),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Text(
-                    '${item.course.credits.toInt()} cr',
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                ],
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Text(
+                _sectionError
+                    ? 'Section availability unavailable.'
+                    : 'Checking section availability…',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
               ),
             ),
-          Text(
-            _sections != null
-                ? 'Imported offerings · confirm seats and registration in Tiger Portal.'
-                : _sectionError
-                ? 'Section data unavailable · verify offerings in the builder.'
-                : 'Checking imported Spring offerings…',
-            style: TextStyle(fontSize: 11, color: colors.onSurfaceVariant),
-          ),
+          if (recommended.isEmpty && openSections != null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                'No eligible courses have open sections in this snapshot.',
+              ),
+            ),
+          for (final item in recommended)
+            _courseRow(
+              context,
+              title: item.course.title,
+              detail: _offeringLabel(item.course.code, openSections),
+              credits: item.course.credits,
+              note:
+                  item.eligibility.status ==
+                      EligibilityStatus.eligibleAfterCurrentTerm
+                  ? item.eligibility.reason ??
+                        'After current prerequisites are completed.'
+                  : null,
+            ),
         ],
       ),
     ];
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'Your academic workspace',
-          style: Theme.of(context).textTheme.headlineSmall
-              ?.copyWith(fontWeight: FontWeight.w800),
-        ),
-        const SizedBox(height: 14),
         if (AppDesignTokens.of(context).design == AppDesign.sharp) ...[
           SegmentedButton<int>(
             segments: const [
@@ -265,64 +202,83 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     );
   }
 
+  String _offeringLabel(String code, Map<String, int>? sections) {
+    final count = sections?[code];
+    if (count == null) return code;
+    return '$code · $count open ${count == 1 ? 'section' : 'sections'}';
+  }
+
   Widget _panel(
     BuildContext context, {
-    required IconData icon,
-    required String eyebrow,
     required String title,
-    required String description,
     required String action,
     required VoidCallback onTap,
     required List<Widget> children,
   }) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: EdgeInsets.all(
-          AppDesignTokens.of(context).design == AppDesign.soft ? 26 : 22,
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(title, style: AppThemes.pageTitle(context, size: 23)),
+        const SizedBox(height: 10),
+        const Divider(height: 1),
+        ...children,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: onTap,
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(Icons.arrow_forward, size: 16),
+            label: Text(action, style: theme.textTheme.labelLarge),
+          ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(icon, color: colors.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  eyebrow,
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5,
-                  ),
+      ],
+    );
+  }
+
+  Widget _courseRow(
+    BuildContext context, {
+    required String title,
+    String? detail,
+    double? credits,
+    String? note,
+  }) {
+    final theme = Theme.of(context);
+    final muted = theme.textTheme.bodySmall?.copyWith(
+      color: theme.colorScheme.onSurfaceVariant,
+    );
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title, style: theme.textTheme.titleMedium),
+                    if (detail != null) Text(detail, style: muted),
+                    if (note != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 3),
+                        child: Text(note, style: muted),
+                      ),
+                  ],
                 ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              description,
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: colors.onSurfaceVariant),
-            ),
-            const SizedBox(height: 16),
-            ...children,
-            const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: onTap,
-              icon: const Icon(Icons.arrow_forward, size: 17),
-              label: Text(action),
-            ),
-          ],
+              ),
+              if (credits != null)
+                Padding(
+                  padding: const EdgeInsets.only(left: 12, top: 2),
+                  child: Text('${credits.toInt()} cr', style: muted),
+                ),
+            ],
+          ),
         ),
-      ),
+        Divider(height: 1, color: theme.colorScheme.outlineVariant),
+      ],
     );
   }
 }

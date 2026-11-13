@@ -101,15 +101,6 @@ class _CourseRecommendationsScreenState
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _buildHeader(context),
-          const SizedBox(height: 22),
-          _buildOverview(
-            context,
-            remainingRequirements.length,
-            readyNow.length,
-            recommendedNext.length,
-          ),
-          const SizedBox(height: 22),
           _buildNavigation(
             context,
             recommendedCount:
@@ -137,138 +128,6 @@ class _CourseRecommendationsScreenState
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          textAlign: TextAlign.center,
-          'Academic Advice',
-          style: TextStyle(
-            fontSize: 29,
-            fontWeight: FontWeight.bold,
-            color: colors.onSurface,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          textAlign: TextAlign.center,
-          'Recommendations based on your degree requirements, '
-          'completed courses, current enrollment, and prerequisites.',
-          style: TextStyle(
-            fontSize: 15,
-            height: 1.4,
-            color: colors.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildOverview(
-    BuildContext context,
-    int remaining,
-    int eligible,
-    int recommended,
-  ) {
-    final colors =
-        Theme.of(context).colorScheme;
-
-    return Container(
-      padding: const EdgeInsets.all(22),
-      decoration: BoxDecoration(
-        color: colors.primary,
-        borderRadius:
-            BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: colors.primary.withValues(
-              alpha: 0.18,
-            ),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _overviewItem(
-              context,
-              value: '$recommended',
-              label: 'Top Picks',
-            ),
-          ),
-          _verticalDivider(context),
-          Expanded(
-            child: _overviewItem(
-              context,
-              value: '$eligible',
-              label: 'Eligible Now',
-            ),
-          ),
-          _verticalDivider(context),
-          Expanded(
-            child: _overviewItem(
-              context,
-              value: '$remaining',
-              label: 'Requirements Left',
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _overviewItem(
-    BuildContext context, {
-    required String value,
-    required String label,
-  }) {
-    final colors =
-        Theme.of(context).colorScheme;
-
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            color: colors.onPrimary,
-            fontSize: 27,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            color: colors.onPrimary
-                .withValues(alpha: 0.80),
-            fontSize: 12,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _verticalDivider(
-    BuildContext context,
-  ) {
-    final colors =
-        Theme.of(context).colorScheme;
-
-    return Container(
-      width: 1,
-      height: 42,
-      color: colors.onPrimary.withValues(
-        alpha: 0.22,
-      ),
-    );
-  }
-
   Widget _buildNavigation(
     BuildContext context, {
     required int recommendedCount,
@@ -284,7 +143,7 @@ class _CourseRecommendationsScreenState
           context,
           view:
               RecommendationView.recommended,
-          icon: Icons.auto_awesome,
+          icon: Icons.fact_check_outlined,
           label: 'Recommended',
           count: recommendedCount,
         ),
@@ -535,7 +394,7 @@ class _CourseRecommendationsScreenState
       children: [
         _sectionHeader(
           context,
-          icon: Icons.auto_awesome,
+          icon: Icons.fact_check_outlined,
           title: 'Recommended Next',
           subtitle:
               'Strong choices based on degree progress and prerequisite sequencing.',

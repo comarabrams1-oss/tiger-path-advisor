@@ -53,251 +53,212 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) => Theme(
     data: AppThemes.build(AppThemePreset.benedict),
     child: Builder(
-      builder: (context) {
-        final colors = Theme.of(context).colorScheme;
-        return Scaffold(
-          body: SafeArea(
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 980),
-                  child: LayoutBuilder(
-                    builder: (context, size) {
-                      final wide = size.maxWidth >= 760;
-                      final brand = Container(
-                        padding: EdgeInsets.all(wide ? 38 : 26),
-                        decoration: BoxDecoration(
-                          color: colors.primary,
-                          borderRadius: BorderRadius.circular(28),
-                        ),
+      builder: (context) => Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1060),
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 800;
+                    final form = _buildForm(context);
+                    if (!wide) {
+                      return ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 480),
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Container(
-                              width: wide ? 74 : 52,
-                              height: wide ? 74 : 52,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(18),
-                              ),
-                              child: Image.asset(
-                                'assets/images/benedict_logo.png',
-                                fit: BoxFit.contain,
-                              ),
-                            ),
-                            SizedBox(height: wide ? 24 : 14),
-                            Text(
-                              'Tiger Path Advisor',
-                              style: TextStyle(
-                                color: colors.onPrimary,
-                                fontSize: wide ? 34 : 25,
-                                fontWeight: FontWeight.w800,
-                                height: 1.16,
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              'Benedict College',
-                              style: TextStyle(color: colors.onPrimary),
-                            ),
+                            _buildBrand(context, wide: false),
+                            const SizedBox(height: 28),
+                            form,
                           ],
                         ),
                       );
-                      final form = Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          wide ? 44 : 4,
-                          wide ? 26 : 30,
-                          wide ? 12 : 4,
-                          20,
+                    }
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          flex: 11,
+                          child: _buildBrand(context, wide: true),
                         ),
-                        child: Form(
-                          key: _form,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Sign in',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              Text(
-                                'Use your Benedict student email or try a demo profile.',
-                                style: TextStyle(
-                                  color: colors.onSurfaceVariant,
-                                  height: 1.5,
-                                ),
-                              ),
-                              const SizedBox(height: 20),
-                              TextFormField(
-                                controller: _email,
-                                enabled: !_busy,
-                                keyboardType: TextInputType.emailAddress,
-                                textInputAction: TextInputAction.done,
-                                autocorrect: false,
-                                enableSuggestions: false,
-                                onFieldSubmitted: (_) => _signIn(),
-                                decoration: const InputDecoration(
-                                  labelText: 'Student email',
-                                  hintText: 'your.name@my.benedict.edu',
-                                  prefixIcon: Icon(Icons.alternate_email),
-                                  border: OutlineInputBorder(),
-                                ),
-                                validator: (value) =>
-                                    MockAuthService.isStudentEmail(value ?? '')
-                                    ? null
-                                    : 'Use your @my.benedict.edu student email.',
-                              ),
-                              const SizedBox(height: 12),
-                              CheckboxListTile(
-                                contentPadding: EdgeInsets.zero,
-                                controlAffinity:
-                                    ListTileControlAffinity.leading,
-                                value: _remember,
-                                onChanged: _busy
-                                    ? null
-                                    : (value) => setState(
-                                        () => _remember = value ?? false,
-                                      ),
-                                title: const Text(
-                                  'Keep me signed in on this browser',
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ),
-                              if (_error != null)
-                                Padding(
-                                  padding: const EdgeInsets.only(bottom: 12),
-                                  child: Text(
-                                    _error!,
-                                    style: TextStyle(color: colors.error),
-                                  ),
-                                ),
-                              const SizedBox(height: 10),
-                              SizedBox(
-                                width: double.infinity,
-                                child: FilledButton(
-                                  onPressed: _busy ? null : _signIn,
-                                  style: FilledButton.styleFrom(
-                                    padding: const EdgeInsets.all(18),
-                                  ),
-                                  child: _busy
-                                      ? const SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        )
-                                      : const Text('Continue to Tiger Path'),
-                                ),
-                              ),
-                              const SizedBox(height: 22),
-                              Text(
-                                'Try a demo profile',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              for (final entry in {
-                                mockStudentEmail: fictionalStudent,
-                                ...additionalStudentScenarios,
-                              }.entries)
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 8),
-                                  child: SizedBox(
-                                    width: double.infinity,
-                                    child: OutlinedButton(
-                                      style: OutlinedButton.styleFrom(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                          horizontal: 14,
-                                        ),
-                                      ),
-                                      onPressed: _busy
-                                          ? null
-                                          : () {
-                                              _email.text = entry.key;
-                                              _signIn();
-                                            },
-                                      child: Row(
-                                        children: [
-                                          const Icon(
-                                            Icons.person_outline,
-                                            size: 19,
-                                          ),
-                                          const SizedBox(width: 12),
-                                          Expanded(
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  '${entry.value.classification} · ${entry.value.major}',
-                                                  style: const TextStyle(
-                                                    fontWeight: FontWeight.w700,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  "${entry.value.name.replaceFirst(' (Demo)', '')} · ${entry.value.inProgressCredits.toInt()} credits in progress",
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodySmall,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          const Icon(
-                                            Icons.arrow_forward,
-                                            size: 17,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              const SizedBox(height: 22),
-                              Container(
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: colors.surfaceContainerLow,
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: Text(
-                                  'Demo sign-in uses sample academic records without verifying your email. Drafts and chats are stored on this browser.',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    height: 1.6,
-                                    color: colors.onSurfaceVariant,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                      return wide
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Expanded(child: brand),
-                                Expanded(child: form),
-                              ],
-                            )
-                          : Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [brand, form],
-                            );
-                    },
-                  ),
+                        const SizedBox(width: 56),
+                        Expanded(flex: 8, child: form),
+                      ],
+                    );
+                  },
                 ),
               ),
             ),
           ),
-        );
-      },
+        ),
+      ),
     ),
   );
+
+  Widget _buildBrand(BuildContext context, {required bool wide}) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Image.asset(
+              'assets/images/benedict_logo.png',
+              width: wide ? 48 : 36,
+              height: wide ? 48 : 36,
+              fit: BoxFit.contain,
+              excludeFromSemantics: true,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Benedict College',
+                style: theme.textTheme.titleMedium,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          'Tiger Path Advisor',
+          style: AppThemes.pageTitle(context, size: wide ? 48 : 34),
+        ),
+        if (wide) ...[
+          const SizedBox(height: 22),
+          AspectRatio(
+            aspectRatio: 1.5,
+            child: Image.asset(
+              'assets/images/benedict_campus.jpg',
+              fit: BoxFit.cover,
+              alignment: Alignment.topRight,
+              semanticLabel: 'Tiger statue on the Benedict College campus',
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Benedict College, Columbia, SC. Photo by 2C2K Photography (CC BY 4.0).',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildForm(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Form(
+      key: _form,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Sign in', style: theme.textTheme.headlineSmall),
+          const SizedBox(height: 14),
+          TextFormField(
+            controller: _email,
+            enabled: !_busy,
+            keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.done,
+            autocorrect: false,
+            enableSuggestions: false,
+            onFieldSubmitted: (_) => _signIn(),
+            decoration: const InputDecoration(
+              labelText: 'Student email',
+              hintText: 'your.name@my.benedict.edu',
+            ),
+            validator: (value) => MockAuthService.isStudentEmail(value ?? '')
+                ? null
+                : 'Use your @my.benedict.edu student email.',
+          ),
+          CheckboxListTile(
+            contentPadding: EdgeInsets.zero,
+            controlAffinity: ListTileControlAffinity.leading,
+            value: _remember,
+            onChanged: _busy
+                ? null
+                : (value) => setState(() => _remember = value ?? false),
+            title: const Text('Keep me signed in on this browser'),
+          ),
+          if (_error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(_error!, style: TextStyle(color: colors.error)),
+            ),
+          FilledButton(
+            onPressed: _busy ? null : _signIn,
+            child: _busy
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Text('Continue to Tiger Path'),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Demo sign-in uses sample records. Drafts and chats are saved on this device.',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 22),
+          Text('Try a demo profile', style: theme.textTheme.titleMedium),
+          const SizedBox(height: 6),
+          for (final entry in {
+            mockStudentEmail: fictionalStudent,
+            ...additionalStudentScenarios,
+          }.entries) ...[
+            const Divider(height: 1),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                style: TextButton.styleFrom(
+                  alignment: Alignment.centerLeft,
+                  foregroundColor: colors.onSurface,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 9,
+                    horizontal: 2,
+                  ),
+                  minimumSize: const Size(0, 48),
+                  shape: const RoundedRectangleBorder(),
+                ),
+                onPressed: _busy
+                    ? null
+                    : () {
+                        _email.text = entry.key;
+                        _signIn();
+                      },
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(entry.value.name.replaceFirst(' (Demo)', '')),
+                          Text(
+                            '${entry.value.classification} · ${entry.value.major}',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Icon(Icons.arrow_forward, size: 18, color: colors.primary),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          const Divider(height: 1),
+        ],
+      ),
+    );
+  }
 }

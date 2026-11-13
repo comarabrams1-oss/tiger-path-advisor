@@ -68,10 +68,6 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
       Text('Interface design', style: Theme.of(context).textTheme.titleLarge),
-      const SizedBox(height: 6),
-      const Text(
-        'Navigation, layout, shapes, and typography — independent of your colors.',
-      ),
       const SizedBox(height: 14),
       LayoutBuilder(
         builder: (context, constraints) => Wrap(
@@ -245,7 +241,7 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Theme Studio')),
@@ -255,68 +251,25 @@ class _ThemeSettingsScreenState extends State<ThemeSettingsScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 24, 20, 40),
             children: [
-              Text(
-                textAlign: TextAlign.center,
-                'Choose Your Look',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                textAlign: TextAlign.center,
-                'Combine an interface design with your favorite colors. Your choices apply throughout Tiger Path.',
-                style: TextStyle(
-                  color: colors.onSurface.withValues(alpha: 0.65),
-                  fontSize: 15,
-                ),
-              ),
-              const SizedBox(height: 28),
               _buildDesignChoices(context),
               const SizedBox(height: 28),
-              Text(
-                'Preset Themes',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
+              Text('Preset themes', style: theme.textTheme.titleLarge),
               const SizedBox(height: 14),
               _buildPresetGrid(context),
               const SizedBox(height: 34),
-              Text(
-                'Create Your Own Theme',
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                'Choose light or dark mode, then select your primary and accent colors.',
-                style: TextStyle(
-                  color: colors.onSurface.withValues(alpha: 0.62),
-                ),
-              ),
-              const SizedBox(height: 18),
+              Text('Custom colors', style: theme.textTheme.titleLarge),
+              const SizedBox(height: 14),
               _buildCustomThemeEditor(context),
               const SizedBox(height: 24),
               _buildCustomPreview(context),
               const SizedBox(height: 22),
               if (_editingCustom || selectedPreset == AppThemePreset.custom)
-                SizedBox(
-                  width: double.infinity,
+                Align(
+                  alignment: Alignment.centerLeft,
                   child: FilledButton.icon(
                     onPressed: _saveCustomTheme,
-                    icon: const Icon(Icons.save_outlined),
-                    label: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 14),
-                      child: Text('Save & Apply My Theme'),
-                    ),
+                    icon: const Icon(Icons.save_outlined, size: 18),
+                    label: const Text('Apply custom theme'),
                   ),
                 ),
             ],
@@ -615,7 +568,7 @@ class ThemeStudioPreview extends StatelessWidget {
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
               color: theme.scaffoldBackgroundColor,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(custom.design.radius),
               border: Border.all(color: colors.outlineVariant),
             ),
             child: Column(
@@ -649,33 +602,9 @@ class ThemeStudioPreview extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Container(
-                        key: const ValueKey('preview-hero'),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: colors.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Tiger Path Advisor',
-                              style: TextStyle(
-                                color: colors.onPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 5),
-                            Text(
-                              'Academic planning',
-                              style: TextStyle(
-                                color: colors.onPrimary.withValues(alpha: 0.78),
-                              ),
-                            ),
-                          ],
-                        ),
+                      Text(
+                        'Tiger Path Advisor',
+                        style: AppThemes.pageTitle(context, size: 25),
                       ),
                       const SizedBox(height: 14),
                       Card(
@@ -702,11 +631,6 @@ class ThemeStudioPreview extends StatelessWidget {
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const Spacer(),
-                                  Text(
-                                    '60.8%',
-                                    style: TextStyle(color: colors.onSurface),
-                                  ),
                                 ],
                               ),
                               const SizedBox(height: 10),
@@ -725,7 +649,7 @@ class ThemeStudioPreview extends StatelessWidget {
                                 children: [
                                   FilledButton(
                                     onPressed: () {},
-                                    child: const Text('Primary action'),
+                                    child: const Text('Build schedule'),
                                   ),
                                   FilledButton.tonalIcon(
                                     key: const ValueKey(
@@ -740,10 +664,10 @@ class ThemeStudioPreview extends StatelessWidget {
                                       Icons.arrow_forward,
                                       size: 17,
                                     ),
-                                    label: const Text('Chat action'),
+                                    label: const Text('Apply colors'),
                                   ),
                                   FilterChip(
-                                    label: const Text('Selected option'),
+                                    label: const Text('Monday'),
                                     selected: true,
                                     onSelected: (_) {},
                                   ),
@@ -757,14 +681,14 @@ class ThemeStudioPreview extends StatelessWidget {
                       TextField(
                         readOnly: true,
                         decoration: InputDecoration(
-                          hintText: 'Message Tiger Path',
+                          labelText: 'Message Tiger Path',
                           suffixIcon: Padding(
                             padding: const EdgeInsets.all(5),
                             child: IconButton.filled(
                               onPressed: () {},
                               style: IconButton.styleFrom(
-                                backgroundColor: colors.secondary,
-                                foregroundColor: colors.onSecondary,
+                                backgroundColor: colors.primary,
+                                foregroundColor: colors.onPrimary,
                               ),
                               icon: const Icon(Icons.arrow_upward, size: 18),
                             ),
@@ -802,14 +726,6 @@ class ThemeStudioPreview extends StatelessWidget {
                               ],
                             ),
                         ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Display colors include the same contrast adjustments as the app.',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: colors.onSurfaceVariant,
-                        ),
                       ),
                     ],
                   ),

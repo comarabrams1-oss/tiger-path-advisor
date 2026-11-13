@@ -35,17 +35,17 @@ void main() {
         if (design == AppDesign.sharp) {
           expect(find.byType(NavigationRail), findsOneWidget);
           expect(find.byType(SegmentedButton<int>), findsOneWidget);
-          expect(find.text('What could come next'), findsNothing);
+          expect(find.text('Spring 2027 recommendations'), findsNothing);
           await tester.tap(find.text('Next term'));
           await tester.pumpAndSettle();
-          expect(find.text('What could come next'), findsOneWidget);
-          expect(find.text('Your current semester'), findsNothing);
+          expect(find.text('Spring 2027 recommendations'), findsOneWidget);
+          expect(find.text('Fall 2026 courses'), findsNothing);
         } else if (design == AppDesign.soft) {
           expect(find.byType(ListTile), findsNWidgets(6));
         } else {
           expect(find.byType(NavigationRail), findsNothing);
-          expect(find.text('Your current semester'), findsOneWidget);
-          expect(find.text('What could come next'), findsOneWidget);
+          expect(find.text('Fall 2026 courses'), findsOneWidget);
+          expect(find.text('Spring 2027 recommendations'), findsOneWidget);
         }
         await tester.tap(find.text('Plan'));
         expect(destination, 3);

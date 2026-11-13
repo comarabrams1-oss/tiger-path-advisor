@@ -68,9 +68,9 @@ extension AppDesignInfo on AppDesign {
     AppDesign.sharp => 'Navigation rail and a compact, tabbed workspace',
   };
   double get radius => switch (this) {
-    AppDesign.classic => 18,
-    AppDesign.soft => 30,
-    AppDesign.sharp => 6,
+    AppDesign.classic => 8,
+    AppDesign.soft => 16,
+    AppDesign.sharp => 4,
   };
 }
 
@@ -118,27 +118,31 @@ class CustomThemeSettings {
 }
 
 class AppThemes {
+  static TextStyle pageTitle(BuildContext context, {double size = 32}) =>
+      Theme.of(context).textTheme.headlineMedium!.copyWith(
+        fontFamily: 'Spectral',
+        fontSize: size,
+        fontWeight: FontWeight.w600,
+        height: 1.12,
+        letterSpacing: -.5,
+      );
+
   static ThemeData build(
     AppThemePreset preset, {
     CustomThemeSettings custom = const CustomThemeSettings(),
   }) {
     final base = _palette(preset, custom);
     final design = custom.design;
-    if (design == AppDesign.classic) {
-      return base.copyWith(extensions: [AppDesignTokens(design)]);
-    }
     final radius = BorderRadius.circular(design.radius);
     final sharp = design == AppDesign.sharp;
     final shape = RoundedRectangleBorder(
       borderRadius: radius,
-      side: BorderSide(
-        color: base.colorScheme.outline.withValues(alpha: sharp ? .55 : .13),
-        width: sharp ? 1.3 : 1,
-      ),
+      side: BorderSide(color: base.colorScheme.outlineVariant),
     );
-    final labels = base.textTheme.labelLarge?.copyWith(
-      letterSpacing: sharp ? 1.1 : .15,
-      fontWeight: FontWeight.w700,
+    final controlShape = WidgetStatePropertyAll(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(sharp ? 4 : 8),
+      ),
     );
     return base.copyWith(
       extensions: [AppDesignTokens(design)],
@@ -148,26 +152,40 @@ class AppThemes {
         margin: EdgeInsets.zero,
       ),
       textTheme: base.textTheme.copyWith(
-        labelLarge: labels,
+        labelLarge: base.textTheme.labelLarge?.copyWith(
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+        ),
+        bodyMedium: base.textTheme.bodyMedium?.copyWith(
+          fontSize: 15,
+          letterSpacing: 0,
+        ),
+        bodySmall: base.textTheme.bodySmall?.copyWith(
+          fontSize: 13,
+          letterSpacing: 0,
+        ),
         titleLarge: base.textTheme.titleLarge?.copyWith(
-          fontWeight: sharp ? FontWeight.w900 : FontWeight.w600,
-          letterSpacing: sharp ? -.6 : .1,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: (base.filledButtonTheme.style ?? const ButtonStyle()).copyWith(
-          shape: WidgetStatePropertyAll(shape),
-          padding: WidgetStatePropertyAll(
-            EdgeInsets.symmetric(
-              horizontal: sharp ? 18 : 24,
-              vertical: sharp ? 14 : 18,
-            ),
+        style: base.filledButtonTheme.style!.copyWith(
+          shape: controlShape,
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
-        style: (base.outlinedButtonTheme.style ?? const ButtonStyle()).copyWith(
-          shape: WidgetStatePropertyAll(shape),
+        style: base.outlinedButtonTheme.style!.copyWith(
+          shape: controlShape,
+          minimumSize: const WidgetStatePropertyAll(Size(0, 44)),
+          side: WidgetStatePropertyAll(
+            BorderSide(color: base.colorScheme.outlineVariant),
+          ),
         ),
       ),
       inputDecorationTheme: base.inputDecorationTheme.copyWith(
@@ -185,10 +203,10 @@ class AppThemes {
       ),
       chipTheme: base.chipTheme.copyWith(
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(sharp ? 4 : 20),
+          borderRadius: BorderRadius.circular(sharp ? 4 : 8),
         ),
       ),
-      dividerTheme: base.dividerTheme.copyWith(thickness: sharp ? 1.3 : .7),
+      dividerTheme: base.dividerTheme.copyWith(thickness: 1),
     );
   }
 
@@ -218,8 +236,8 @@ class AppThemes {
   }
 
   static ThemeData _benedictTheme() {
-    const background = Color(0xFFF7F4FA);
-    const surface = Colors.white;
+    const background = Color(0xFFF7F5F0);
+    const surface = Color(0xFFFFFDFA);
 
     final scheme =
         ColorScheme.fromSeed(
@@ -228,19 +246,29 @@ class AppThemes {
         ).copyWith(
           primary: benedictPurple,
           onPrimary: Colors.white,
+          primaryContainer: const Color(0xFFEDE5F1),
+          onPrimaryContainer: benedictDarkPurple,
           secondary: benedictGold,
           onSecondary: Colors.black,
+          secondaryContainer: const Color(0xFFF4E8C8),
+          onSecondaryContainer: const Color(0xFF4F3910),
           surface: surface,
-          onSurface: const Color(0xFF211B25),
+          surfaceContainerLow: const Color(0xFFF0ECE6),
+          surfaceContainerHighest: const Color(0xFFE8E1D7),
+          onSurface: const Color(0xFF252127),
+          onSurfaceVariant: const Color(0xFF605762),
+          outline: const Color(0xFF877D85),
+          outlineVariant: const Color(0xFFDAD2C9),
         );
 
     return _baseTheme(
       scheme: scheme,
       scaffoldBackground: background,
       cardColor: surface,
-      appBarColor: benedictPurple,
-      appBarForeground: Colors.white,
+      appBarColor: background,
+      appBarForeground: benedictPurple,
       navigationColor: surface,
+      dividerColor: scheme.outlineVariant,
     );
   }
 
@@ -305,21 +333,26 @@ class AppThemes {
   }
 
   static ThemeData _midnightPurpleTheme() {
-    const background = Color(0xFF090510);
-    const surface = Color(0xFF160D20);
-    const card = Color(0xFF1D102A);
-    const primary = Color(0xFFB875E7);
-    const accent = Color(0xFF8F7CFF);
+    const background = Color(0xFF151218);
+    const surface = Color(0xFF201B24);
+    const card = Color(0xFF251F29);
+    const primary = Color(0xFFD0B6E1);
+    const accent = Color(0xFFE7C87C);
 
     const scheme = ColorScheme.dark(
       primary: primary,
       onPrimary: Color(0xFF240037),
-      primaryContainer: Color(0xFF41215A),
-      onPrimaryContainer: Color(0xFFF4DBFF),
+      primaryContainer: Color(0xFF3B2D45),
+      onPrimaryContainer: Color(0xFFF2E6F8),
       secondary: accent,
-      onSecondary: Color(0xFF100A2C),
+      onSecondary: Color(0xFF302203),
+      secondaryContainer: Color(0xFF443920),
+      onSecondaryContainer: Color(0xFFF3DEA8),
       surface: surface,
+      surfaceContainerLow: Color(0xFF261F2A),
       onSurface: Color(0xFFF7EEFC),
+      onSurfaceVariant: Color(0xFFCCC0D0),
+      outlineVariant: Color(0xFF483E4C),
       error: Color(0xFFFFB4AB),
       onError: Color(0xFF690005),
     );
@@ -328,11 +361,11 @@ class AppThemes {
       scheme: scheme,
       scaffoldBackground: background,
       cardColor: card,
-      appBarColor: const Color(0xFF12091B),
+      appBarColor: background,
       appBarForeground: Colors.white,
       navigationColor: surface,
       dividerColor: const Color(0xFF3E304A),
-      inputFillColor: const Color(0xFF251630),
+      inputFillColor: const Color(0xFF2E2733),
     );
   }
 
@@ -469,6 +502,7 @@ class AppThemes {
   }) {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Source Sans 3',
       brightness: scheme.brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: scaffoldBackground,
@@ -568,6 +602,9 @@ class AppThemes {
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: navigationColor,
         indicatorColor: scheme.secondaryContainer,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(7),
+        ),
       ),
       popupMenuTheme: PopupMenuThemeData(
         color: cardColor,

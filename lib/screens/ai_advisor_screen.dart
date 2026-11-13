@@ -557,7 +557,18 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               final wide = size.maxWidth >= 1000;
               final chat = Column(
                 children: [
-                  if (size.maxHeight >= 420) _header(colors),
+                  if (size.maxHeight >= 420 && _saved)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 10, 20, 3),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Conversation saved on this browser',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
+                        ),
+                      ),
+                    ),
                   if (_loading) const LinearProgressIndicator(),
                   if (_storageError != null)
                     Padding(
@@ -573,18 +584,11 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
                       children: [
                         if (_changes.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.all(14),
-                            margin: const EdgeInsets.only(bottom: 16),
-                            decoration: BoxDecoration(
-                              color: colors.tertiaryContainer,
-                              borderRadius: BorderRadius.circular(16),
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
                             child: Text(
-                              '${_changes.length} requirement updates since this chat. Ask “What changed in my progress?”',
-                              style: TextStyle(
-                                color: colors.onTertiaryContainer,
-                              ),
+                              '${_changes.length} requirements changed since this chat.',
+                              style: TextStyle(color: colors.onSurfaceVariant),
                             ),
                           ),
                         if (_messages.isEmpty && !_loading) _welcome(colors),
@@ -626,7 +630,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Expanded(child: chat),
-                  if (wide) SizedBox(width: 280, child: _progressPanel(colors)),
+                  if (wide && size.maxHeight >= 420)
+                    SizedBox(width: 250, child: _progressPanel(colors)),
                 ],
               );
             },
@@ -636,139 +641,31 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
     );
   }
 
-  Widget _header(ColorScheme colors) => Container(
-    margin: const EdgeInsets.fromLTRB(20, 12, 20, 8),
-    padding: const EdgeInsets.all(18),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          colors.primaryContainer,
-          Color.lerp(colors.primaryContainer, colors.primary, 0.10)!,
-        ],
-      ),
-      borderRadius: BorderRadius.circular(24),
-    ),
-    child: Column(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Icon(Icons.auto_awesome, color: colors.primary, size: 25),
-        ),
-        const SizedBox(height: 10),
-        SizedBox(
-          width: double.infinity,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                textAlign: TextAlign.center,
-                'Academic advisor',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: colors.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 5),
-              Text(
-                textAlign: TextAlign.center,
-                '${widget.student.classification} · ${widget.student.major} · Spring 2027',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: colors.onPrimaryContainer,
-                ),
-              ),
-              const SizedBox(height: 7),
-              Text(
-                textAlign: TextAlign.center,
-                _busy
-                    ? 'Thinking with your latest plan'
-                    : _saved
-                    ? 'Conversation saved on this browser'
-                    : 'Ask about courses, progress, or settings',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: colors.onPrimaryContainer,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
   Widget _welcome(ColorScheme colors) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 20),
+    padding: const EdgeInsets.only(top: 18, bottom: 16),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          textAlign: TextAlign.center,
-          'Ask Tiger Path',
-          style: TextStyle(
-            fontSize: 25,
-            fontWeight: FontWeight.w700,
-            color: colors.onSurface,
-          ),
+          '${widget.student.classification} · ${widget.student.major}',
+          style: Theme.of(context).textTheme.bodyMedium
+              ?.copyWith(color: colors.onSurfaceVariant),
         ),
-        const SizedBox(height: 9),
-        Text(
-          textAlign: TextAlign.center,
-          'Get course recommendations, review degree requirements, or change app settings.',
-          style: TextStyle(color: colors.onSurfaceVariant, height: 1.5),
-        ),
-        const SizedBox(height: 22),
-        for (final item in [
-          (
-            Icons.route_outlined,
-            'Plan my next semester',
-            'What should I take in Spring 2027?',
-          ),
-          (
-            Icons.school_outlined,
-            'See what’s left',
-            'What classes do I still need?',
-          ),
-          (Icons.palette_outlined, 'Change theme', 'I want to change my theme'),
+        const SizedBox(height: 14),
+        for (final question in [
+          'What should I take in Spring 2027?',
+          'What classes do I still need?',
         ])
-          Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: Material(
-              color: colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(18),
-              child: InkWell(
-                borderRadius: BorderRadius.circular(18),
-                onTap: _context == null || _busy ? null : () => _send(item.$3),
-                child: Padding(
-                  padding: const EdgeInsets.all(17),
-                  child: Row(
-                    children: [
-                      Icon(item.$1, color: colors.primary),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          item.$2,
-                          style: const TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward,
-                        size: 18,
-                        color: colors.primary,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
+          TextButton.icon(
+            onPressed: _context == null || _busy ? null : () => _send(question),
+            icon: const Icon(Icons.arrow_forward, size: 17),
+            iconAlignment: IconAlignment.end,
+            label: Text(question, textAlign: TextAlign.left),
           ),
       ],
     ),
   );
+
   Widget _bubble(AdvisorMessage message, ColorScheme colors) {
     final user = message.role == 'user';
     return Align(
@@ -776,56 +673,34 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       child: Container(
         constraints: const BoxConstraints(maxWidth: 680),
         margin: const EdgeInsets.only(bottom: 18, left: 0, right: 0),
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: user ? colors.primaryContainer : colors.surfaceContainerLow,
-          border: Border.all(
-            color: user
-                ? colors.primaryContainer
-                : colors.outlineVariant.withValues(alpha: 0.6),
-          ),
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(22),
-            topRight: const Radius.circular(22),
-            bottomLeft: Radius.circular(user ? 22 : 5),
-            bottomRight: Radius.circular(user ? 5 : 22),
-          ),
-        ),
+        padding: EdgeInsets.fromLTRB(user ? 14 : 0, 12, 14, 12),
+        decoration: user
+            ? BoxDecoration(
+                color: colors.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              )
+            : null,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  user ? Icons.person_outline : Icons.auto_awesome,
-                  size: 15,
-                  color: user ? colors.onPrimaryContainer : colors.secondary,
-                ),
-                const SizedBox(width: 7),
-                Text(
-                  user ? 'YOU' : 'TIGER PATH',
-                  style: TextStyle(
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                    fontWeight: FontWeight.w800,
-                    color: user ? colors.onPrimaryContainer : colors.secondary,
-                  ),
-                ),
-              ],
+            Text(
+              user ? 'You' : 'Tiger Path',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                color: user ? colors.onPrimaryContainer : colors.primary,
+              ),
             ),
-            const SizedBox(height: 11),
-            if (!user)
-              AdvisorResponse(text: message.text)
-            else
+            const SizedBox(height: 6),
+            if (user)
               SelectableText(
                 message.text,
                 style: TextStyle(
-                  fontSize: 14,
-                  height: 1.6,
-                  color: user ? colors.onPrimaryContainer : colors.onSurface,
+                  fontSize: 15,
+                  height: 1.5,
+                  color: colors.onPrimaryContainer,
                 ),
-              ),
+              )
+            else
+              AdvisorResponse(text: message.text),
             for (final action in message.actions.where(
               (a) => a.type == 'customTheme',
             ))
@@ -891,9 +766,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        border: Border(
-          top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.4)),
-        ),
+        border: Border(top: BorderSide(color: colors.outlineVariant)),
       ),
       child: Column(
         children: [
@@ -901,7 +774,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
             decoration: BoxDecoration(
               color: colors.surfaceContainerLow,
-              borderRadius: BorderRadius.circular(22),
+              borderRadius: BorderRadius.circular(8),
               border: Border.all(color: colors.outlineVariant),
             ),
             child: Row(
@@ -951,7 +824,6 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                       minLines: 1,
                       maxLines: 4,
                       decoration: const InputDecoration(
-                        hintText: 'Ask about classes, progress, or the app…',
                         labelText: 'Message Tiger Path',
                         counterText: '',
                         border: InputBorder.none,
@@ -967,8 +839,8 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                   child: IconButton.filled(
                     tooltip: 'Send question',
                     style: IconButton.styleFrom(
-                      backgroundColor: colors.secondary,
-                      foregroundColor: colors.onSecondary,
+                      backgroundColor: colors.primary,
+                      foregroundColor: colors.onPrimary,
                     ),
                     onPressed: _busy || _context == null ? null : () => _send(),
                     icon: const Icon(Icons.arrow_upward, size: 20),
@@ -977,141 +849,74 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.lock_outline,
-                size: 11,
-                color: colors.onSurfaceVariant,
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                foregroundColor: colors.onSurfaceVariant,
               ),
-              const SizedBox(width: 5),
-              Flexible(
-                child: Text(
-                  'Saved here · AI guidance · confirm with your advisor',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: colors.onSurfaceVariant,
+              onPressed: () => showDialog<void>(
+                context: context,
+                builder: (dialog) => AlertDialog(
+                  title: const Text('Chat privacy'),
+                  content: const Text(
+                    'Questions, class year, and planning results go to Google Gemini. Tiger Path excludes your name, grades, GPA, and full transcript. Avoid including private details in your messages.\n\nChats are stored on this browser. Use Saved chats to clear them on a shared device.',
                   ),
-                ),
-              ),
-              const SizedBox(width: 5),
-              InkWell(
-                onTap: () => showDialog<void>(
-                  context: context,
-                  builder: (dialog) => AlertDialog(
-                    title: const Text('Your chat & privacy'),
-                    content: const Text(
-                      'Chats are saved on this browser, including on shared devices. Use Saved chats to clear them. Questions, classification, and computed planning results are sent to Google Gemini. Your name, grades, GPA, and full transcript are excluded. Avoid entering private information.\n\nThe current profile is the app’s demo student. Progress refreshes from the app’s academic record; chat cannot change it. Confirm final plans with your academic advisor.',
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialog),
+                      child: const Text('Close'),
                     ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(dialog),
-                        child: const Text('Got it'),
-                      ),
-                    ],
-                  ),
-                ),
-                child: Text(
-                  'Details',
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: colors.primary,
-                    decoration: TextDecoration.underline,
-                  ),
+                  ],
                 ),
               ),
-            ],
+              child: const Text('Chat privacy'),
+            ),
           ),
         ],
       ),
     ),
   );
+
   Widget _progressPanel(ColorScheme colors) {
     final student = widget.student;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(0, 12, 20, 20),
-      padding: const EdgeInsets.all(22),
+    final theme = Theme.of(context);
+    final progress = student.requiredCredits > 0
+        ? (student.earnedCredits / student.requiredCredits).clamp(0.0, 1.0)
+        : 0.0;
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(24),
+        border: Border(left: BorderSide(color: colors.outlineVariant)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.school_outlined, color: colors.primary, size: 30),
-          const SizedBox(height: 20),
-          const Text(
-            'Degree progress',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '${student.classification} · ${student.degreeLabel} ${student.major}',
-            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 28),
-          Text(
-            '${student.earnedCredits.toInt()} / ${student.requiredCredits.toInt()}',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w800,
-              color: colors.primary,
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(18, 20, 20, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Degree progress', style: theme.textTheme.titleMedium),
+            const SizedBox(height: 12),
+            Text(
+              '${student.earnedCredits.toInt()} / ${student.requiredCredits.toInt()} credits',
+              style: theme.textTheme.titleLarge,
             ),
-          ),
-          const Text('credits earned', style: TextStyle(fontSize: 12)),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: (student.earnedCredits / student.requiredCredits).clamp(
-                0,
-                1,
+            const SizedBox(height: 9),
+            LinearProgressIndicator(value: progress, minHeight: 4),
+            const SizedBox(height: 9),
+            Text(
+              '${student.inProgressCredits.toInt()} credits in progress',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
               ),
-              minHeight: 7,
             ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            '${student.inProgressCredits.toInt()} credits in progress',
-            style: TextStyle(color: colors.onSurfaceVariant, fontSize: 12),
-          ),
-          const SizedBox(height: 26),
-          const Divider(),
-          const SizedBox(height: 10),
-          Text(
-            'CURRENT SOURCE',
-            style: TextStyle(
-              fontSize: 10,
-              letterSpacing: 1.3,
-              fontWeight: FontWeight.w700,
-              color: colors.onSurfaceVariant,
+            const SizedBox(height: 8),
+            TextButton(
+              onPressed: () =>
+                  _perform(const AdvisorAction('navigate', 'degreeProgress')),
+              child: const Text('View progress'),
             ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Spring 2027 offerings',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Degree checks refresh with every question. Seat availability is an imported snapshot.',
-            style: TextStyle(
-              fontSize: 12,
-              height: 1.6,
-              color: colors.onSurfaceVariant,
-            ),
-          ),
-          const SizedBox(height: 22),
-          OutlinedButton.icon(
-            onPressed: () =>
-                _perform(const AdvisorAction('navigate', 'degreeProgress')),
-            icon: const Icon(Icons.trending_up, size: 18),
-            label: const Text('View progress'),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

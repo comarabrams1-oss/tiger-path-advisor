@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../data/test_student.dart';
 import '../models/student_course.dart';
+import '../themes/app_theme.dart';
 
 class TranscriptScreen extends StatelessWidget {
   const TranscriptScreen({super.key});
@@ -23,7 +24,7 @@ class TranscriptScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: AppBar(title: Text('Transcript')),
+      appBar: AppBar(title: const Text('Transcript')),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -32,21 +33,17 @@ class TranscriptScreen extends StatelessWidget {
           _buildAcademicSummary(context),
           const SizedBox(height: 28),
           if (inProgress.isNotEmpty) ...[
-            _sectionTitle(
-              context,
-              icon: Icons.schedule,
-              title: 'Current Semester',
-              subtitle: '${inProgress.length} courses currently in progress',
+            Text(
+              'Current semester',
+              style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: 14),
             _buildCurrentSemester(context, inProgress),
             const SizedBox(height: 30),
           ],
-          _sectionTitle(
-            context,
-            icon: Icons.history,
-            title: 'Academic History',
-            subtitle: 'Completed coursework organized by semester',
+          Text(
+            'Academic history',
+            style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 14),
           ...List.generate(sortedTerms.length, (index) {
@@ -69,211 +66,50 @@ class TranscriptScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Academic Record',
-          style: TextStyle(
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        const SizedBox(height: 7),
-        Text(
-          '${activeStudent.major} • ${activeStudent.classification}',
-          style: TextStyle(
-            fontSize: 16,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(
-          activeStudent.institution,
-          style: TextStyle(
-            fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
-        ),
-      ],
-    );
-  }
+  Widget _buildHeader(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(activeStudent.major, style: AppThemes.pageTitle(context)),
+      const SizedBox(height: 4),
+      Text(activeStudent.classification),
+    ],
+  );
 
   Widget _buildAcademicSummary(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(22),
+    final theme = Theme.of(context);
+    return DecoratedBox(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary,
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.primary
-                .withValues(alpha: 0.16),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
+        color: theme.colorScheme.surface,
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        borderRadius: BorderRadius.circular(AppDesignTokens.of(context).radius),
       ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final compact = constraints.maxWidth < 520;
-
-          if (compact) {
-            return Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _summaryItem(
-                        context,
-                        activeStudent.earnedCredits.toInt().toString(),
-                        'Earned Credits',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _summaryItem(
-                        context,
-                        activeStudent.inProgressCredits.toInt().toString(),
-                        'In Progress',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                _summaryItem(
-                  context,
-                  activeStudent.gpa.toStringAsFixed(2),
-                  'Cumulative GPA',
-                ),
-              ],
-            );
-          }
-
-          return Row(
-            children: [
-              Expanded(
-                child: _summaryItem(
-                  context,
-                  activeStudent.earnedCredits.toInt().toString(),
-                  'Earned Credits',
-                ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Wrap(
+          spacing: 24,
+          runSpacing: 12,
+          children: [
+            for (final (label, value) in [
+              (
+                'Earned credits',
+                activeStudent.earnedCredits.toInt().toString(),
               ),
-              _summaryDivider(context),
-              Expanded(
-                child: _summaryItem(
-                  context,
-                  activeStudent.inProgressCredits.toInt().toString(),
-                  'In Progress',
-                ),
+              (
+                'In progress',
+                activeStudent.inProgressCredits.toInt().toString(),
               ),
-              _summaryDivider(context),
-              Expanded(
-                child: _summaryItem(
-                  context,
-                  activeStudent.gpa.toStringAsFixed(2),
-                  'Cumulative GPA',
-                ),
+              ('Cumulative GPA', activeStudent.gpa.toStringAsFixed(2)),
+            ])
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(value, style: theme.textTheme.titleLarge),
+                  Text(label, style: theme.textTheme.bodySmall),
+                ],
               ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _summaryItem(BuildContext context, String value, String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        children: [
-          Text(
-            value,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary,
-              fontSize: 25,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 5),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary
-                  .withValues(alpha: 0.8),
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _summaryDivider(BuildContext context) {
-    return Container(
-      width: 1,
-      height: 45,
-      margin: const EdgeInsets.symmetric(horizontal: 10),
-      color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.18),
-    );
-  }
-
-  Widget _sectionTitle(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 45,
-          height: 45,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Icon(
-            icon,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
+          ],
         ),
-        const SizedBox(width: 13),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                title,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 21,
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const SizedBox(height: 3),
-              Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(width: 58),
-      ],
+      ),
     );
   }
 

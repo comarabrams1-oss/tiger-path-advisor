@@ -27,14 +27,18 @@ class AdvisorResponse extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
     // Older saved answers sometimes place numbered sections on one line.
     final normalized = text.replaceAllMapped(
       RegExp(r'([.:])\s+(?=\d+\.\s)'),
       (m) => '${m[1]}\n',
     );
     final lines = normalized.split('\n');
-    final base = TextStyle(fontSize: 14, height: 1.55, color: colors.onSurface);
+    final base = (theme.textTheme.bodyMedium ?? const TextStyle()).copyWith(
+      height: 1.5,
+      color: colors.onSurface,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [

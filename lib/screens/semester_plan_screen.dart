@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../widgets/info_tip.dart';
+import '../themes/app_theme.dart';
 
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
@@ -103,138 +104,120 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
 
     return Scaffold(
       appBar: AppBar(title: const Text('Semester Plan')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Text(
-            textAlign: TextAlign.center,
-            '${activeStudent.classification} semester plan',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            textAlign: TextAlign.center,
-            'Spring 2027 · Check meeting times in the next step.',
-          ),
-          if (activeStudent.major == 'Computer Engineering')
-            const Padding(
-              padding: EdgeInsets.only(top: 12),
-              child: Text(engineeringPreviewNotice),
-            ),
-          const SizedBox(height: 24),
-
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Plan Summary',
-                    style: TextStyle(fontSize: 19, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    '${plan.totalCredits.toInt()} course credits · ${plan.maxCredits}-credit limit',
-                  ),
-                  const SizedBox(height: 10),
-                  LinearProgressIndicator(
-                    value: plan.maxCredits == 0
-                        ? 0
-                        : (plan.totalCredits / plan.maxCredits).clamp(0.0, 1.0),
-                    minHeight: 10,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    '${plan.remainingCreditCapacity.toInt()} '
-                    'credits below the limit',
-                  ),
-                  const SizedBox(height: 8),
-                ],
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                textAlign: TextAlign.center,
+                '${activeStudent.classification} semester plan',
+                style: AppThemes.pageTitle(context),
               ),
-            ),
-          ),
-
-          const SizedBox(height: 30),
-
-          if (plan.shortfallReason != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(plan.shortfallReason!),
-            ),
-          if (omittedPins.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 16),
-              child: Text(
-                'Saved sections that did not fit: ${omittedPins.join(', ')}.',
-              ),
-            ),
-          ...plan.items.map((item) => buildPlanItem(context, item)),
-
-          if (plan.reviewItems.isNotEmpty)
-            Card(
-              child: ExpansionTile(
-                initiallyExpanded: false,
-                title: const Text('Future requirements & advisor review'),
-                subtitle: const Text(
-                  'Outstanding requirements outside this semester. These do not count toward planned credits.',
+              const SizedBox(height: 8),
+              const Text(textAlign: TextAlign.center, 'Spring 2027'),
+              if (activeStudent.major == 'Computer Engineering')
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Text(engineeringPreviewNotice),
                 ),
-                children: [
-                  for (final item in plan.reviewItems)
-                    buildPlanItem(context, item),
-                ],
-              ),
-            ),
+              const SizedBox(height: 24),
 
-          if (plan.items.isEmpty)
-            const Card(
-              child: Padding(
-                padding: EdgeInsets.all(20),
-                child: Text(
-                  'No eligible Spring 2027 sections fit this plan. Check Future requirements & advisor review for the remaining courses and their availability.',
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${plan.totalCredits.toInt()} course credits · ${plan.maxCredits}-credit limit',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 10),
+                      LinearProgressIndicator(
+                        value: plan.maxCredits == 0
+                            ? 0
+                            : (plan.totalCredits / plan.maxCredits).clamp(
+                                0.0,
+                                1.0,
+                              ),
+                        minHeight: 5,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 30),
 
-          if (plan.items.isNotEmpty)
-            FilledButton.icon(
-              onPressed: () async {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    settings: const RouteSettings(
-                      name: 'GeneratedScheduleScreen',
-                    ),
-                    builder: (_) => GeneratedScheduleScreen(
-                      plan: plan,
-                      previousDraft: previousDraft,
+              if (plan.shortfallReason != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(plan.shortfallReason!),
+                ),
+              if (omittedPins.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    'Saved sections that did not fit: ${omittedPins.join(', ')}.',
+                  ),
+                ),
+              ...plan.items.map((item) => buildPlanItem(context, item)),
+
+              if (plan.reviewItems.isNotEmpty)
+                Card(
+                  child: ExpansionTile(
+                    initiallyExpanded: false,
+                    title: const Text('Future requirements & advisor review'),
+                    children: [
+                      for (final item in plan.reviewItems)
+                        buildPlanItem(context, item),
+                    ],
+                  ),
+                ),
+
+              if (plan.items.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Text(
+                      'No eligible Spring 2027 sections fit this plan. Check Future requirements & advisor review for the remaining courses and their availability.',
                     ),
                   ),
-                );
-                if (mounted) setState(() {});
-              },
-              icon: const Icon(Icons.calendar_month),
-              label: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 14),
-                child: Text('Generate Class Schedule'),
-              ),
-            ),
+                ),
 
-          const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Text(
-                'Planning draft · confirm registration with your advisor.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
+              if (plan.items.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute<void>(
+                          settings: const RouteSettings(
+                            name: 'GeneratedScheduleScreen',
+                          ),
+                          builder: (_) => GeneratedScheduleScreen(
+                            plan: plan,
+                            previousDraft: previousDraft,
+                          ),
+                        ),
+                      );
+                      if (mounted) setState(() {});
+                    },
+                    icon: const Icon(Icons.calendar_month_outlined, size: 18),
+                    label: const Text('Generate Class Schedule'),
+                  ),
+                ),
+
+              const SizedBox(height: 20),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
