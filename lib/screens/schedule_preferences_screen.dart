@@ -350,17 +350,14 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 help: 'The builder schedules up to this limit using eligible, open sections.',
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Text(
-                          '$maxCredits credits',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: colors.primary,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      '$maxCredits credits',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: colors.primary,
+                      ),
                     ),
                     Slider(
                       value: maxCredits.toDouble(),
@@ -427,9 +424,9 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
               ),
 
               const SizedBox(height: 22),
-              Align(
-                alignment: Alignment.centerLeft,
+              Center(
                 child: Wrap(
+                  alignment: WrapAlignment.center,
                   spacing: 10,
                   runSpacing: 8,
                   children: [

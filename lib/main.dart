@@ -318,32 +318,29 @@ class HomeScreen extends StatelessWidget {
     final details = showBrand
         ? '${activeStudent.major} ${activeStudent.degreeLabel} · ${activeStudent.classification}'
         : '${activeStudent.degreeLabel} · ${activeStudent.classification}';
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
+    return Column(
       children: [
         if (showBrand) ...[
           Image.asset(
             'assets/images/benedict_logo.png',
-            width: 44,
-            height: 48,
+            width: 38,
+            height: 42,
             fit: BoxFit.contain,
             semanticLabel: 'Benedict College logo',
           ),
-          const SizedBox(width: 12),
+          const SizedBox(height: 8),
         ],
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: AppThemes.pageTitle(context)),
-              const SizedBox(height: 4),
-              Text(
-                details,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
+        Text(
+          title,
+          textAlign: TextAlign.center,
+          style: AppThemes.pageTitle(context),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          details,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
           ),
         ),
       ],
@@ -364,7 +361,11 @@ class HomeScreen extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Degree progress', style: theme.textTheme.titleLarge),
+        Text(
+          'Degree progress',
+          textAlign: TextAlign.center,
+          style: theme.textTheme.titleLarge,
+        ),
         const SizedBox(height: 9),
         Text.rich(
           TextSpan(
@@ -382,6 +383,7 @@ class HomeScreen extends StatelessWidget {
               ),
             ],
           ),
+          textAlign: TextAlign.center,
         ),
         const SizedBox(height: 10),
         ExcludeSemantics(
@@ -394,12 +396,14 @@ class HomeScreen extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           '${_credits(student.inProgressCredits)} in progress · ${_credits(projectedRemaining)} left if passed',
+          textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: colors.onSurfaceVariant,
           ),
         ),
         const SizedBox(height: 6),
         Wrap(
+          alignment: WrapAlignment.center,
           spacing: 8,
           children: [
             TextButton(
@@ -446,10 +450,11 @@ class HomeScreen extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 15, 20, 16),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 'Spring 2027 schedule',
+                textAlign: TextAlign.center,
                 style: AppThemes.pageTitle(context, size: 25),
               ),
               if (draft != null) ...[
@@ -457,6 +462,7 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   '${draft.schedule.scheduled.length} courses · ${_credits(draft.schedule.scheduledCredits)} of ${draft.preferences.maxCredits} credits'
                   '${unresolved > 0 ? ' · $unresolved unresolved' : ''}',
+                  textAlign: TextAlign.center,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -464,6 +470,7 @@ class HomeScreen extends StatelessWidget {
               ],
               const SizedBox(height: 14),
               Wrap(
+                alignment: WrapAlignment.center,
                 spacing: 8,
                 runSpacing: 4,
                 children: [

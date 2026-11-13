@@ -101,9 +101,14 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget _buildBrand(BuildContext context, {required bool wide}) {
     final theme = Theme.of(context);
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: wide
+          ? CrossAxisAlignment.start
+          : CrossAxisAlignment.center,
       children: [
         Row(
+          mainAxisAlignment: wide
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.center,
           children: [
             Image.asset(
               'assets/images/benedict_logo.png',
@@ -113,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
               excludeFromSemantics: true,
             ),
             const SizedBox(width: 12),
-            Expanded(
+            Flexible(
               child: Text(
                 'Benedict College',
                 style: theme.textTheme.titleMedium,
@@ -124,6 +129,7 @@ class _LoginScreenState extends State<LoginScreen> {
         const SizedBox(height: 12),
         Text(
           'Tiger Path Advisor',
+          textAlign: wide ? TextAlign.start : TextAlign.center,
           style: AppThemes.pageTitle(context, size: wide ? 48 : 34),
         ),
         if (wide) ...[
@@ -157,7 +163,7 @@ class _LoginScreenState extends State<LoginScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sign in', style: theme.textTheme.headlineSmall),
+          Center(child: Text('Sign in', style: theme.textTheme.headlineSmall)),
           const SizedBox(height: 14),
           TextFormField(
             controller: _email,
@@ -189,15 +195,20 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.only(bottom: 12),
               child: Text(_error!, style: TextStyle(color: colors.error)),
             ),
-          FilledButton(
-            onPressed: _busy ? null : _signIn,
-            child: _busy
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Text('Continue to Tiger Path'),
+          Center(
+            child: FilledButton(
+              onPressed: _busy ? null : _signIn,
+              child: _busy
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Text(
+                      'Continue to Tiger Path',
+                      textAlign: TextAlign.center,
+                    ),
+            ),
           ),
           const SizedBox(height: 14),
           Text(

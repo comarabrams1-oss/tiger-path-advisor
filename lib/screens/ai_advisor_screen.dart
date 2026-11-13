@@ -644,10 +644,10 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   Widget _welcome(ColorScheme colors) => Padding(
     padding: const EdgeInsets.only(top: 18, bottom: 16),
     child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '${widget.student.classification} · ${widget.student.major}',
+          textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodyMedium
               ?.copyWith(color: colors.onSurfaceVariant),
         ),
@@ -660,7 +660,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             onPressed: _context == null || _busy ? null : () => _send(question),
             icon: const Icon(Icons.arrow_forward, size: 17),
             iconAlignment: IconAlignment.end,
-            label: Text(question, textAlign: TextAlign.left),
+            label: Text(question, textAlign: TextAlign.center),
           ),
       ],
     ),

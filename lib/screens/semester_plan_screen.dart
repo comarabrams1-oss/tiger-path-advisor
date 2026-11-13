@@ -128,10 +128,11 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
                         '${plan.totalCredits.toInt()} course credits · ${plan.maxCredits}-credit limit',
+                        textAlign: TextAlign.center,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 10),
@@ -191,8 +192,7 @@ class _SemesterPlanScreenState extends State<SemesterPlanScreen> {
               const SizedBox(height: 20),
 
               if (plan.items.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
+                Center(
                   child: FilledButton.icon(
                     onPressed: () async {
                       await Navigator.push(

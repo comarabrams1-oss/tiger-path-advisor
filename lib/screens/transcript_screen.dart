@@ -67,11 +67,14 @@ class TranscriptScreen extends StatelessWidget {
   }
 
   Widget _buildHeader(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      Text(activeStudent.major, style: AppThemes.pageTitle(context)),
+      Text(
+        activeStudent.major,
+        textAlign: TextAlign.center,
+        style: AppThemes.pageTitle(context),
+      ),
       const SizedBox(height: 4),
-      Text(activeStudent.classification),
+      Text(activeStudent.classification, textAlign: TextAlign.center),
     ],
   );
 
@@ -86,6 +89,7 @@ class TranscriptScreen extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Wrap(
+          alignment: WrapAlignment.center,
           spacing: 24,
           runSpacing: 12,
           children: [
@@ -101,10 +105,13 @@ class TranscriptScreen extends StatelessWidget {
               ('Cumulative GPA', activeStudent.gpa.toStringAsFixed(2)),
             ])
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(value, style: theme.textTheme.titleLarge),
-                  Text(label, style: theme.textTheme.bodySmall),
+                  Text(
+                    label,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodySmall,
+                  ),
                 ],
               ),
           ],

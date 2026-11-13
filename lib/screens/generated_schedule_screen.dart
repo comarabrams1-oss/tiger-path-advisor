@@ -396,8 +396,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
                   const SizedBox(height: 14),
                   _buildSummary(context, generatedSchedule, preferences),
                   const SizedBox(height: 12),
-                  Align(
-                    alignment: Alignment.centerLeft,
+                  Center(
                     child: OutlinedButton.icon(
                       onPressed: _updating || _historyLoading
                           ? null
@@ -826,6 +825,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
             ),
           ),
           Wrap(
+            alignment: WrapAlignment.center,
             spacing: 10,
             runSpacing: 8,
             children: [
@@ -928,37 +928,35 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     final courseCount = schedule.scheduled.length;
     final unresolved = schedule.unscheduled.length;
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Divider(height: 1),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
+          child: Wrap(
+            alignment: WrapAlignment.center,
+            spacing: 16,
+            runSpacing: 4,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              Expanded(
-                child: Wrap(
-                  spacing: 16,
-                  runSpacing: 4,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    Text(
-                      '$credits / $limit credits',
-                      style: theme.textTheme.titleLarge,
-                    ),
-                    Text(
-                      '$courseCount ${courseCount == 1 ? 'course' : 'courses'}',
-                      style: theme.textTheme.bodyMedium,
-                    ),
-                    if (unresolved > 0)
-                      Text(
-                        '$unresolved unresolved',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: theme.colorScheme.error,
-                        ),
-                      ),
-                  ],
-                ),
+              Text(
+                '$credits / $limit credits',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleLarge,
               ),
+              Text(
+                '$courseCount ${courseCount == 1 ? 'course' : 'courses'}',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium,
+              ),
+              if (unresolved > 0)
+                Text(
+                  '$unresolved unresolved',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.error,
+                  ),
+                ),
               if (credits < limit)
                 InfoTip(
                   label: 'About the credit gap',
@@ -974,8 +972,7 @@ class _GeneratedScheduleScreenState extends State<GeneratedScheduleScreen> {
     );
   }
 
-  Widget _buildViewToggle(ScheduleView view) => Align(
-    alignment: Alignment.centerLeft,
+  Widget _buildViewToggle(ScheduleView view) => Center(
     child: SegmentedButton<ScheduleView>(
       segments: const [
         ButtonSegment(value: ScheduleView.weekly, label: Text('Weekly View')),
