@@ -10,6 +10,9 @@ import 'generated_schedule_screen.dart';
 import 'semester_plan_screen.dart';
 import '../data/test_student.dart';
 import '../data/program_registry.dart';
+import '../models/academic_term.dart';
+import '../services/student_record_service.dart';
+import 'graduation_path_screen.dart';
 
 class SchedulePreferencesScreen extends StatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -96,6 +99,17 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
 
   Future<void> _generatePlan() {
     PreferencesService.savePreferences(_buildPreferences());
+    if (StudentRecordService.currentTerm(activeStudent).next !=
+        AcademicTerm.firstPlanningTerm) {
+      return _openScheduleRoute(
+        'GraduationPathScreen',
+        (_) => GraduationPathScreen(
+          student: activeStudent,
+          profileId: PreferencesService.profileId,
+          maxCredits: maxCredits,
+        ),
+      );
+    }
     return _openScheduleRoute(
       'SemesterPlanScreen',
       (_) => const SemesterPlanScreen(),
@@ -199,7 +213,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
                 },
               ),
               Text(
-                'Spring 2027',
+                StudentRecordService.currentTerm(activeStudent).next.label,
                 textAlign: TextAlign.center,
                 style: AppThemes.pageTitle(context),
               ),

@@ -67,23 +67,34 @@ class DegreeAuditService {
 
         return DegreeAuditItem(
           requirement: requirement,
-          status: student.gpa >= minimum
+          status: student.hasCalculatedGpa && student.gpa >= minimum
               ? RequirementStatus.completed
               : RequirementStatus.remaining,
         );
 
       case RequirementType.elective:
+        final approved = <String, double>{};
+        for (final course in student.courses) {
+          if (course.approvedElectiveId != requirement.id ||
+              !course.meetsMinimumGrade(requirement.minimumGrade)) {
+            continue;
+          }
+          final hours = course.creditHours ?? 0;
+          if (hours > (approved[course.courseCode] ?? 0)) {
+            approved[course.courseCode] = hours;
+          }
+        }
+        final credits =
+            (student.confirmedRequirementCredits[requirement.id] ?? 0) +
+            approved.values.fold(0.0, (sum, hours) => sum + hours);
         return DegreeAuditItem(
           requirement: requirement,
-          status:
-              (student.confirmedRequirementCredits[requirement.id] ?? 0) >=
-                  requirement.creditsRequired
+          status: credits >= requirement.creditsRequired
               ? RequirementStatus.completed
               : RequirementStatus.remaining,
-          completedCredits:
-              (student.confirmedRequirementCredits[requirement.id] ?? 0)
-                  .clamp(0, requirement.creditsRequired)
-                  .toDouble(),
+          completedCredits: credits
+              .clamp(0, requirement.creditsRequired)
+              .toDouble(),
         );
     }
   }
@@ -121,47 +132,51 @@ class DegreeAuditService {
     Student student,
     DegreeRequirement requirement,
   ) {
-    final completedCodes = <String>{};
-    final inProgressCodes = <String>{};
+    final completed = <String, double>{};
+    final inProgress = <String, double>{};
     for (final course in student.courses) {
       if (!requirement.courseCodes.contains(course.courseCode)) continue;
+      final hours = course.creditHours ?? _creditsForCourse(course.courseCode);
       if (course.meetsMinimumGrade(requirement.minimumGrade)) {
-        completedCodes.add(course.courseCode);
-      } else if (course.status == CourseStatus.inProgress) {
-        inProgressCodes.add(course.courseCode);
+        if (hours > (completed[course.courseCode] ?? 0)) {
+          completed[course.courseCode] = hours;
+        }
+      } else if (course.status == CourseStatus.inProgress &&
+          hours > (inProgress[course.courseCode] ?? 0)) {
+        inProgress[course.courseCode] = hours;
       }
     }
-    final completed = completedCodes.fold<double>(
+    final completedHours = completed.values.fold<double>(
       0,
-      (sum, code) => sum + _creditsForCourse(code),
+      (sum, hours) => sum + hours,
     );
-    final inProgress = inProgressCodes
-        .difference(completedCodes)
-        .fold<double>(0, (sum, code) => sum + _creditsForCourse(code));
+    final inProgressHours = inProgress.entries
+        .where((entry) => !completed.containsKey(entry.key))
+        .fold<double>(0, (sum, entry) => sum + entry.value);
 
-    if (completed >= requirement.creditsRequired) {
+    if (completedHours >= requirement.creditsRequired) {
       return DegreeAuditItem(
         requirement: requirement,
         status: RequirementStatus.completed,
-        completedCredits: completed,
-        inProgressCredits: inProgress,
+        completedCredits: completedHours,
+        inProgressCredits: inProgressHours,
       );
     }
 
-    if (completed + inProgress >= requirement.creditsRequired) {
+    if (completedHours + inProgressHours >= requirement.creditsRequired) {
       return DegreeAuditItem(
         requirement: requirement,
         status: RequirementStatus.inProgress,
-        completedCredits: completed,
-        inProgressCredits: inProgress,
+        completedCredits: completedHours,
+        inProgressCredits: inProgressHours,
       );
     }
 
     return DegreeAuditItem(
       requirement: requirement,
       status: RequirementStatus.remaining,
-      completedCredits: completed,
-      inProgressCredits: inProgress,
+      completedCredits: completedHours,
+      inProgressCredits: inProgressHours,
     );
   }
 

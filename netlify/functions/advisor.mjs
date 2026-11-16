@@ -38,7 +38,7 @@ object with answer (formatted text) and actions (array). Each action has type an
 Allowed actions: changeTheme with target benedict, light, dark, midnightPurple,
 goldBlack, highContrast, custom; customTheme with target custom plus primaryHex,
 accentHex (both six-digit #RRGGBB colors) and darkMode (boolean); navigate with target transcript, degreeProgress,
-recommendations, scheduleBuilder, themeStudio, programLibrary, readiness. changeDesign with target classic, soft or sharp changes the interface layout while preserving the current colors. Current layout is in context.themeSettings.design. Offer changeDesign for a requested layout, not a custom color action. At most 3 actions. For an unclear
+recommendations, scheduleBuilder, themeStudio, programLibrary, readiness, graduationPath. changeDesign with target classic, soft or sharp changes the interface layout while preserving the current colors. Current layout is in context.themeSettings.design. Offer changeDesign for a requested layout, not a custom color action. At most 3 actions. For an unclear
 theme request, ask which colors they want. When colors or a visual style are
 requested, create a customTheme palette matching the request, with a complementary
 accent if only one color is specified. Respect requested light/dark background;
@@ -67,6 +67,14 @@ when the user asks to revise preferences.
 Readiness has interview practice with AI ratings and a career and graduate-school
 checklist. Point students there when asked about those features, and offer navigation
 when asked to open it. Do not infer progress in Readiness from academic records.
+Use graduationPath for graduation dates, next-semester courses, and sequencing
+bottlenecks. State the computed estimate, or explain outstanding requirements
+when no estimate is available. The credit-only minimum is a lower bound.
+The estimate assumes required passing grades and future offerings and may include
+credits that need advisor approval. Never describe a projection as official clearance.
+For employment and graduate-school questions, use the Readiness statuses when
+supplied. Suggest practical next steps. Treat job and graduate program requirements
+as variable. Never invent completed skills, a GPA, applications or credentials.
 For academic questions return actions: [] unless navigation is requested.`;
 const reply = (status, body) => Response.json(body, {
   status, headers: {'Cache-Control': 'no-store'},
@@ -97,7 +105,7 @@ export default async function handler(request) {
       body.messages.at(-1).role !== 'user')) return reply(400, {error: 'Invalid conversation.'});
   // Whitelist the explanation context. Identity and raw transcript fields are dropped.
   const context = Object.fromEntries(['program', 'catalogYear', 'classification', 'term', 'focusedCourses', 'offeringsAvailable',
-    'programMappingReview', 'programLibrary', 'requirements', 'recommendations', 'offeredCourseCodes', 'sectionDetails', 'sectionCoverage', 'dataNotice', 'progressChanges', 'currentTheme', 'themeSettings', 'schedule'].map(k => [k, body.context?.[k]]));
+    'programMappingReview', 'programLibrary', 'requirements', 'recommendations', 'offeredCourseCodes', 'sectionDetails', 'sectionCoverage', 'dataNotice', 'progressChanges', 'graduationPath', 'readiness', 'currentTheme', 'themeSettings', 'schedule'].map(k => [k, body.context?.[k]]));
   const scheduleMode = body.mode === 'schedule';
   const model = process.env.GEMINI_MODEL;
   if (!/^[a-zA-Z0-9._-]+$/.test(model)) return reply(503, {error: 'AI model configuration needs attention.'});
@@ -118,7 +126,7 @@ export default async function handler(request) {
           type:'object',additionalProperties:false,properties:{answer:{type:'string'},actions:{type:'array',maxItems:3,items:{
             type:'object',additionalProperties:false,properties:{
               type:{type:'string',enum:['changeTheme','navigate','customTheme','changeDesign']},
-              target:{type:'string',enum:['benedict','light','dark','midnightPurple','goldBlack','highContrast','custom','transcript','degreeProgress','recommendations','scheduleBuilder','themeStudio','programLibrary','readiness','classic','soft','sharp']},
+              target:{type:'string',enum:['benedict','light','dark','midnightPurple','goldBlack','highContrast','custom','transcript','degreeProgress','recommendations','scheduleBuilder','themeStudio','programLibrary','readiness','graduationPath','classic','soft','sharp']},
               primaryHex:{type:'string',pattern:'^#[0-9A-Fa-f]{6}$'},
               accentHex:{type:'string',pattern:'^#[0-9A-Fa-f]{6}$'},darkMode:{type:'boolean'}},
               required:['type','target','primaryHex','accentHex','darkMode']
@@ -155,7 +163,7 @@ export default async function handler(request) {
     }
     if (typeof parsed?.answer !== 'string' || !parsed.answer.trim()) return reply(502, {code:'EMPTY_RESPONSE',error: 'No answer returned.'});
     const themes = ['benedict','light','dark','midnightPurple','goldBlack','highContrast','custom'];
-    const pages = ['transcript','degreeProgress','recommendations','scheduleBuilder','themeStudio','programLibrary','readiness'];
+    const pages = ['transcript','degreeProgress','recommendations','scheduleBuilder','themeStudio','programLibrary','readiness','graduationPath'];
     const actions = (Array.isArray(parsed.actions) ? parsed.actions : []).filter(a =>
       a && (a.type === 'changeTheme' && themes.includes(a.target) ||
         a.type === 'navigate' && pages.includes(a.target) ||

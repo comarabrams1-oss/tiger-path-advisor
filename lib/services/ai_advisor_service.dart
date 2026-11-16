@@ -37,6 +37,7 @@ class AdvisorAction {
     'themeStudio',
     'programLibrary',
     'readiness',
+    'graduationPath',
   ];
   static const designs = ['classic', 'soft', 'sharp'];
   static AdvisorAction? parse(dynamic value) {

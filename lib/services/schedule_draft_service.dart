@@ -56,9 +56,16 @@ class ScheduleDraft {
 class ScheduleDraftService {
   static const _term = CourseSectionRepository.spring2027Term;
   static final _drafts = <String, ScheduleDraft>{};
+  static final _draftRecords = <String, Student>{};
   static final _revision = ValueNotifier(0);
 
-  static ScheduleDraft? get current => _drafts[PreferencesService.profileId];
+  static ScheduleDraft? get current {
+    final profile = PreferencesService.profileId;
+    return identical(_draftRecords[profile], activeStudent)
+        ? _drafts[profile]
+        : null;
+  }
+
   static ValueListenable<int> get revision => _revision;
 
   static String _key(String profile) => 'schedule_draft_v1_$profile';
@@ -66,6 +73,7 @@ class ScheduleDraftService {
   static Future<bool> save(ScheduleDraft draft) async {
     final profile = PreferencesService.profileId;
     _drafts[profile] = draft;
+    _draftRecords[profile] = activeStudent;
     _revision.value++;
     try {
       final plan = draft.plan;
@@ -156,6 +164,7 @@ class ScheduleDraftService {
       final sections = await CourseSectionRepository.loadForTerm(_term);
       if (sections.isEmpty ||
           profile != PreferencesService.profileId ||
+          !identical(activeStudent, student) ||
           current != null) {
         return;
       }
@@ -181,6 +190,7 @@ class ScheduleDraftService {
         deferred: deferred,
         advisorReview: advisorReview,
       );
+      _draftRecords[profile] = student;
       if (!PreferencesService.hasPreferences) {
         PreferencesService.savePreferences(preferences);
       }

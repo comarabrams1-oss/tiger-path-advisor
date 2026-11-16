@@ -1,359 +1,324 @@
 import 'package:flutter/material.dart';
 
+import '../data/course_descriptions.dart';
+import '../data/program_registry.dart';
 import '../data/test_student.dart';
+import '../models/academic_term.dart';
+import '../models/student.dart';
 import '../models/student_course.dart';
+import '../services/mock_auth_service.dart';
+import '../services/preferences_service.dart';
+import '../services/student_record_service.dart';
 import '../themes/app_theme.dart';
+import '../widgets/transcript_entry_dialog.dart';
 
-class TranscriptScreen extends StatelessWidget {
+class TranscriptScreen extends StatefulWidget {
   const TranscriptScreen({super.key});
+  @override
+  State<TranscriptScreen> createState() => _TranscriptScreenState();
+}
+
+class _TranscriptScreenState extends State<TranscriptScreen> {
+  bool _saving = false;
+
+  Future<void> _save(
+    Student before,
+    MockStudentSession session,
+    List<StudentCourse> courses,
+  ) async {
+    if (_saving ||
+        PreferencesService.profileId != session.profileId ||
+        !identical(activeStudent, before)) {
+      return;
+    }
+    setState(() => _saving = true);
+    try {
+      final result = await StudentRecordService().save(
+        session.profileId,
+        demoStudentFor(session.email),
+        courses,
+      );
+      if (PreferencesService.profileId == session.profileId &&
+          identical(activeStudent, before)) {
+        activeStudent = result;
+        StudentRecordService.revision.value++;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Saved. Degree progress and course plans were recalculated.',
+              ),
+            ),
+          );
+        }
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not save the transcript. Try again.'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  Future<void> _edit(
+    MockStudentSession session, [
+    StudentCourse? course,
+  ]) async {
+    final student = activeStudent;
+    final remaining = [
+      for (final entry in student.courses)
+        if (!identical(entry, course)) entry,
+    ];
+    final edited = await showDialog<StudentCourse>(
+      context: context,
+      builder: (context) => TranscriptEntryDialog(
+        attempt: course,
+        currentTerm: StudentRecordService.currentTerm(student).label,
+        knownHours: {
+          for (final course in catalogFor(student)) course.code: course.credits,
+        },
+        otherAttempts: remaining,
+        requirements: programFor(student).requirements,
+      ),
+    );
+    if (!mounted || edited == null) return;
+    await _save(student, session, [edited, ...remaining]);
+  }
+
+  Future<void> _grades(
+    MockStudentSession session,
+    String term,
+    List<StudentCourse> courses,
+  ) async {
+    final student = activeStudent;
+    final grades = await showDialog<Map<StudentCourse, String>>(
+      context: context,
+      builder: (context) => SemesterGradesDialog(term: term, courses: courses),
+    );
+    if (!mounted || grades == null) return;
+    await _save(student, session, [
+      for (final course in student.courses)
+        if (grades[course] case final grade?)
+          StudentCourse(
+            courseCode: course.courseCode,
+            term: course.term,
+            status: CourseStatus.completed,
+            grade: grade,
+            creditHours: course.creditHours,
+            isTransfer: course.isTransfer,
+            approvedElectiveId: course.approvedElectiveId,
+          )
+        else
+          course,
+    ]);
+  }
+
+  Future<void> _remove(MockStudentSession session, StudentCourse course) async {
+    final student = activeStudent;
+    final remove = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove ${course.courseCode}?'),
+        content: Text(
+          'Remove the ${course.term} attempt from this planning record.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Remove attempt'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || remove != true) return;
+    await _save(
+      student,
+      session,
+      student.courses.where((a) => !identical(a, course)).toList(),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    final inProgress = activeStudent.courses
-        .where((course) => course.status == CourseStatus.inProgress)
-        .toList();
+    final student = activeStudent;
+    final session = MockSessionScope.maybeOf(context)?.session;
+    final theme = Theme.of(context);
+    final hours = StudentRecordService.creditHoursFor(student);
+    final titles = {
+      for (final item in courseDescriptions.entries) item.key: item.value.$1,
+      for (final course in catalogFor(student)) course.code: course.title,
+    };
+    final attempts = <String, int>{};
+    final current = <String, List<StudentCourse>>{};
+    final history = <String, List<StudentCourse>>{};
+    for (final course in student.courses) {
+      attempts.update(
+        course.courseCode,
+        (count) => count + 1,
+        ifAbsent: () => 1,
+      );
+      final group = course.status == CourseStatus.inProgress
+          ? current
+          : history;
+      (group[course.term] ??= []).add(course);
+    }
+    final metrics = StudentRecordService.metrics(student.courses, hours);
+    final majorCodes = programFor(student).requirements
+        .where((item) => item.category == 'Major')
+        .expand((item) => item.courseCodes)
+        .toSet();
+    final majorGpa = StudentRecordService.metrics(
+      student.courses.where((course) => majorCodes.contains(course.courseCode)),
+      hours,
+    ).gpa;
+    List<String> sortedTerms(Map<String, List<StudentCourse>> terms) =>
+        terms.keys.toList()..sort(
+          (a, b) => (AcademicTerm.parse(b) ?? AcademicTerm.demoTerm).compareTo(
+            AcademicTerm.parse(a) ?? AcademicTerm.demoTerm,
+          ),
+        );
 
-    final completed = activeStudent.courses
-        .where((course) => course.status == CourseStatus.completed)
-        .toList();
-
-    final completedByTerm = _groupByTerm(completed);
-
-    final sortedTerms = completedByTerm.keys.toList()
-      ..sort((a, b) => _termSortValue(b).compareTo(_termSortValue(a)));
+    Widget row(StudentCourse course) {
+      final inProgress = course.status == CourseStatus.inProgress;
+      final passed = course.meetsMinimumGrade(null);
+      final credit = course.creditHours ?? hours[course.courseCode];
+      final title = titles[course.courseCode];
+      return ListTile(
+        leading: Icon(
+          inProgress
+              ? Icons.schedule
+              : passed
+              ? Icons.check_circle_outline
+              : Icons.error_outline,
+        ),
+        title: Text(title ?? course.courseCode),
+        subtitle: Text(
+          [
+            if (title != null) course.courseCode,
+            if (credit != null) '${_credits(credit)} credits',
+            if (course.transfer) 'Transfer',
+            if (attempts[course.courseCode]! > 1) 'Repeat',
+            if (course.approvedElectiveId != null) 'Approved elective',
+            if (!inProgress && !passed) 'No credit earned',
+            if (!inProgress && course.normalizedGrade != null)
+              'Grade ${course.normalizedGrade}',
+          ].join(' · '),
+        ),
+        trailing: session == null
+            ? null
+            : PopupMenuButton<String>(
+                tooltip: 'Edit ${course.courseCode} attempt',
+                enabled: !_saving,
+                onSelected: (action) => action == 'edit'
+                    ? _edit(session, course)
+                    : _remove(session, course),
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit attempt')),
+                  PopupMenuItem(value: 'remove', child: Text('Remove attempt')),
+                ],
+              ),
+      );
+    }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(title: const Text('Transcript')),
-      body: ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          _buildHeader(context),
-          const SizedBox(height: 22),
-          _buildAcademicSummary(context),
-          const SizedBox(height: 28),
-          if (inProgress.isNotEmpty) ...[
-            Text(
-              'Current semester',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 14),
-            _buildCurrentSemester(context, inProgress),
-            const SizedBox(height: 30),
-          ],
-          Text(
-            'Academic history',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 14),
-          ...List.generate(sortedTerms.length, (index) {
-            final term = sortedTerms[index];
-            final courses = completedByTerm[term] ?? [];
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _buildSemesterCard(
-                context,
-                term: term,
-                courses: courses,
-                initiallyExpanded: false,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              Text(
+                student.major,
+                textAlign: TextAlign.center,
+                style: AppThemes.pageTitle(context),
               ),
-            );
-          }),
-          const SizedBox(height: 25),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) => Column(
-    children: [
-      Text(
-        activeStudent.major,
-        textAlign: TextAlign.center,
-        style: AppThemes.pageTitle(context),
-      ),
-      const SizedBox(height: 4),
-      Text(activeStudent.classification, textAlign: TextAlign.center),
-    ],
-  );
-
-  Widget _buildAcademicSummary(BuildContext context) {
-    final theme = Theme.of(context);
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-        borderRadius: BorderRadius.circular(AppDesignTokens.of(context).radius),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Wrap(
-          alignment: WrapAlignment.center,
-          spacing: 24,
-          runSpacing: 12,
-          children: [
-            for (final (label, value) in [
-              (
-                'Earned credits',
-                activeStudent.earnedCredits.toInt().toString(),
-              ),
-              (
-                'In progress',
-                activeStudent.inProgressCredits.toInt().toString(),
-              ),
-              ('Cumulative GPA', activeStudent.gpa.toStringAsFixed(2)),
-            ])
-              Column(
+              Text(student.classification, textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 20,
+                runSpacing: 14,
                 children: [
-                  Text(value, style: theme.textTheme.titleLarge),
-                  Text(
-                    label,
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall,
-                  ),
+                  for (final (label, value) in [
+                    ('Earned credits', _credits(student.earnedCredits)),
+                    ('In progress', _credits(student.inProgressCredits)),
+                    ('Recorded transfer', _credits(metrics.transfer)),
+                    ('Recorded attempts', '${student.courses.length}'),
+                    (
+                      'Cumulative GPA',
+                      student.hasCalculatedGpa
+                          ? student.gpa.toStringAsFixed(2)
+                          : '—',
+                    ),
+                    ('Major GPA', majorGpa?.toStringAsFixed(2) ?? '—'),
+                  ])
+                    Column(
+                      children: [
+                        Text(value, style: theme.textTheme.titleLarge),
+                        Text(label, style: theme.textTheme.bodySmall),
+                      ],
+                    ),
                 ],
               ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildCurrentSemester(
-    BuildContext context,
-    List<StudentCourse> courses,
-  ) {
-    final term = courses.first.term;
-
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-            color: Theme.of(context).colorScheme.secondaryContainer,
-            child: Row(
-              children: [
-                Icon(
-                  Icons.calendar_month_outlined,
-                  color: Theme.of(context).colorScheme.onSecondaryContainer,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    term,
-                    style: TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(context).colorScheme.onSecondaryContainer,
-                    ),
+              if (session != null) ...[
+                const SizedBox(height: 14),
+                Center(
+                  child: FilledButton.tonalIcon(
+                    onPressed: _saving ? null : () => _edit(session),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Add course'),
                   ),
                 ),
-                _statusBadge(
-                  context,
-                  'In Progress',
-                  Theme.of(context).colorScheme.onSecondaryContainer,
-                ),
+                if (_saving) const LinearProgressIndicator(),
               ],
-            ),
-          ),
-          ...courses.map(
-            (course) => _courseRow(context, course, inProgress: true),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSemesterCard(
-    BuildContext context, {
-    required String term,
-    required List<StudentCourse> courses,
-    required bool initiallyExpanded,
-  }) {
-    return Card(
-      margin: EdgeInsets.zero,
-      clipBehavior: Clip.antiAlias,
-      child: ExpansionTile(
-        initiallyExpanded: initiallyExpanded,
-        shape: const Border(),
-        collapsedShape: const Border(),
-        tilePadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
-        childrenPadding: EdgeInsets.zero,
-        leading: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Icon(
-            Icons.check_circle_outline,
-            color: Theme.of(context).colorScheme.onPrimaryContainer,
-          ),
-        ),
-        title: Text(
-          term,
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
-        ),
-        subtitle: Padding(
-          padding: const EdgeInsets.only(top: 4),
-          child: Text(
-            '${courses.length} completed ${courses.length == 1 ? 'course' : 'courses'}',
-          ),
-        ),
-        children: courses.map((course) => _courseRow(context, course)).toList(),
-      ),
-    );
-  }
-
-  Widget _courseRow(
-    BuildContext context,
-    StudentCourse course, {
-    bool inProgress = false,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
-      decoration: BoxDecoration(
-        border: Border(
-          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 39,
-            height: 39,
-            decoration: BoxDecoration(
-              color: inProgress
-                  ? Theme.of(context).colorScheme.secondaryContainer
-                  : Theme.of(context).colorScheme.primaryContainer,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(
-              inProgress ? Icons.schedule : Icons.check,
-              size: 21,
-              color: inProgress
-                  ? Theme.of(context).colorScheme.onSecondaryContainer
-                  : Theme.of(context).colorScheme.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(width: 13),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  course.courseCode,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                if (!inProgress) ...[
-                  const SizedBox(height: 3),
-                  Text(
-                    'Completed',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      fontSize: 13,
-                    ),
+              const SizedBox(height: 22),
+              if (current.isNotEmpty) ...[
+                Text('In-progress courses', style: theme.textTheme.titleLarge),
+                for (final term in sortedTerms(current)) ...[
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(term),
+                    trailing: session == null
+                        ? null
+                        : TextButton(
+                            onPressed: _saving
+                                ? null
+                                : () => _grades(session, term, current[term]!),
+                            child: const Text('Enter final grades'),
+                          ),
                   ),
+                  for (final course in current[term]!) row(course),
                 ],
+                const SizedBox(height: 20),
               ],
-            ),
+              Text('Academic history', style: theme.textTheme.titleLarge),
+              if (history.isEmpty) const Text('No finalized course attempts.'),
+              for (final term in sortedTerms(history))
+                ExpansionTile(
+                  key: PageStorageKey(term),
+                  tilePadding: EdgeInsets.zero,
+                  title: Text(term),
+                  subtitle: Text('${history[term]!.length} course attempts'),
+                  children: [for (final course in history[term]!) row(course)],
+                ),
+            ],
           ),
-          if (inProgress)
-            _statusBadge(
-              context,
-              'Current',
-              Theme.of(context).colorScheme.onSecondaryContainer,
-            )
-          else
-            _gradeBadge(context, course.grade),
-        ],
-      ),
-    );
-  }
-
-  Widget _gradeBadge(BuildContext context, String? grade) {
-    if (grade == null || grade.isEmpty) {
-      return const SizedBox();
-    }
-
-    return Container(
-      constraints: const BoxConstraints(minWidth: 42),
-      height: 34,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryContainer,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        grade,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onPrimaryContainer,
-          fontWeight: FontWeight.bold,
-          fontSize: 15,
         ),
       ),
     );
   }
 
-  Widget _statusBadge(BuildContext context, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.secondaryContainer,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          color: color,
-          fontSize: 12,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
-    );
-  }
-
-  Map<String, List<StudentCourse>> _groupByTerm(List<StudentCourse> courses) {
-    final grouped = <String, List<StudentCourse>>{};
-
-    for (final course in courses) {
-      grouped.putIfAbsent(course.term, () => []).add(course);
-    }
-
-    return grouped;
-  }
-
-  int _termSortValue(String term) {
-    final match = RegExp(r'(\d{4})').firstMatch(term);
-
-    if (match == null) {
-      return 0;
-    }
-
-    final year = int.tryParse(match.group(1) ?? '') ?? 0;
-
-    var semester = 0;
-
-    final lower = term.toLowerCase();
-
-    if (lower.contains('spring')) {
-      semester = 1;
-    } else if (lower.contains('summer')) {
-      semester = 2;
-    } else if (lower.contains('fall')) {
-      semester = 3;
-    }
-
-    return (year * 10) + semester;
-  }
+  String _credits(double value) => value == value.roundToDouble()
+      ? '${value.toInt()}'
+      : value.toStringAsFixed(1);
 }

@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../data/program_registry.dart';
 import '../data/test_student.dart';
+import '../models/academic_term.dart';
 import '../models/course_section.dart';
 import '../models/student.dart';
 import '../services/advisor_context_service.dart';
@@ -12,6 +13,10 @@ import '../services/advisor_app_actions.dart';
 import '../services/advisor_history_service.dart';
 import '../services/ai_advisor_service.dart';
 import '../services/course_section_repository.dart';
+import '../services/graduation_path_service.dart';
+import '../services/preferences_service.dart';
+import '../services/readiness_progress_service.dart';
+import '../services/student_record_service.dart';
 import '../services/theme_service.dart';
 import '../themes/app_theme.dart';
 import 'transcript_screen.dart';
@@ -22,21 +27,23 @@ import 'theme_settings_screen.dart';
 import 'program_library_screen.dart';
 import 'readiness_screen.dart';
 import 'generated_schedule_screen.dart';
+import 'graduation_path_screen.dart';
 import '../services/schedule_draft_service.dart';
 import '../services/schedule_assistant_service.dart';
 
 class AiAdvisorScreen extends StatefulWidget {
   final AiAdvisorService? service;
   final ScheduleAssistantService? scheduleAssistant;
-  final Student student;
+  final Student? _student;
+  Student get student => _student ?? activeStudent;
   final AdvisorHistoryService history;
-  AiAdvisorScreen({
+  const AiAdvisorScreen({
     super.key,
     this.service,
     this.scheduleAssistant,
-    Student? student,
+    this._student,
     this.history = const AdvisorHistoryService(),
-  }) : student = student ?? activeStudent;
+  });
   @override
   State<AiAdvisorScreen> createState() => _AiAdvisorScreenState();
 }
@@ -59,7 +66,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
   @override
   void initState() {
     super.initState();
+    StudentRecordService.revision.addListener(_recordChanged);
     _load();
+  }
+
+  void _recordChanged() {
+    if (widget._student == null && !_busy) _refreshContext();
   }
 
   @override
@@ -72,17 +84,13 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   Future<Map<String, Object?>> _buildContext([String question = '']) async {
     final messages = _messages.reversed.where((m) => m.role == 'user');
-    final termPattern = RegExp(
-      r'\b(fall\s*2026|spring\s*2027)\b',
-      caseSensitive: false,
-    );
     final termMention = [
       question,
       ...messages.take(5).map((m) => m.text),
-    ].map(termPattern.firstMatch).whereType<RegExpMatch>().firstOrNull;
-    final term = termMention?[1]?.toLowerCase().startsWith('fall') == true
-        ? CourseSectionRepository.fall2026Term
-        : CourseSectionRepository.spring2027Term;
+    ].map(AcademicTerm.parse).whereType<AcademicTerm>().firstOrNull;
+    final term =
+        (termMention ?? StudentRecordService.currentTerm(widget.student).next)
+            .portalKey;
     var sectionsAvailable = true;
     List<CourseSection> sections = [];
     try {
@@ -134,6 +142,34 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
           },
     ];
     context['progressChanges'] = _changes;
+    if (RegExp(
+      r'\b(graduat\w*|pathway|on time|next semester|next term)\b',
+      caseSensitive: false,
+    ).hasMatch(question)) {
+      final path = await GraduationPathService().load(
+        widget.student,
+        maxCredits: PreferencesService.preferences?.maxCredits ?? 15,
+      );
+      context['graduationPath'] = path.toAdvisorContext();
+    }
+    if (RegExp(
+      r'\b(career|grad school|graduate school|readiness|internship|interview|resume|résumé|job|skills?|portfolio)\b',
+      caseSensitive: false,
+    ).hasMatch(question)) {
+      try {
+        final readiness = await ReadinessProgressService(
+          widget.history.profileId,
+        ).loadProfile();
+        final target = readiness.targetGpa;
+        context['readiness'] = readiness.toAdvisorContext(
+          target != null && widget.student.hasCalculatedGpa
+              ? widget.student.gpa >= target
+              : null,
+        );
+      } catch (_) {
+        // General guidance is still available if local progress fails to load.
+      }
+    }
     return context;
   }
 
@@ -432,6 +468,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
       'scheduleBuilder' => 'Open Schedule Builder',
       'programLibrary' => 'Open Programs of Study',
       'readiness' => 'Open Readiness',
+      'graduationPath' => 'Open Graduation Pathway',
       _ => 'Open Theme Studio',
     };
   }
@@ -519,6 +556,12 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
             page = const ProgramLibraryScreen();
           case 'readiness':
             page = ReadinessScreen(profileId: widget.history.profileId);
+          case 'graduationPath':
+            page = GraduationPathScreen(
+              student: widget.student,
+              profileId: widget.history.profileId,
+              maxCredits: PreferencesService.preferences?.maxCredits ?? 15,
+            );
           default:
             final settings = await ThemeService.load();
             if (!mounted) return;
@@ -541,6 +584,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
                 'scheduleBuilder' => 'SchedulePreferencesScreen',
                 'programLibrary' => 'ProgramLibraryScreen',
                 'readiness' => 'ReadinessScreen',
+                'graduationPath' => 'GraduationPathScreen',
                 _ => 'ThemeSettingsScreen',
               },
             ),
@@ -561,6 +605,7 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
 
   @override
   void dispose() {
+    StudentRecordService.revision.removeListener(_recordChanged);
     _input.dispose();
     _scroll.dispose();
     if (widget.service == null) _service.dispose();
@@ -691,8 +736,9 @@ class _AiAdvisorScreenState extends State<AiAdvisorScreen> {
         ),
         const SizedBox(height: 14),
         for (final question in [
-          'What should I take in Spring 2027?',
+          'What should I take in ${StudentRecordService.currentTerm(widget.student).next.label}?',
           'What classes do I still need?',
+          'When could I graduate?',
           'What is CSC 338 about?',
         ])
           TextButton.icon(

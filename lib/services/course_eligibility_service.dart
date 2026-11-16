@@ -58,6 +58,7 @@ class CourseEligibilityService {
                 course.minimumPrerequisiteGrades[attempt.courseCode],
               ) &&
               (!course.requiresPassingPrerequisites ||
+                  attempt.transfer ||
                   RegExp(r'^[ABCD][+-]?$')
                       .hasMatch(attempt.normalizedGrade ?? '')),
         )

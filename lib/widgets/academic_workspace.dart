@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../data/test_student.dart';
 import '../data/program_registry.dart';
+import '../models/academic_term.dart';
 import '../models/student_course.dart';
 import '../models/course_section.dart';
 import '../services/course_section_repository.dart';
 import '../services/course_priority_service.dart';
 import '../services/course_eligibility_service.dart';
+import '../services/student_record_service.dart';
 import '../screens/transcript_screen.dart';
 import '../screens/course_recommendations_screen.dart';
 import '../themes/app_theme.dart';
@@ -21,15 +23,33 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
   int _tab = 0;
   List<CourseSection>? _sections;
   bool _sectionError = false;
+  late AcademicTerm _term;
   @override
   void initState() {
     super.initState();
-    CourseSectionRepository.loadForTerm(CourseSectionRepository.spring2027Term)
+    _loadSections();
+  }
+
+  @override
+  void didUpdateWidget(AcademicWorkspace oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_term != StudentRecordService.currentTerm(activeStudent).next) {
+      _loadSections();
+    }
+  }
+
+  void _loadSections() {
+    final term = StudentRecordService.currentTerm(activeStudent).next;
+    _term = term;
+    _sections = null;
+    _sectionError = false;
+    if (!CourseSectionRepository.hasTerm(term.portalKey)) return;
+    CourseSectionRepository.loadForTerm(term.portalKey)
         .then((sections) {
-          if (mounted) setState(() => _sections = sections);
+          if (mounted && _term == term) setState(() => _sections = sections);
         })
         .catchError((Object _) {
-          if (mounted) setState(() => _sectionError = true);
+          if (mounted && _term == term) setState(() => _sectionError = true);
         });
   }
 
@@ -63,9 +83,15 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     final colors = Theme.of(context).colorScheme;
     final theme = Theme.of(context);
     final student = activeStudent;
+    final currentTerm = StudentRecordService.currentTerm(student);
+    final hasOfferings = CourseSectionRepository.hasTerm(_term.portalKey);
     final catalog = catalogFor(student);
     final current = student.courses
-        .where((course) => course.status == CourseStatus.inProgress)
+        .where(
+          (course) =>
+              course.status == CourseStatus.inProgress &&
+              AcademicTerm.parse(course.term) == currentTerm,
+        )
         .toList();
     final titles = {for (final course in catalog) course.code: course.title};
     final openSections = _openSections;
@@ -88,7 +114,7 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
     final panels = [
       _panel(
         context,
-        title: 'Fall 2026 courses',
+        title: '${currentTerm.label} courses',
         action: 'View transcript',
         onTap: () => _open(context, const TranscriptScreen()),
         children: [
@@ -109,7 +135,7 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
       ),
       _panel(
         context,
-        title: 'Spring 2027 recommendations',
+        title: '${_term.label} recommendations',
         action: 'View recommendations',
         onTap: () => _open(context, const CourseRecommendationsScreen()),
         children: [
@@ -117,7 +143,9 @@ class _AcademicWorkspaceState extends State<AcademicWorkspace> {
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 10),
               child: Text(
-                _sectionError
+                !hasOfferings
+                    ? 'Confirm future section availability with your advisor.'
+                    : _sectionError
                     ? 'Section availability unavailable.'
                     : 'Checking section availability…',
                 style: theme.textTheme.bodySmall?.copyWith(

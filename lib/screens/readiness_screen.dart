@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../data/test_student.dart';
+import '../models/readiness.dart';
 import '../services/interview_practice_service.dart';
 import '../services/readiness_progress_service.dart';
 import '../themes/app_theme.dart';
 import '../widgets/info_tip.dart';
+import '../widgets/readiness_checklist.dart';
 
 class ReadinessScreen extends StatefulWidget {
   final String profileId;
@@ -20,20 +23,12 @@ class ReadinessScreen extends StatefulWidget {
 }
 
 class _ReadinessScreenState extends State<ReadinessScreen> {
-  static const _milestones = {
-    'resume': 'Prepare a résumé',
-    'internship': 'Find an internship or job opportunity',
-    'research': 'Explore a research opportunity',
-    'certification': 'Explore a professional certification',
-    'graduate': 'Review graduate program requirements',
-  };
   final _answer = TextEditingController();
   late final _interview = widget.interviewService ?? InterviewPracticeService();
   late final _progress = ReadinessProgressService(widget.profileId);
   List<InterviewQuestion> _questions = [];
   Map<String, InterviewFeedback> _feedback = {};
-  Set<String> _completed = {};
-  final _savingMilestones = <String>{};
+  ReadinessProfile _profile = const ReadinessProfile();
   int _questionIndex = 0;
   bool _loading = true;
   bool _reviewing = false;
@@ -57,11 +52,11 @@ class _ReadinessScreenState extends State<ReadinessScreen> {
       }
       try {
         final feedback = await _progress.loadFeedback(questions);
-        final milestones = await _progress.loadMilestones(_milestones.keys);
+        final profile = await _progress.loadProfile(questions: questions);
         if (!mounted) return;
         setState(() {
           _feedback = feedback;
-          _completed = milestones;
+          _profile = profile;
           _questionIndex = questions.indexWhere(
             (q) => !feedback.containsKey(q.id),
           );
@@ -97,6 +92,7 @@ class _ReadinessScreenState extends State<ReadinessScreen> {
       if (!_progressFailed) {
         try {
           await _progress.saveFeedback(question.id, feedback);
+          await _reloadMilestones();
         } catch (_) {
           if (mounted) {
             setState(
@@ -113,24 +109,9 @@ class _ReadinessScreenState extends State<ReadinessScreen> {
     }
   }
 
-  Future<void> _setMilestone(String id, bool checked) async {
-    setState(() => _savingMilestones.add(id));
-    try {
-      await _progress.setMilestone(id, checked);
-      if (mounted) {
-        setState(() => checked ? _completed.add(id) : _completed.remove(id));
-      }
-    } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not save this milestone. Try again.'),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _savingMilestones.remove(id));
-    }
+  Future<void> _reloadMilestones() async {
+    final profile = await _progress.loadProfile(questions: _questions);
+    if (mounted) setState(() => _profile = profile);
   }
 
   void _showQuestion(int index) {
@@ -205,7 +186,22 @@ class _ReadinessScreenState extends State<ReadinessScreen> {
                                   ],
                                 )
                               : _practice(context);
-                          final milestones = _checklist(context);
+                          final milestones = ReadinessChecklist(
+                            profile: _profile,
+                            student: activeStudent,
+                            saveEntry: _progressFailed
+                                ? null
+                                : (id, entry) async {
+                                    await _progress.setEntry(id, entry);
+                                    await _reloadMilestones();
+                                  },
+                            saveGpa: _progressFailed
+                                ? null
+                                : (target) async {
+                                    await _progress.setTargetGpa(target);
+                                    await _reloadMilestones();
+                                  },
+                          );
                           if (size.maxWidth < 760) {
                             return Column(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -356,42 +352,6 @@ class _ReadinessScreenState extends State<ReadinessScreen> {
           const SizedBox(height: 8),
           Text('What to try next', style: theme.textTheme.titleSmall),
           Text(feedback.nextStep),
-        ],
-      ],
-    );
-  }
-
-  Widget _checklist(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Career and graduate school',
-          textAlign: TextAlign.center,
-          style: AppThemes.pageTitle(context, size: 24),
-        ),
-        const SizedBox(height: 5),
-        Text(
-          '${_completed.length} of ${_milestones.length} milestones complete',
-          textAlign: TextAlign.center,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 14),
-        for (final milestone in _milestones.entries) ...[
-          const Divider(height: 1),
-          CheckboxListTile(
-            contentPadding: EdgeInsets.zero,
-            controlAffinity: ListTileControlAffinity.leading,
-            title: Text(milestone.value),
-            value: _completed.contains(milestone.key),
-            onChanged:
-                _progressFailed || _savingMilestones.contains(milestone.key)
-                ? null
-                : (value) => _setMilestone(milestone.key, value ?? false),
-          ),
         ],
       ],
     );

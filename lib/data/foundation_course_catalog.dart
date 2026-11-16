@@ -50,6 +50,21 @@ const foundationCourseCatalog = <Course>[
     category: 'General Education',
   ),
   Course(
+    code: 'MATH 138',
+    title: 'College Algebra',
+    credits: 3,
+    category: 'Preparation',
+  ),
+  Course(
+    code: 'MATH 139',
+    title: 'Precalculus',
+    credits: 3,
+    category: 'Preparation',
+    prerequisiteGroups: [
+      ['MATH 138'],
+    ],
+  ),
+  Course(
     code: 'MATH 143',
     title: 'Calculus I',
     credits: 4,
@@ -66,6 +81,24 @@ const foundationCourseCatalog = <Course>[
     prerequisiteGroups: [
       ['MATH 143'],
     ],
+  ),
+  Course(
+    code: 'AR 130',
+    title: 'Elementary Arabic',
+    credits: 3,
+    category: 'Preparation',
+  ),
+  Course(
+    code: 'FS 130',
+    title: 'Elementary French',
+    credits: 3,
+    category: 'Preparation',
+  ),
+  Course(
+    code: 'SP 130',
+    title: 'Elementary Spanish',
+    credits: 3,
+    category: 'Preparation',
   ),
   Course(
     code: 'AR 233',

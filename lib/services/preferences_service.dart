@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/schedule_preferences.dart';
@@ -7,6 +8,7 @@ import '../models/schedule_preferences.dart';
 class PreferencesService {
   static String _profile = 'demo-cs-2024';
   static final _profiles = <String, SchedulePreferences>{};
+  static final creditLimitRevision = ValueNotifier(0);
   static String get profileId => _profile;
   static void useProfile(String id) => _profile = id;
 
@@ -14,7 +16,9 @@ class PreferencesService {
 
   static Future<bool> savePreferences(SchedulePreferences preferences) async {
     final profile = _profile;
+    final before = _profiles[profile]?.maxCredits;
     _profiles[profile] = preferences;
+    if (preferences.maxCredits != before) creditLimitRevision.value++;
     try {
       final storage = await SharedPreferences.getInstance();
       if (!identical(_profiles[profile], preferences)) return true;

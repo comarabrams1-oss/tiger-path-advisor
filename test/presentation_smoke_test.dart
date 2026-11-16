@@ -71,7 +71,7 @@ void main() {
           const TranscriptScreen(),
           const DegreeProgressScreen(),
           const CourseRecommendationsScreen(),
-          AiAdvisorScreen(),
+          const AiAdvisorScreen(),
           const SchedulePreferencesScreen(),
         ]) {
           await tester.pumpWidget(

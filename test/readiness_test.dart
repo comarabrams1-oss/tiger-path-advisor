@@ -1,10 +1,13 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:tiger_path/models/readiness.dart';
 import 'package:tiger_path/screens/readiness_screen.dart';
 import 'package:tiger_path/services/interview_practice_service.dart';
 import 'package:tiger_path/services/readiness_progress_service.dart';
@@ -18,10 +21,35 @@ void main() {
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      final questions = await tester.runAsync(
-        InterviewPracticeService.loadQuestions,
+      rootBundle.clear();
+      tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+        'flutter/assets',
+        (message) async {
+          final path = const StringCodec().decodeMessage(message)!;
+          return ByteData.sublistView(
+            File('build/unit_test_assets/$path').readAsBytesSync(),
+          );
+        },
       );
-      expect(questions?.map((question) => question.text), [
+      addTearDown(() {
+        rootBundle.clear();
+        tester.binding.defaultBinaryMessenger.setMockMessageHandler(
+          'flutter/assets',
+          null,
+        );
+      });
+      final questions =
+          (jsonDecode(
+                File('assets/data/interview_questions.json').readAsStringSync(),
+              ) as List)
+              .map(
+                (item) => InterviewQuestion(
+                  item['id'] as String,
+                  item['text'] as String,
+                ),
+              )
+              .toList();
+      expect(questions.map((question) => question.text), [
         'Tell me about yourself.',
         'Why do you want this job?',
         'What is one of your strengths?',
@@ -71,6 +99,7 @@ void main() {
 
       Future<void> tap(Finder finder) async {
         await tester.ensureVisible(finder);
+        await tester.pumpAndSettle();
         await tester.tap(finder);
         await tester.pumpAndSettle();
       }
@@ -104,23 +133,21 @@ void main() {
       expect(find.text('Relevance 4/5'), findsOneWidget);
       expect(find.text(feedback.nextStep), findsOneWidget);
       expect(find.text('1 of 6 questions reviewed'), findsOneWidget);
+      await scrollTo(find.text('Career readiness'));
+      await tap(find.text('Career readiness'));
       await scrollTo(find.text('Prepare a résumé'));
       await tap(find.text('Prepare a résumé'));
-      expect(find.text('1 of 5 milestones complete'), findsOneWidget);
+      await tap(find.byType(DropdownButton<ReadinessStatus>));
+      await tap(find.text('Complete').last);
+      await tap(find.text('Save milestone'));
+      expect(find.textContaining('1 of 7 milestones complete'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       await open('two');
       expect(find.text('Tell me about yourself.'), findsOneWidget);
       expect(find.text('0 of 6 questions reviewed'), findsOneWidget);
-      await scrollTo(find.text('Prepare a résumé'));
-      expect(
-        tester
-            .widget<CheckboxListTile>(
-              find.widgetWithText(CheckboxListTile, 'Prepare a résumé'),
-            )
-            .value,
-        isFalse,
-      );
+      await scrollTo(find.text('Career readiness'));
+      expect(find.textContaining('0 of 7 milestones complete'), findsOneWidget);
       await open('one');
       expect(find.text('Why do you want this job?'), findsOneWidget);
       await tap(find.byTooltip('Previous question'));
@@ -138,7 +165,7 @@ void main() {
         isFalse,
       );
       expect(
-        (await const ReadinessProgressService('one').loadFeedback(questions!))
+        (await const ReadinessProgressService('one').loadFeedback(questions))
             .keys,
         ['introduction'],
       );

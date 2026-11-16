@@ -13,12 +13,17 @@ import 'services/preferences_service.dart';
 import 'services/schedule_draft_service.dart';
 import 'services/advisor_app_actions.dart';
 import 'services/mock_auth_service.dart';
+import 'services/student_record_service.dart';
+import 'models/academic_term.dart';
+import 'services/course_section_repository.dart';
+import 'screens/graduation_path_screen.dart';
 import 'services/advisor_history_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/program_library_screen.dart';
 import 'themes/app_theme.dart';
 import 'widgets/academic_workspace.dart';
 import 'widgets/workspace_shell.dart';
+import 'widgets/student_success_overview.dart';
 
 void main() {
   runApp(const TigerPathAdvisorApp());
@@ -46,6 +51,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
       'SchedulePreferencesScreen': 3,
       'GeneratedScheduleScreen': 3,
       'SemesterPlanScreen': 3,
+      'GraduationPathScreen': 3,
       'AiAdvisorScreen': 4,
       'ThemeSettingsScreen': 5,
       'ReadinessScreen': 6,
@@ -98,6 +104,11 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
     final profile = session?.profileId ?? 'demo-cs-2024';
     PreferencesService.useProfile(profile);
     if (session == null) return;
+    try {
+      activeStudent = await StudentRecordService().load(profile, activeStudent);
+    } catch (_) {
+      // A damaged local transcript leaves the demo record available.
+    }
     await PreferencesService.restore();
     if (mounted && PreferencesService.profileId == profile) {
       await ScheduleDraftService.restore();
@@ -209,7 +220,11 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
                 if (mounted) setState(() => _session = session);
               },
             )
-          : HomeScreen(key: ValueKey(_session!.email)),
+          : ListenableBuilder(
+              key: ValueKey(_session!.email),
+              listenable: StudentRecordService.revision,
+              builder: (context, _) => const HomeScreen(),
+            ),
     );
   }
 }
@@ -307,7 +322,18 @@ class HomeScreen extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 28),
-                const AcademicWorkspace(),
+                AcademicWorkspace(
+                  key: ValueKey(
+                    StudentRecordService.currentTerm(activeStudent),
+                  ),
+                ),
+                if (session?.session case final account?) ...[
+                  const SizedBox(height: 24),
+                  StudentSuccessOverview(
+                    profileId: account.profileId,
+                    student: activeStudent,
+                  ),
+                ],
               ],
             ),
           ),
@@ -399,7 +425,7 @@ class HomeScreen extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          '${_credits(student.inProgressCredits)} in progress · ${_credits(projectedRemaining)} left if passed',
+          '${(progress * 100).round()}% complete · ${_credits(student.inProgressCredits)} in progress · ${_credits(projectedRemaining)} left if passed',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: colors.onSurfaceVariant,
@@ -442,6 +468,10 @@ class HomeScreen extends StatelessWidget {
       final theme = Theme.of(context);
       final colors = theme.colorScheme;
       final draft = ScheduleDraftService.current;
+      final nextTerm = StudentRecordService.currentTerm(activeStudent).next;
+      final canBuild =
+          nextTerm == AcademicTerm.firstPlanningTerm &&
+          CourseSectionRepository.hasTerm(nextTerm.portalKey);
       final unresolved = draft?.schedule.unscheduled.length ?? 0;
       return DecoratedBox(
         decoration: BoxDecoration(
@@ -457,7 +487,7 @@ class HomeScreen extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Spring 2027 schedule',
+                '${nextTerm.label} schedule',
                 textAlign: TextAlign.center,
                 style: AppThemes.pageTitle(context, size: 25),
               ),
@@ -481,10 +511,30 @@ class HomeScreen extends StatelessWidget {
                   FilledButton.icon(
                     icon: const Icon(Icons.arrow_forward, size: 18),
                     label: Text(
-                      draft == null ? 'Build schedule' : 'Continue schedule',
+                      !canBuild
+                          ? 'View graduation pathway'
+                          : draft == null
+                          ? 'Build schedule'
+                          : 'Continue schedule',
                     ),
                     onPressed: () {
-                      if (draft == null) {
+                      if (!canBuild) {
+                        Navigator.push<void>(
+                          context,
+                          MaterialPageRoute<void>(
+                            settings: const RouteSettings(
+                              name: 'GraduationPathScreen',
+                            ),
+                            builder: (_) => GraduationPathScreen(
+                              student: activeStudent,
+                              profileId: PreferencesService.profileId,
+                              maxCredits:
+                                  PreferencesService.preferences?.maxCredits ??
+                                  15,
+                            ),
+                          ),
+                        );
+                      } else if (draft == null) {
                         _openPlanner(context);
                       } else {
                         Navigator.push(

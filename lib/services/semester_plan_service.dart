@@ -60,6 +60,7 @@ class SemesterPlanService {
     required int maxCredits,
     List<CourseSection>? sections,
     List<CourseSection>? publishedSections,
+    Set<String>? expectedCourseCodes,
     SchedulePreferences? preferences,
     Map<String, String> preferredSections = const {},
     List<String> preferredCourses = const [],
@@ -139,6 +140,7 @@ class SemesterPlanService {
           ) ??
           999;
       if (freshman && level >= 300) continue;
+      if (expectedCourseCodes?.contains(course.code) == false) continue;
       if (sectionSearch?.hasOpenCourse(course.code) == false) {
         continue;
       }
@@ -171,6 +173,7 @@ class SemesterPlanService {
               ) ??
               999;
           if (freshman && candidateLevel >= 300) return false;
+          if (expectedCourseCodes?.contains(code) == false) return false;
           if (sectionSearch?.hasOpenCourse(code) == false) return false;
           visiting.add(code);
           for (final companion in candidate.eligibility.requiredCompanions) {
@@ -208,8 +211,9 @@ class SemesterPlanService {
               category: addition.course.category,
               courseCode: addition.course.code,
               credits: addition.course.credits,
-              reason:
-                  '${addition.reasons.join('. ')}. Counts toward ${requirement.title}.',
+              reason: requirement.category == 'Preparation'
+                  ? '${requirement.title}. Confirm how these credits apply to your degree.'
+                  : '${addition.reasons.join('. ')}. Counts toward ${requirement.title}.',
               projectedEligibility:
                   addition.eligibility.status ==
                   EligibilityStatus.eligibleAfterCurrentTerm,
