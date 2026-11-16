@@ -286,6 +286,10 @@ void main() {
       );
       await tester.pageBack();
       await settle();
+      expect(
+        find.textContaining('9 of 120 credits earned', findRichText: true),
+        findsOneWidget,
+      );
       await tester.pump(const Duration(seconds: 5));
       await settle();
       await visible(find.text('Review with advisor'));

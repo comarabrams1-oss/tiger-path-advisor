@@ -223,7 +223,8 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
           : ListenableBuilder(
               key: ValueKey(_session!.email),
               listenable: StudentRecordService.revision,
-              builder: (context, _) => const HomeScreen(),
+              builder: (context, _) =>
+                  HomeScreen(key: ObjectKey(activeStudent)),
             ),
     );
   }
