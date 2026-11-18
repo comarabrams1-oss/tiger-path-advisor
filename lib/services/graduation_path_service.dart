@@ -275,7 +275,11 @@ class GraduationPathService {
         if (!item.needsCourse(projected, code)) continue;
         final course = byCode[code];
         if (course == null) continue;
-        final check = eligibility.checkCourse(projected, course);
+        final check = eligibility.checkCourse(
+          projected,
+          course,
+          program: program,
+        );
         if (check.missingPrerequisites.isNotEmpty) {
           details.add('$code needs ${check.missingPrerequisites.join(', ')}');
         } else if (check.status == EligibilityStatus.requiresPermission ||
@@ -349,7 +353,11 @@ class GraduationPathService {
       for (final code in item.requirement.courseCodes) {
         final course = catalog[code];
         if (course == null || !item.needsCourse(student, code)) continue;
-        final result = eligibility.checkCourse(student, course);
+        final result = eligibility.checkCourse(
+          student,
+          course,
+          program: program,
+        );
         if (result.status == EligibilityStatus.eligible) {
           options.clear();
           break;
