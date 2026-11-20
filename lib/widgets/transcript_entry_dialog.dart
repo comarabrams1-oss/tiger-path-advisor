@@ -14,6 +14,7 @@ String transcriptCourseCode(String input) {
 
 class TranscriptEntryDialog extends StatefulWidget {
   final StudentCourse? attempt;
+  final String? initialCourseCode;
   final String currentTerm;
   final Map<String, double> knownHours;
   final List<StudentCourse> otherAttempts;
@@ -21,6 +22,7 @@ class TranscriptEntryDialog extends StatefulWidget {
   const TranscriptEntryDialog({
     super.key,
     this.attempt,
+    this.initialCourseCode,
     required this.currentTerm,
     required this.knownHours,
     required this.otherAttempts,
@@ -33,7 +35,9 @@ class TranscriptEntryDialog extends StatefulWidget {
 
 class _TranscriptEntryDialogState extends State<TranscriptEntryDialog> {
   final _form = GlobalKey<FormState>();
-  late final _code = TextEditingController(text: widget.attempt?.courseCode);
+  late final _code = TextEditingController(
+    text: widget.attempt?.courseCode ?? widget.initialCourseCode,
+  );
   late final _term = TextEditingController(
     text:
         AcademicTerm.parse(widget.attempt?.term ?? '')?.label ??
@@ -42,7 +46,8 @@ class _TranscriptEntryDialogState extends State<TranscriptEntryDialog> {
   late final _hours = TextEditingController(
     text:
         (widget.attempt?.creditHours ??
-                widget.knownHours[widget.attempt?.courseCode])
+                widget.knownHours[widget.attempt?.courseCode ??
+                    widget.initialCourseCode])
             ?.toString(),
   );
   late bool _transfer = widget.attempt?.transfer ?? false;

@@ -6,6 +6,7 @@ import '../models/degree_program.dart';
 import '../services/course_eligibility_service.dart';
 import '../services/course_priority_service.dart';
 import '../services/degree_audit_service.dart';
+import 'course_check_screen.dart';
 
 enum RecommendationView {
   recommended,
@@ -97,6 +98,21 @@ class _CourseRecommendationsScreenState
         title: const Text(
           'Course Recommendations',
         ),
+        actions: [
+          IconButton(
+            tooltip: 'Check prerequisites',
+            icon: const Icon(Icons.rule_outlined),
+            onPressed: () => Navigator.push<void>(
+              context,
+              MaterialPageRoute(
+                settings: const RouteSettings(name: 'CourseCheckScreen'),
+                builder: (_) => const CourseCheckScreen(),
+              ),
+            ).then((_) {
+              if (mounted) setState(() {});
+            }),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

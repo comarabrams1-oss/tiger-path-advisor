@@ -10,6 +10,18 @@ Course planning and degree progress for Benedict College students. The app uses 
 
 The demo uses local browser or device storage and four degree mappings. Entries in the planning record are student-entered. The Fall 2026 and Spring 2027 sections are snapshots. Later terms use tentative availability, and the roadmap flags elective approvals and catalogue gaps for review. Ask Tiger Path receives computed degree and readiness statuses for relevant questions.
 
+## Student 2 course planning integration
+
+The [Team 1 course recommendation project](https://studio.code.org/projects/applab/6c04297f-6d0b-4ce5-af08-13e7b766483d) contributes the five-part course planning workflow:
+
+- **Recommend Courses:** the Courses tab ranks courses against the student's mapped degree audit and prerequisites.
+- **Check Prerequisites:** open the checker from Courses or Plan, search by course code or title, and see missing prerequisites, current-term dependencies, required permissions, and companion courses.
+- **Semester Planner:** Plan uses the saved credit target, scheduling preferences, and imported sections.
+- **Graduation Pathway:** open the pathway from Plan or Home to see sequenced terms and unresolved requirements.
+- **Mark Course Completed:** choose **Record or edit result** in the checker, enter the actual term and grade, and save. This uses the shared transcript record, recalculating degree progress and future recommendations. Canceling leaves the record unchanged.
+
+These features use Tiger Path's existing program mappings, grade checks, placement rules, and saved profiles. The source project's demonstration course list is not part of the Benedict course catalogue. Checking eligibility does not enroll the student or guarantee an offered section. Data remains local to the current browser/device and profile.
+
 ## Course information and interview practice
 
 Ask Tiger Path uses plain-language course summaries from the [Benedict College Catalogue 2025–2026](https://benedict.edu/wp-content/uploads/2026/01/2025-2026-Benedict-College-Master-Catalogue-010826.pdf). Course content is independent of the imported section snapshots and the app's degree rules.

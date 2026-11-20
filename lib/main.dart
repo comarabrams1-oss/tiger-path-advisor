@@ -46,6 +46,7 @@ class _TigerPathAdvisorAppState extends State<TigerPathAdvisorApp> {
   late final _routeObserver = _WorkspaceRouteObserver((route) {
     const names = {
       'CourseRecommendationsScreen': 1,
+      'CourseCheckScreen': 1,
       'TranscriptScreen': 1,
       'DegreeProgressScreen': 2,
       'SchedulePreferencesScreen': 3,

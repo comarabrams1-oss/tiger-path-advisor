@@ -13,13 +13,41 @@ import '../themes/app_theme.dart';
 import '../widgets/transcript_entry_dialog.dart';
 
 class TranscriptScreen extends StatefulWidget {
-  const TranscriptScreen({super.key});
+  final String? initialCourseCode;
+  const TranscriptScreen({super.key, this.initialCourseCode});
   @override
   State<TranscriptScreen> createState() => _TranscriptScreenState();
 }
 
 class _TranscriptScreenState extends State<TranscriptScreen> {
   bool _saving = false;
+  bool _openedInitialCourse = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final code = widget.initialCourseCode;
+    final session = MockSessionScope.maybeOf(context)?.session;
+    if (_openedInitialCourse || code == null || session == null) return;
+    _openedInitialCourse = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || PreferencesService.profileId != session.profileId) return;
+      final attempts =
+          activeStudent.courses
+              .where((attempt) => attempt.courseCode == code)
+              .toList()
+            ..sort((a, b) {
+              if (a.status != b.status) {
+                return a.status == CourseStatus.inProgress ? -1 : 1;
+              }
+              return (AcademicTerm.parse(b.term) ?? AcademicTerm.demoTerm)
+                  .compareTo(
+                    AcademicTerm.parse(a.term) ?? AcademicTerm.demoTerm,
+                  );
+            });
+      _edit(session, attempts.firstOrNull, code);
+    });
+  }
 
   Future<void> _save(
     Student before,
@@ -68,6 +96,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
   Future<void> _edit(
     MockStudentSession session, [
     StudentCourse? course,
+    String? initialCourseCode,
   ]) async {
     final student = activeStudent;
     final remaining = [
@@ -78,6 +107,7 @@ class _TranscriptScreenState extends State<TranscriptScreen> {
       context: context,
       builder: (context) => TranscriptEntryDialog(
         attempt: course,
+        initialCourseCode: initialCourseCode,
         currentTerm: StudentRecordService.currentTerm(student).label,
         knownHours: {
           for (final course in catalogFor(student)) course.code: course.credits,

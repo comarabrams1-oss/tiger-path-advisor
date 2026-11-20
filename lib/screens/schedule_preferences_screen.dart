@@ -13,6 +13,7 @@ import '../data/program_registry.dart';
 import '../models/academic_term.dart';
 import '../services/student_record_service.dart';
 import 'graduation_path_screen.dart';
+import 'course_check_screen.dart';
 
 class SchedulePreferencesScreen extends StatefulWidget {
   const SchedulePreferencesScreen({super.key});
@@ -119,6 +120,7 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
   Future<void> _openScheduleRoute(String name, WidgetBuilder builder) async {
     final profile = PreferencesService.profileId;
     final before = PreferencesService.preferences;
+    final beforeStudent = activeStudent;
     await Navigator.push(
       context,
       MaterialPageRoute<void>(
@@ -127,11 +129,12 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
       ),
     );
     final saved = PreferencesService.preferences;
-    if (mounted &&
-        profile == PreferencesService.profileId &&
-        saved != null &&
-        !identical(saved, before)) {
-      setState(() => _applyPreferences(saved));
+    if (mounted && profile == PreferencesService.profileId) {
+      if (saved != null && !identical(saved, before)) {
+        setState(() => _applyPreferences(saved));
+      } else if (!identical(beforeStudent, activeStudent)) {
+        setState(() {});
+      }
     }
   }
 
@@ -185,6 +188,34 @@ class _SchedulePreferencesScreenState extends State<SchedulePreferencesScreen> {
           child: ListView(
             padding: const EdgeInsets.all(20),
             children: [
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.rule_outlined),
+                    label: const Text('Check prerequisites'),
+                    onPressed: () => _openScheduleRoute(
+                      'CourseCheckScreen',
+                      (_) => const CourseCheckScreen(),
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.route_outlined),
+                    label: const Text('Graduation pathway'),
+                    onPressed: () => _openScheduleRoute(
+                      'GraduationPathScreen',
+                      (_) => GraduationPathScreen(
+                        student: activeStudent,
+                        profileId: PreferencesService.profileId,
+                        maxCredits: maxCredits,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
               ValueListenableBuilder<int>(
                 valueListenable: ScheduleDraftService.revision,
                 builder: (context, _, _) {
