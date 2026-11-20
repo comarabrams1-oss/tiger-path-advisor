@@ -46,17 +46,19 @@ class CourseEligibilityService {
     );
 
     return remainingCourses
-        .map((course) => checkCourse(student, course))
+        .map((course) => checkCourse(student, course, program: program))
         .toList();
   }
 
-  CourseEligibilityResult checkCourse(Student student, Course course) {
+  CourseEligibilityResult checkCourse(
+    Student student,
+    Course course, {
+    DegreeProgram? program,
+  }) {
     final completedCodes = student.courses
         .where(
           (attempt) =>
-              attempt.meetsMinimumGrade(
-                course.minimumPrerequisiteGrades[attempt.courseCode],
-              ) &&
+              _meetsPrerequisiteGrade(attempt, course, program) &&
               (!course.requiresPassingPrerequisites ||
                   attempt.transfer ||
                   RegExp(r'^[ABCD][+-]?$')
@@ -187,6 +189,38 @@ class CourseEligibilityService {
       reason: 'Prerequisites completed.$companionNote',
       requiredCompanions: requiredCompanions,
     );
+  }
+
+  bool _meetsPrerequisiteGrade(
+    StudentCourse attempt,
+    Course course,
+    DegreeProgram? program,
+  ) {
+    // A course-specific prerequisite rule is authoritative, even when it is
+    // lower than the grade needed to complete the degree requirement.
+    final explicitMinimum =
+        course.minimumPrerequisiteGrades[attempt.courseCode];
+    if (explicitMinimum != null) {
+      return attempt.meetsMinimumGrade(explicitMinimum);
+    }
+    // Apply the program fallback to prerequisites, not unrelated completed
+    // courses or co-enrollment companions. Keep standalone checks compatible.
+    if (program == null ||
+        !course.prerequisiteGroups.any(
+          (group) => group.contains(attempt.courseCode),
+        )) {
+      return attempt.meetsMinimumGrade(null);
+    }
+    final requirements = program.requirements.where(
+      (requirement) =>
+          requirement.type == RequirementType.requiredCourse &&
+          requirement.courseCodes.contains(attempt.courseCode) &&
+          requirement.minimumGrade != null,
+    );
+    return attempt.meetsMinimumGrade(null) &&
+        requirements.every(
+          (requirement) => attempt.meetsMinimumGrade(requirement.minimumGrade),
+        );
   }
 
   bool _meetsClassStanding(String currentStanding, String? requiredStanding) {

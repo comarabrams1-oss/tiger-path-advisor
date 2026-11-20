@@ -134,7 +134,7 @@ class AdvisorContextService {
                 'prerequisiteGroups': course.prerequisiteGroups,
                 'corequisites': course.corequisiteCodes,
                 'eligibility': _eligibilityDetails(
-                  eligibility.checkCourse(student, course),
+                  eligibility.checkCourse(student, course, program: program),
                 ),
               },
               if (sectionsAvailable) ...{
